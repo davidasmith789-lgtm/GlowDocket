@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
+// Helper 1: Detect dark/light mode system configuration
 function getSystemPreference() {
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     return 'dark'
@@ -8,8 +9,41 @@ function getSystemPreference() {
   return 'light'
 }
 
+// Helper 2: Map assignment dates directly to active relative timelines
+function getDueDateBucket(dueMonth, dueDay) {
+  if (!dueMonth || !dueDay) return 'No Due Date';
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Build target assignment date instance
+  const taskDate = new Date(currentYear, Number(dueMonth) - 1, Number(dueDay));
+  
+  // Normalize comparison instances to midnight
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // Calculate relative weekend threshold mappings (Saturday cutoffs)
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + (6 - today.getDay())); 
+  
+  const endOfNextWeek = new Date(endOfWeek);
+  endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
+
+  const diffTime = taskDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Overdue 🚨';
+  if (diffDays === 0) return 'Due Today ⏰';
+  if (diffDays === 1) return 'Due Tomorrow 🗓️';
+  if (taskDate <= endOfWeek) return 'Due This Week';
+  if (taskDate <= endOfNextWeek) return 'Due Next Week';
+  return 'Due Later';
+}
+
 function App() {
-  // --- USER AUTHENTICATION STATE ---
+  // --- USER PROFILE AUTHENTICATION STATE ---
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return localStorage.getItem('currentUser') || ''
@@ -20,12 +54,11 @@ function App() {
   })
   const [signInName, setSignInName] = useState('')
 
-  // Define local storage keys based on profile
+  // Storage key assignment namespaces
   const currentStorageKey = currentUser ? `tasks_${currentUser}` : 'tasks_guest'
   const courseStorageKey = currentUser ? `courses_${currentUser}` : 'courses_guest'
 
-  // --- DYNAMIC COURSES STATE ---
-  // Loads customized courses per user profile; defaults to your senior year track if none exist.
+  // --- DYNAMIC INTEGRATED ROSTER TRACKING ---
   const [courses, setCourses] = useState(() => {
     try {
       const storedCourses = localStorage.getItem(courseStorageKey)
@@ -36,11 +69,10 @@ function App() {
     }
   })
 
-  // State to manage whether the user is selecting an existing course or typing a custom one
   const [isCustomCourse, setIsCustomCourse] = useState(false)
   const [customCourseName, setCustomCourseName] = useState('')
 
-  // --- FORM INPUT STATE ---
+  // --- COMPONENT FORM CONTROL FLAGS ---
   const [taskName, setTaskName] = useState('')
   const [selectedCourse, setSelectedCourse] = useState('')
   const [dueMonth, setDueMonth] = useState('')
@@ -50,12 +82,12 @@ function App() {
   const [estTime, setEstTime] = useState('')
   const [priority, setPriority] = useState('MED')
 
-  // --- TASK LIST & UI STATE ---
+  // --- CORE SYSTEM APP ARRAYS ---
   const [tasks, setTasks] = useState([])
   const [currentTab, setCurrentTab] = useState('dashboard')
   const [expandedTaskId, setExpandedTaskId] = useState(null)
 
-  // --- THEME STATE ---
+  // --- DISPLAY PALETTE SCHEMES ---
   const [theme, setTheme] = useState(() => {
     try {
       const storedTheme = localStorage.getItem('theme')
@@ -76,7 +108,7 @@ function App() {
     return `📅 Due: ${dateLabel} at ${timeLabel} | ⏱️ Est: ${task.estimatedMinutes || 0} mins | ⚠️ Priority: ${task.priority}`
   }
 
-  // Sync theme
+  // Monitor DOM modifications for UI layout theme rules
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     try {
@@ -90,7 +122,7 @@ function App() {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'))
   }
 
-  // Sync tasks and courses when user profile changes
+  // Profile data reloading pipeline
   useEffect(() => {
     try {
       const rawTasks = localStorage.getItem(currentStorageKey)
@@ -103,12 +135,10 @@ function App() {
       setTasks([])
       setCourses(['AP Stat', 'British Literature', 'Calculus H', 'APES'])
     }
-    // Reset custom input toggle on switch user
     setIsCustomCourse(false)
     setCustomCourseName('')
   }, [currentStorageKey, courseStorageKey])
 
-  // Sync currentUser profile tracking
   useEffect(() => {
     try {
       if (currentUser) {
@@ -121,15 +151,13 @@ function App() {
     }
   }, [currentUser])
 
-  // --- HANDLERS ---
+  // --- ACTIONS & MUTATIONS ---
   const handleAddTask = (e) => {
     e.preventDefault()
     
-    // Determine target course name based on mode
     const finalCourse = isCustomCourse ? customCourseName.trim() : selectedCourse
     if (!taskName || !finalCourse) return 
 
-    // If it's a new course, save it into the user's permanent list profile
     if (isCustomCourse && !courses.includes(finalCourse)) {
       const updatedCourses = [...courses, finalCourse].sort()
       setCourses(updatedCourses)
@@ -162,7 +190,7 @@ function App() {
       return updated
     })
 
-    // Reset Form
+    // Clear submission contexts
     setTaskName('')
     setSelectedCourse('')
     setCustomCourseName('')
@@ -231,8 +259,36 @@ function App() {
     setCurrentTab('dashboard')
   }
 
-  // Check if form is valid to safely submit
   const isFormInvalid = !taskName || (isCustomCourse ? !customCourseName.trim() : !selectedCourse)
+
+  // --- DATA TRANSFORMATION PIPELINE (AUTOMATIC SORTING & TIMELINE GROUPING) ---
+  const todoTasks = tasks.filter(t => !t.isCompleted);
+
+  const sortedTodoTasks = [...todoTasks].sort((a, b) => {
+    const priorityMap = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
+    
+    // Level 1 Order Metric: Priority Weighting
+    if (priorityMap[b.priority] !== priorityMap[a.priority]) {
+      return priorityMap[b.priority] - priorityMap[a.priority];
+    }
+    // Level 2 Order Metric: Execution Estimate Weighting (shortest duration first)
+    return (Number(a.estimatedMinutes) || 0) - (Number(b.estimatedMinutes) || 0);
+  });
+
+  const bucketsOrder = ['Overdue 🚨', 'Due Today ⏰', 'Due Tomorrow 🗓️', 'Due This Week', 'Due Next Week', 'Due Later', 'No Due Date'];
+  const groupedTasks = bucketsOrder.reduce((acc, bucket) => {
+    acc[bucket] = [];
+    return acc;
+  }, {});
+
+  sortedTodoTasks.forEach(task => {
+    const bucket = getDueDateBucket(task.dueMonth, task.dueDay);
+    if (groupedTasks[bucket]) {
+      groupedTasks[bucket].push(task);
+    } else {
+      groupedTasks['No Due Date'].push(task);
+    }
+  });
 
   return (
     <div className={`App ${theme}`}>
@@ -243,7 +299,7 @@ function App() {
           <div style={{ fontSize: '14px' }}>{currentUser ? `Signed in as ${currentUser}` : 'Not signed in'}</div>
         </div>
 
-        {/* Tabs */}
+        {/* Navigation Tab Actions */}
         <div className="tab-row" style={{ display: 'flex', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
           <button className={`tab-button ${currentTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>Dashboard</button>
           <button className={`tab-button ${currentTab === 'todo' ? 'active' : ''}`} onClick={() => setCurrentTab('todo')}>To Do</button>
@@ -295,21 +351,20 @@ function App() {
               )}
 
               <label>Due Date:</label>
-<div style={{ display: 'flex', gap: '8px' }}>
-  <select value={dueMonth} onChange={(e) => setDueMonth(e.target.value)}>
-    <option value="">Month</option>
-    {monthNames.map((m, idx) => (
-      <option key={m} value={String(idx + 1).padStart(2, '0')}>{m}</option>
-    ))}
-  </select>
-  {/* FIXED THE ONCHANGE BRACKETS BELOW */}
-  <select value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
-    <option value="">Day</option>
-    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-      <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
-    ))}
-  </select>
-</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select value={dueMonth} onChange={(e) => setDueMonth(e.target.value)}>
+                  <option value="">Month</option>
+                  {monthNames.map((m, idx) => (
+                    <option key={m} value={String(idx + 1).padStart(2, '0')}>{m}</option>
+                  ))}
+                </select>
+                <select value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                  ))}
+                </select>
+              </div>
 
               <label>Due Time (12-hour):</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -348,71 +403,85 @@ function App() {
           </div>
         )}
 
-        {/* --- MAIN VIEW SECTION --- */}
+        {/* --- MAIN DISPLAY CONTROLLERS --- */}
         <div>
-          {/* TO DO TAB */}
+          {/* TO DO TAB VIEW */}
           {currentTab === 'todo' && (
             <div>
-              <h3>📝 To Do ({tasks.filter(t => !t.isCompleted).length})</h3>
-              {tasks.filter(t => !t.isCompleted).length === 0 ? (
+              <h3>📝 To Do ({todoTasks.length})</h3>
+              {todoTasks.length === 0 ? (
                 <p className="placeholder-text">No pending assignments.</p>
               ) : (
-                <ul className="task-list">
-                  {tasks.filter(t => !t.isCompleted).map(task => (
-                    <li
-                      key={task.id}
-                      className={`task-card${task.priority === 'HIGH' ? ' task-card-high' : ''}${expandedTaskId === task.id ? ' expanded' : ''}`}
-                      onClick={() => toggleTaskExpansion(task.id)}
-                    >
-                      <div>
-                        <strong>{task.title}</strong> — <span className="course-name">{task.course}</span>
-                        <div className="task-details">{formatTaskDetails(task)}</div>
-                      </div>
+                <div>
+                  {bucketsOrder.map(bucketName => {
+                    const tasksInBucket = groupedTasks[bucketName];
+                    if (tasksInBucket.length === 0) return null;
 
-                      <div className="task-actions">
-                        <button 
-                          className="btn btn-primary"
-                          onClick={(e) => { e.stopPropagation(); handleComplete(task.id) }}
-                          style={{ padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          Complete ✅
-                        </button>
-                        <button 
-                          className="btn btn-danger"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}
-                          style={{ padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                          Delete
-                        </button>
-                      </div>
+                    return (
+                      <div key={bucketName} className="bucket-section" style={{ marginTop: '20px' }}>
+                        <h4 className="bucket-title" style={{ borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '10px', color: 'var(--text-color)' }}>
+                          {bucketName}
+                        </h4>
+                        <ul className="task-list" style={{ paddingLeft: 0, listStyle: 'none' }}>
+                          {tasksInBucket.map(task => (
+                            <li
+                              key={task.id}
+                              className={`task-card${task.priority === 'HIGH' ? ' task-card-high' : ''}${expandedTaskId === task.id ? ' expanded' : ''}`}
+                              onClick={() => toggleTaskExpansion(task.id)}
+                            >
+                              <div>
+                                <strong>{task.title}</strong> — <span className="course-name">{task.course}</span>
+                                <div className="task-details">{formatTaskDetails(task)}</div>
+                              </div>
 
-                      {expandedTaskId === task.id && (
-                        <div className="task-notes-panel" onClick={(e) => e.stopPropagation()}>
-                          <label htmlFor={`notes-${task.id}`} className="task-notes-label">Notes</label>
-                          <textarea
-                            id={`notes-${task.id}`}
-                            value={task.notes || ''}
-                            onChange={(e) => handleNoteChange(task.id, e.target.value)}
-                            placeholder="Type notes for this assignment..."
-                            className="task-note-input"
-                          />
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                              <div className="task-actions">
+                                <button 
+                                  className="btn btn-primary"
+                                  onClick={(e) => { e.stopPropagation(); handleComplete(task.id) }}
+                                  style={{ padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                  Complete ✅
+                                </button>
+                                <button 
+                                  className="btn btn-danger"
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(task.id) }}
+                                  style={{ padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+
+                              {expandedTaskId === task.id && (
+                                <div className="task-notes-panel" onClick={(e) => e.stopPropagation()}>
+                                  <label htmlFor={`notes-${task.id}`} className="task-notes-label">Notes</label>
+                                  <textarea
+                                    id={`notes-${task.id}`}
+                                    value={task.notes || ''}
+                                    onChange={(e) => handleNoteChange(task.id, e.target.value)}
+                                    placeholder="Type notes for this assignment..."
+                                    className="task-note-input"
+                                  />
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
 
-          {/* COMPLETED TAB */}
+          {/* COMPLETED TAB VIEW */}
           {currentTab === 'completed' && (
             <div>
               <h3>✅ Completed ({tasks.filter(t => t.isCompleted).length})</h3>
               {tasks.filter(t => t.isCompleted).length === 0 ? (
                 <p className="placeholder-text">No completed assignments.</p>
               ) : (
-                <ul className="task-list">
+                <ul className="task-list" style={{ paddingLeft: 0, listStyle: 'none' }}>
                   {tasks.filter(t => t.isCompleted).map(task => (
                     <li
                       key={task.id}
@@ -459,7 +528,7 @@ function App() {
             </div>
           )}
 
-          {/* SIGN IN TAB */}
+          {/* SIGN IN PROFILES TAB VIEW */}
           {currentTab === 'signin' && (
             <div className="card card-container" style={{ marginTop: '10px' }}>
               <h3>🔐 Sign In</h3>
