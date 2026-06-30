@@ -821,3 +821,49 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* ============================
+   Compact Filter Bar
+   ============================ */
+
+.filter-bar {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 900;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.filter-bar:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.55);
+}
+
+.filter-controls-card {
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.filter-grid label {
+  display: block;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--text-color);
+}

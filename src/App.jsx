@@ -110,6 +110,7 @@ const courseColorsStorageKey = currentUser ? `courseColors_${currentUser}` : 'co
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
   const [filterRepeat, setFilterRepeat] = useState('ALL')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // --- DISPLAY PALETTE SCHEMES ---
   const [theme, setTheme] = useState(() => {
@@ -553,116 +554,105 @@ const resetFilters = () => {
   setFilterDueBucket('ALL')
   setFilterRepeat('ALL')
 }
-  const renderAssignmentFilters = () => (
-  
-  <div
-    className="card"
-    style={{
-      marginBottom: '20px',
-      padding: '15px'
-    }}
+
+const renderFilterToggle = () => (
+  <button
+    type="button"
+    className="filter-bar"
+    onClick={() => setFiltersOpen(prev => !prev)}
   >
-    <h4 style={{ marginTop: 0 }}>🔎 Filter Assignments</h4>
-
-    <input
-      type="text"
-      placeholder="Search by title, course, or notes..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      style={{
-        width: '100%',
-        padding: '10px',
-        marginBottom: '12px',
-        borderRadius: '8px'
-      }}
-    />
-
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '12px'
-      }}
-    >
-      <div>
-        <label>Course:</label>
-        <select
-          value={filterCourse}
-          onChange={(e) => setFilterCourse(e.target.value)}
-        >
-          <option value="ALL">All Courses</option>
-          {courses.map(course => (
-            <option key={course} value={course}>
-              {course}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label>Priority:</label>
-        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
-          <option value="ALL">All Priorities</option>
-          <option value="HIGH">High</option>
-          <option value="MED">Medium</option>
-          <option value="LOW">Low</option>
-        </select>
-        <label>Repeat:</label>
-        <select
-          value={repeatFrequency}
-          onChange={(e) => setRepeatFrequency(e.target.value)}
-        >
-          <option value="NONE">Does not repeat</option>
-          <option value="DAILY">Daily</option>
-          <option value="WEEKLY">Weekly</option>
-          <option value="MONTHLY">Monthly</option>
-        </select>
-      </div>
-
-      <div>
-        <label>Due:</label>
-        <select
-          value={filterDueBucket}
-          onChange={(e) => setFilterDueBucket(e.target.value)}
-        >
-          <option value="ALL">All Due Dates</option>
-          {bucketsOrder.map(bucket => (
-            <option key={bucket} value={bucket}>
-              {bucket}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-    <div>
-  <label>Repeat:</label>
-  <select
-    value={filterRepeat}
-    onChange={(e) => setFilterRepeat(e.target.value)}
-  >
-    <option value="ALL">All Repeat Types</option>
-    <option value="NONE">Does not repeat</option>
-    <option value="DAILY">Daily</option>
-    <option value="WEEKLY">Weekly</option>
-    <option value="MONTHLY">Monthly</option>
-  </select>
-</div>
-
-    <button
-      type="button"
-      className="btn btn-secondary"
-      onClick={resetFilters}
-      style={{
-        marginTop: '12px',
-        padding: '8px 12px',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }}
-    >
-      Reset Filters
-    </button>
-  </div>
+    <span>🔎 Filter Assignments</span>
+    <span>{filtersOpen ? '▲ Hide' : '▼ Show'}</span>
+  </button>
 )
+
+const renderFilterControls = () => {
+  if (!filtersOpen) return null
+
+  return (
+    <div className="card filter-controls-card">
+      <input
+        type="text"
+        placeholder="Search by title, course, or notes..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      <div className="filter-grid">
+        <div>
+          <label>Course:</label>
+          <select
+            value={filterCourse}
+            onChange={(e) => setFilterCourse(e.target.value)}
+          >
+            <option value="ALL">All Courses</option>
+            {courses.map(course => (
+              <option key={course} value={course}>
+                {course}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label>Priority:</label>
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+          >
+            <option value="ALL">All Priorities</option>
+            <option value="HIGH">High</option>
+            <option value="MED">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Due:</label>
+          <select
+            value={filterDueBucket}
+            onChange={(e) => setFilterDueBucket(e.target.value)}
+          >
+            <option value="ALL">All Due Dates</option>
+            {bucketsOrder.map(bucket => (
+              <option key={bucket} value={bucket}>
+                {bucket}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label>Repeat:</label>
+          <select
+            value={filterRepeat}
+            onChange={(e) => setFilterRepeat(e.target.value)}
+          >
+            <option value="ALL">All Repeat Types</option>
+            <option value="NONE">Does not repeat</option>
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
+          </select>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={resetFilters}
+        style={{
+          marginTop: '12px',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Reset Filters
+      </button>
+    </div>
+  )
+}
 const activeTasksCount = tasks.filter(task => !task.isCompleted).length
 const completedTasksCount = tasks.filter(task => task.isCompleted).length
 
@@ -942,21 +932,13 @@ const estimatedMinutesLeft = totalEstimatedMinutes % 60
           {/* TO DO TAB VIEW */}
           {currentTab === 'todo' && (
             <div>
-              <h3>📝 To Do ({todoTasks.length})</h3>
-              {renderAssignmentFilters()}
-              <input
-                type="text"
-                placeholder="🔍 Search assignments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginBottom: '20px',
-                  borderRadius: '8px'
-                }}
-              />
-              {todoTasks.length === 0 ? (
+            {renderFilterToggle()}
+
+            <h3>📝 To Do ({todoTasks.length})</h3>
+
+            {renderFilterControls()}
+
+            {todoTasks.length === 0 ? (
                 <p className="placeholder-text">No pending assignments match your filters.</p>
               ) : (
                 <div>
@@ -1095,10 +1077,14 @@ const estimatedMinutesLeft = totalEstimatedMinutes % 60
 
           {/* COMPLETED TAB VIEW */}
           {currentTab === 'completed' && (
-            <div>
-              <h3>✅ Completed ({completedTasks.length})</h3>
-              {renderAssignmentFilters()}
-              {completedTasks.length === 0 ? (
+          <div>
+            {renderFilterToggle()}
+
+            <h3>✅ Completed ({completedTasks.length})</h3>
+
+            {renderFilterControls()}
+
+            {completedTasks.length === 0 ? (
                 <p className="placeholder-text">No completed assignments match your filters.</p>
               ) : (
                 <ul className="task-list" style={{ paddingLeft: 0, listStyle: 'none' }}>
