@@ -386,3 +386,83 @@ html, body, #root {
     border-right-color: var(--border);
   }
 }
+
+/* React Calendar base styling */
+.react-calendar {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+}
+
+/* Dark mode calendar container */
+html[data-theme='dark'] .react-calendar {
+  background-color: #111827;
+  border: 1px solid #374151;
+  color: #f9fafb;
+}
+
+/* Dark mode top navigation */
+html[data-theme='dark'] .react-calendar__navigation button {
+  background-color: #1f2937;
+  color: #f9fafb;
+  border-radius: 8px;
+}
+
+html[data-theme='dark'] .react-calendar__navigation button:hover {
+  background-color: #374151;
+}
+
+/* Dark mode weekday labels */
+html[data-theme='dark'] .react-calendar__month-view__weekdays {
+  color: #d1d5db;
+}
+
+html[data-theme='dark'] .react-calendar__month-view__weekdays abbr {
+  color: #d1d5db;
+  text-decoration: none;
+}
+
+/* Dark mode day numbers */
+html[data-theme='dark'] .react-calendar__tile {
+  background-color: #111827;
+  color: #f9fafb;
+  border-radius: 8px;
+}
+
+/* Hovered day */
+html[data-theme='dark'] .react-calendar__tile:hover {
+  background-color: #374151;
+  color: #ffffff;
+}
+
+/* Selected day */
+html[data-theme='dark'] .react-calendar__tile--active {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* Today's date */
+html[data-theme='dark'] .react-calendar__tile--now {
+  background-color: #4b5563;
+  color: #ffffff;
+}
+
+/* Neighboring month days */
+html[data-theme='dark'] .react-calendar__month-view__days__day--neighboringMonth {
+  color: #6b7280;
+}
+
+/* Disabled days */
+html[data-theme='dark'] .react-calendar__tile:disabled {
+  background-color: #1f2937;
+  color: #6b7280;
+}
+
+/* Light mode polish */
+html[data-theme='light'] .react-calendar {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+}
