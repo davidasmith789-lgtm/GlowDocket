@@ -99,8 +99,12 @@ const courseColorsStorageKey = currentUser ? `courseColors_${currentUser}` : 'co
   const [tasks, setTasks] = useState([])
   const [currentTab, setCurrentTab] = useState('dashboard')
   const [expandedTaskId, setExpandedTaskId] = useState(null)
+
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterCourse, setFilterCourse] = useState('ALL')
+  const [filterPriority, setFilterPriority] = useState('ALL')
+  const [filterDueBucket, setFilterDueBucket] = useState('ALL')
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
 
@@ -386,47 +390,176 @@ const handleEditCancel = () => {
 
   const isFormInvalid = !taskName || (isCustomCourse ? !customCourseName.trim() : !selectedCourse)
 
-  // --- DATA TRANSFORMATION PIPELINE (AUTOMATIC SORTING & TIMELINE GROUPING) ---
-  const todoTasks = tasks.filter(task => {
-  if (task.isCompleted) return false
+ // --- DATA TRANSFORMATION PIPELINE (SEARCH, FILTERING, SORTING & TIMELINE GROUPING) ---
 
-  if (!searchTerm.trim()) return true
+const bucketsOrder = [
+  'Overdue 🚨',
+  'Due Today ⏰',
+  'Due Tomorrow 🗓️',
+  'Due This Week',
+  'Due Next Week',
+  'Due Later',
+  'No Due Date'
+]
 
-  const search = searchTerm.toLowerCase()
+const assignmentMatchesFilters = (task) => {
+  const search = searchTerm.trim().toLowerCase()
 
-  return (
+  const matchesSearch =
+    !search ||
     task.title.toLowerCase().includes(search) ||
     task.course.toLowerCase().includes(search) ||
     (task.notes || '').toLowerCase().includes(search)
-  )
+
+  const matchesCourse =
+    filterCourse === 'ALL' || task.course === filterCourse
+
+  const matchesPriority =
+    filterPriority === 'ALL' || task.priority === filterPriority
+
+  const taskBucket = getDueDateBucket(task.dueMonth, task.dueDay)
+
+  const matchesDueBucket =
+    filterDueBucket === 'ALL' || taskBucket === filterDueBucket
+
+  return matchesSearch && matchesCourse && matchesPriority && matchesDueBucket
+}
+
+const todoTasks = tasks.filter(task =>
+  !task.isCompleted && assignmentMatchesFilters(task)
+)
+
+const completedTasks = tasks.filter(task =>
+  task.isCompleted && assignmentMatchesFilters(task)
+)
+
+const sortedTodoTasks = [...todoTasks].sort((a, b) => {
+  const priorityMap = { HIGH: 3, MED: 2, LOW: 1 }
+
+  const bucketA = bucketsOrder.indexOf(getDueDateBucket(a.dueMonth, a.dueDay))
+  const bucketB = bucketsOrder.indexOf(getDueDateBucket(b.dueMonth, b.dueDay))
+
+  if (bucketA !== bucketB) {
+    return bucketA - bucketB
+  }
+
+  if (priorityMap[b.priority] !== priorityMap[a.priority]) {
+    return priorityMap[b.priority] - priorityMap[a.priority]
+  }
+
+  return (Number(a.estimatedMinutes) || 0) - (Number(b.estimatedMinutes) || 0)
 })
 
-  const sortedTodoTasks = [...todoTasks].sort((a, b) => {
-    const priorityMap = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
-    
-    // Level 1 Order Metric: Priority Weighting
-    if (priorityMap[b.priority] !== priorityMap[a.priority]) {
-      return priorityMap[b.priority] - priorityMap[a.priority];
-    }
-    // Level 2 Order Metric: Execution Estimate Weighting (shortest duration first)
-    return (Number(a.estimatedMinutes) || 0) - (Number(b.estimatedMinutes) || 0);
-  });
+const groupedTasks = bucketsOrder.reduce((acc, bucket) => {
+  acc[bucket] = []
+  return acc
+}, {})
 
-  const bucketsOrder = ['Overdue 🚨', 'Due Today ⏰', 'Due Tomorrow 🗓️', 'Due This Week', 'Due Next Week', 'Due Later', 'No Due Date'];
-  const groupedTasks = bucketsOrder.reduce((acc, bucket) => {
-    acc[bucket] = [];
-    return acc;
-  }, {});
+sortedTodoTasks.forEach(task => {
+  const bucket = getDueDateBucket(task.dueMonth, task.dueDay)
 
-  sortedTodoTasks.forEach(task => {
-    const bucket = getDueDateBucket(task.dueMonth, task.dueDay);
-    if (groupedTasks[bucket]) {
-      groupedTasks[bucket].push(task);
-    } else {
-      groupedTasks['No Due Date'].push(task);
-    }
-  });
+  if (groupedTasks[bucket]) {
+    groupedTasks[bucket].push(task)
+  } else {
+    groupedTasks['No Due Date'].push(task)
+  }
+})
 
+const resetFilters = () => {
+  setSearchTerm('')
+  setFilterCourse('ALL')
+  setFilterPriority('ALL')
+  setFilterDueBucket('ALL')
+}
+  const renderAssignmentFilters = () => (
+  <div
+    className="card"
+    style={{
+      marginBottom: '20px',
+      padding: '15px'
+    }}
+  >
+    <h4 style={{ marginTop: 0 }}>🔎 Filter Assignments</h4>
+
+    <input
+      type="text"
+      placeholder="Search by title, course, or notes..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      style={{
+        width: '100%',
+        padding: '10px',
+        marginBottom: '12px',
+        borderRadius: '8px'
+      }}
+    />
+
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '12px'
+      }}
+    >
+      <div>
+        <label>Course:</label>
+        <select
+          value={filterCourse}
+          onChange={(e) => setFilterCourse(e.target.value)}
+        >
+          <option value="ALL">All Courses</option>
+          {courses.map(course => (
+            <option key={course} value={course}>
+              {course}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label>Priority:</label>
+        <select
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value)}
+        >
+          <option value="ALL">All Priorities</option>
+          <option value="HIGH">High</option>
+          <option value="MED">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Due:</label>
+        <select
+          value={filterDueBucket}
+          onChange={(e) => setFilterDueBucket(e.target.value)}
+        >
+          <option value="ALL">All Due Dates</option>
+          {bucketsOrder.map(bucket => (
+            <option key={bucket} value={bucket}>
+              {bucket}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={resetFilters}
+      style={{
+        marginTop: '12px',
+        padding: '8px 12px',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+    >
+      Reset Filters
+    </button>
+  </div>
+)
   return (
     <div className={`App ${theme}`}>
       <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -639,6 +772,7 @@ const handleEditCancel = () => {
           {currentTab === 'todo' && (
             <div>
               <h3>📝 To Do ({todoTasks.length})</h3>
+              {renderAssignmentFilters()}
               <input
                 type="text"
                 placeholder="🔍 Search assignments..."
@@ -652,7 +786,7 @@ const handleEditCancel = () => {
                 }}
               />
               {todoTasks.length === 0 ? (
-                <p className="placeholder-text">No pending assignments.</p>
+                <p className="placeholder-text">No pending assignments match your filters.</p>
               ) : (
                 <div>
                   {bucketsOrder.map(bucketName => {
@@ -791,12 +925,13 @@ const handleEditCancel = () => {
           {/* COMPLETED TAB VIEW */}
           {currentTab === 'completed' && (
             <div>
-              <h3>✅ Completed ({tasks.filter(t => t.isCompleted).length})</h3>
-              {tasks.filter(t => t.isCompleted).length === 0 ? (
-                <p className="placeholder-text">No completed assignments.</p>
+              <h3>✅ Completed ({completedTasks.length})</h3>
+              {renderAssignmentFilters()}
+              {completedTasks.length === 0 ? (
+                <p className="placeholder-text">No completed assignments match your filters.</p>
               ) : (
                 <ul className="task-list" style={{ paddingLeft: 0, listStyle: 'none' }}>
-                  {tasks.filter(t => t.isCompleted).map(task => (
+                  {completedTasks.map(task => (
                     <li
                       key={task.id}
                       className={`task-card${expandedTaskId === task.id ? ' expanded' : ''}`}
