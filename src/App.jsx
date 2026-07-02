@@ -7,9 +7,26 @@ const DEFAULT_USER_SETTINGS = {
   showPriority: true,
   showRepeat: true,
   showEstimatedMinutes: true,
+  defaultCategory: "School",
+  defaultPriority: "MED",
+  defaultEstimatedMinutes: "",
+  defaultRepeat: "NONE",
+  defaultDueTime: "11:00",
+  defaultDueAmPm: "PM",
+  autoCompleteChecklist: true,
+  confirmBeforeTrash: false,
   notificationsEnabled: false,
   reminderMinutes: 60,
   schoolLevel: "high",
+  textSize: "medium",
+  interfaceDensity: "comfortable",
+  showHeaderSubtitle: true,
+  reduceMotion: false,
+  calendarWeekStartsOn: "sunday",
+  showNeighboringMonth: true,
+  showCalendarCycleLabels: true,
+  showCalendarTaskDots: true,
+  settingsSectionOrder: ["personalization", "assignments", "calendar", "reminders", "cycle", "storage"],
   cycleDayNames: ["A Day", "B Day"],
   cycleAnchorDate: "",
   courseCycleDays: {},
@@ -68,6 +85,17 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "heroEnd", label: "Header gradient end", group: "Header" },
   { key: "heroText", label: "Header text", group: "Header" },
 ];
+
+const normalizeHexColor = (colorId) => {
+  const match = colorId.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!match) return null;
+
+  const hex = match[1];
+  const expandedHex = hex.length === 3
+    ? hex.split("").map((character) => character.repeat(2)).join("")
+    : hex;
+  return `#${expandedHex.toLowerCase()}`;
+};
 
 const THEME_COLOR_DEFAULTS = {
   light: {
@@ -129,12 +157,51 @@ const COLOR_CSS_VARIABLES = {
 };
 
 const SETTINGS_SECTIONS = [
-  { id: "personalization", label: "Personalization", description: "Theme, school level, and every color." },
-  { id: "assignments", label: "Assignment Options", description: "Choose which fields appear when adding work." },
-  { id: "reminders", label: "Reminders & App", description: "Notifications and installation." },
-  { id: "cycle", label: "School Cycle", description: "Cycle labels, anchor date, and courses." },
-  { id: "storage", label: "Storage", description: "Archived assignments and Trash." },
+  { id: "personalization", icon: "🎨", label: "Personalization", description: "Theme, layout, type, and every color." },
+  { id: "assignments", icon: "📝", label: "Assignment Options", description: "Fields, defaults, and workflow behavior." },
+  { id: "calendar", icon: "📅", label: "Calendar", description: "Week layout and calendar details." },
+  { id: "reminders", icon: "🔔", label: "Reminders & App", description: "Notifications and installation." },
+  { id: "cycle", icon: "🔁", label: "School Cycle", description: "Cycle labels, anchor date, and courses." },
+  { id: "storage", icon: "🗄️", label: "Storage", description: "Archive, Trash, and preference tools." },
 ];
+
+function getOrderedSettingsSections(savedOrder) {
+  const validIds = new Set(SETTINGS_SECTIONS.map((section) => section.id));
+  const safeOrder = Array.isArray(savedOrder)
+    ? savedOrder.filter((id, index, items) => validIds.has(id) && items.indexOf(id) === index)
+    : [];
+  const missingIds = SETTINGS_SECTIONS.map((section) => section.id).filter((id) => !safeOrder.includes(id));
+  const completeOrder = [...safeOrder, ...missingIds];
+  return completeOrder.map((id) => SETTINGS_SECTIONS.find((section) => section.id === id));
+}
+
+function SettingsCard({ title, description, className = "", children }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <section className={`settings-section ${className}`.trim()}>
+      <div className="settings-collapse-header">
+        <h4>{title}</h4>
+        <button
+          type="button"
+          className="settings-collapse-button"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={isOpen}
+          aria-label={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
+          title={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
+        >
+          {isOpen ? "−" : "+"}
+        </button>
+      </div>
+      {isOpen && (
+        <div className="settings-collapsible-content">
+          {description && <p className="hint-text settings-card-description">{description}</p>}
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function getTaskCategory(task) {
   return task?.category || "School";
@@ -662,15 +729,15 @@ function App() {
   // These are "controlled inputs": each input displays a state value and uses
   // its onChange handler to put the user's latest typing back into that state.
   const [taskName, setTaskName] = useState("");
-  const [category, setCategory] = useState("School");
+  const [category, setCategory] = useState(userSettings.defaultCategory || "School");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [dueMonth, setDueMonth] = useState("");
   const [dueDay, setDueDay] = useState("");
-  const [dueHour, setDueHour] = useState("11:00");
-  const [dueAmPm, setDueAmPm] = useState("PM");
-  const [estTime, setEstTime] = useState("");
-  const [priority, setPriority] = useState("MED");
-  const [repeatFrequency, setRepeatFrequency] = useState("NONE");
+  const [dueHour, setDueHour] = useState(userSettings.defaultDueTime || "11:00");
+  const [dueAmPm, setDueAmPm] = useState(userSettings.defaultDueAmPm || "PM");
+  const [estTime, setEstTime] = useState(String(userSettings.defaultEstimatedMinutes || ""));
+  const [priority, setPriority] = useState(userSettings.defaultPriority || "MED");
+  const [repeatFrequency, setRepeatFrequency] = useState(userSettings.defaultRepeat || "NONE");
   const [newSubtaskText, setNewSubtaskText] = useState("");
   const [newSubtaskDueMonth, setNewSubtaskDueMonth] = useState("");
   const [newSubtaskDueDay, setNewSubtaskDueDay] = useState("");
@@ -724,6 +791,13 @@ function App() {
   const [addAssignmentOpen, setAddAssignmentOpen] = useState(true);
   const [courseColorsOpen, setCourseColorsOpen] = useState(true);
   const [settingsSection, setSettingsSection] = useState("personalization");
+  const [storageView, setStorageView] = useState(null);
+  const [draggedSettingsSection, setDraggedSettingsSection] = useState(null);
+  const [settingsDropTarget, setSettingsDropTarget] = useState(null);
+  const [appearanceSettingsOpen, setAppearanceSettingsOpen] = useState(false);
+  const [colorStudioOpen, setColorStudioOpen] = useState(false);
+  const [colorGroupsOpen, setColorGroupsOpen] = useState({});
+  const [colorTextDrafts, setColorTextDrafts] = useState({});
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(() =>
     window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -964,11 +1038,95 @@ function App() {
     if (!isEnabled && field === "showEstimatedMinutes") setEstTime("");
   };
 
+  const handleAssignmentDefaultChange = (field, value) => {
+    handleAddFieldSettingChange(field, value);
+    if (field === "defaultCategory") setCategory(value);
+    if (field === "defaultPriority") setPriority(value);
+    if (field === "defaultEstimatedMinutes") setEstTime(String(value));
+    if (field === "defaultRepeat") setRepeatFrequency(value);
+    if (field === "defaultDueTime") setDueHour(value);
+    if (field === "defaultDueAmPm") setDueAmPm(value);
+  };
+
+  const handleResetPreferences = () => {
+    const confirmed = window.confirm(
+      "Reset appearance, assignment, calendar, reminder, and school-cycle preferences? Your assignments and courses will not be deleted.",
+    );
+    if (!confirmed) return;
+
+    const resetSettings = {
+      ...DEFAULT_USER_SETTINGS,
+      cycleDayNames: [...DEFAULT_USER_SETTINGS.cycleDayNames],
+      courseCycleDays: {},
+      customColors: {},
+    };
+    setUserSettings(resetSettings);
+    localStorage.setItem(settingsStorageKey, JSON.stringify(resetSettings));
+    setTheme(getSystemPreference());
+    setCategory(resetSettings.defaultCategory);
+    setPriority(resetSettings.defaultPriority);
+    setEstTime(resetSettings.defaultEstimatedMinutes);
+    setRepeatFrequency(resetSettings.defaultRepeat);
+    setDueHour(resetSettings.defaultDueTime);
+    setDueAmPm(resetSettings.defaultDueAmPm);
+  };
+
+  const saveSettingsSectionOrder = (sections) => {
+    handleAddFieldSettingChange(
+      "settingsSectionOrder",
+      sections.map((section) => section.id),
+    );
+  };
+
+  const handleSettingsSectionDrop = (targetId, position) => {
+    if (!draggedSettingsSection || draggedSettingsSection === targetId) {
+      setDraggedSettingsSection(null);
+      setSettingsDropTarget(null);
+      return;
+    }
+
+    const reordered = getOrderedSettingsSections(userSettings.settingsSectionOrder)
+      .filter((section) => section.id !== draggedSettingsSection);
+    const targetIndex = reordered.findIndex((section) => section.id === targetId);
+    const insertIndex = targetIndex + (position === "after" ? 1 : 0);
+    const draggedSection = SETTINGS_SECTIONS.find((section) => section.id === draggedSettingsSection);
+    reordered.splice(insertIndex, 0, draggedSection);
+    saveSettingsSectionOrder(reordered);
+    setDraggedSettingsSection(null);
+    setSettingsDropTarget(null);
+  };
+
+  const handleSettingsSectionMove = (sectionId, direction) => {
+    const reordered = getOrderedSettingsSections(userSettings.settingsSectionOrder);
+    const currentIndex = reordered.findIndex((section) => section.id === sectionId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= reordered.length) return;
+    [reordered[currentIndex], reordered[nextIndex]] = [reordered[nextIndex], reordered[currentIndex]];
+    saveSettingsSectionOrder(reordered);
+  };
+
   const handleCustomColorChange = (key, value) => {
     handleAddFieldSettingChange("customColors", {
       ...(userSettings.customColors || {}),
       [key]: value,
     });
+  };
+
+  const clearColorTextDraft = (draftKey) => {
+    setColorTextDrafts((drafts) => {
+      if (!(draftKey in drafts)) return drafts;
+      const updatedDrafts = { ...drafts };
+      delete updatedDrafts[draftKey];
+      return updatedDrafts;
+    });
+  };
+
+  const commitColorTextDraft = (draftKey, currentValue, onValidColor) => {
+    const normalizedColor = normalizeHexColor(
+      colorTextDrafts[draftKey] ?? currentValue,
+    );
+    if (normalizedColor) onValidColor(normalizedColor);
+    clearColorTextDraft(draftKey);
   };
 
   const handleAddCycleDay = () => {
@@ -1034,11 +1192,16 @@ function App() {
       setCourseColors(rawCourseColors ? JSON.parse(rawCourseColors) : {});
 
       const rawSettings = localStorage.getItem(settingsStorageKey);
-      setUserSettings(
-        rawSettings
-          ? { ...DEFAULT_USER_SETTINGS, ...JSON.parse(rawSettings) }
-          : DEFAULT_USER_SETTINGS,
-      );
+      const loadedSettings = rawSettings
+        ? { ...DEFAULT_USER_SETTINGS, ...JSON.parse(rawSettings) }
+        : DEFAULT_USER_SETTINGS;
+      setUserSettings(loadedSettings);
+      setCategory(loadedSettings.defaultCategory);
+      setPriority(loadedSettings.defaultPriority);
+      setEstTime(String(loadedSettings.defaultEstimatedMinutes || ""));
+      setRepeatFrequency(loadedSettings.defaultRepeat);
+      setDueHour(loadedSettings.defaultDueTime);
+      setDueAmPm(loadedSettings.defaultDueAmPm);
     } catch (error) {
       console.error("Failed to load user data from localStorage:", error);
       setTasks([]);
@@ -1051,6 +1214,12 @@ function App() {
       ]);
       setCourseColors({});
       setUserSettings(DEFAULT_USER_SETTINGS);
+      setCategory(DEFAULT_USER_SETTINGS.defaultCategory);
+      setPriority(DEFAULT_USER_SETTINGS.defaultPriority);
+      setEstTime(DEFAULT_USER_SETTINGS.defaultEstimatedMinutes);
+      setRepeatFrequency(DEFAULT_USER_SETTINGS.defaultRepeat);
+      setDueHour(DEFAULT_USER_SETTINGS.defaultDueTime);
+      setDueAmPm(DEFAULT_USER_SETTINGS.defaultDueAmPm);
     }
 
     setIsCustomCourse(false);
@@ -1264,17 +1433,17 @@ function App() {
 
     // Return the form to friendly defaults after a successful submission.
     setTaskName("");
-    setCategory("School");
+    setCategory(userSettings.defaultCategory || "School");
     setSelectedCourse("");
     setCustomCourseName("");
     setIsCustomCourse(false);
     setDueMonth("");
     setDueDay("");
-    setDueHour("11:00");
-    setDueAmPm("PM");
-    setEstTime("");
-    setPriority("MED");
-    setRepeatFrequency("NONE");
+    setDueHour(userSettings.defaultDueTime || "11:00");
+    setDueAmPm(userSettings.defaultDueAmPm || "PM");
+    setEstTime(String(userSettings.defaultEstimatedMinutes || ""));
+    setPriority(userSettings.defaultPriority || "MED");
+    setRepeatFrequency(userSettings.defaultRepeat || "NONE");
     setNewSubtaskText("");
     setDraftSubtasks([]);
     setNewSubtaskDueMonth("");
@@ -1495,6 +1664,7 @@ function App() {
         );
 
         shouldCompleteTask =
+          userSettings.autoCompleteChecklist &&
           updatedSubtasks.length > 0 &&
           updatedSubtasks.every((subtask) => subtask.isDone);
 
@@ -1586,8 +1756,37 @@ function App() {
     });
   };
 
+  const handleMoveAllArchivedToTrash = () => {
+    const archivedCount = tasks.filter((task) => task.isArchived && !task.isDeleted).length;
+    if (archivedCount === 0) return;
+
+    const confirmed = window.confirm(
+      `Move all ${archivedCount} archived assignment${archivedCount === 1 ? "" : "s"} to Trash? They can still be restored.`,
+    );
+    if (!confirmed) return;
+
+    const deletedAt = new Date().toISOString();
+    setTasks((prev) => {
+      const updated = prev.map((task) =>
+        task.isArchived && !task.isDeleted
+          ? { ...task, isDeleted: true, deletedAt }
+          : task,
+      );
+      saveTasksForCurrentUser(updated);
+      return updated;
+    });
+  };
+
   // Deleting moves an assignment to recoverable Trash instead of erasing it.
   const handleDelete = (id) => {
+    if (userSettings.confirmBeforeTrash) {
+      const taskToDelete = tasks.find((task) => task.id === id);
+      const confirmed = window.confirm(
+        `Move "${taskToDelete?.title || "this assignment"}" to Trash?`,
+      );
+      if (!confirmed) return;
+    }
+
     const deletedAt = new Date().toISOString();
 
     setTasks((prev) => {
@@ -3118,21 +3317,19 @@ function App() {
   // such as currentTab === "todo" conditionally show only the selected screen.
   const schoolLevelCopy =
     SCHOOL_LEVEL_COPY[userSettings.schoolLevel] || SCHOOL_LEVEL_COPY.high;
-  const activeSettingsSection =
-    SETTINGS_SECTIONS.find((section) => section.id === settingsSection) ||
-    SETTINGS_SECTIONS[0];
-
   return (
-    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"}`}>
+    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} density-${userSettings.interfaceDensity || "comfortable"}${userSettings.reduceMotion ? " reduce-motion" : ""}`}>
       <div className="app-shell">
         {/* The header is always visible and identifies the active local profile. */}
         <header className="hero-card">
           <div>
             <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
             <h1 className="app-title">TaskCabinet</h1>
-            <p className="hero-subtitle">
-              {schoolLevelCopy.subtitle}
-            </p>
+            {userSettings.showHeaderSubtitle && (
+              <p className="hero-subtitle">
+                {schoolLevelCopy.subtitle}
+              </p>
+            )}
           </div>
 
           <div className="user-pill">
@@ -3901,6 +4098,8 @@ function App() {
                   <Calendar
                     onChange={handleCalendarDateChange}
                     value={selectedDate}
+                    calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
+                    showNeighboringMonth={userSettings.showNeighboringMonth !== false}
                     tileContent={({ date }) => {
                       const taskForDay = calendarTasks.find(
                         (task) =>
@@ -3909,10 +4108,13 @@ function App() {
                       );
                       const cycleDay = getCycleDayForDate(date, userSettings);
 
-                      return taskForDay || cycleDay ? (
+                      const showCycleDay = userSettings.showCalendarCycleLabels !== false && cycleDay;
+                      const showTaskDot = userSettings.showCalendarTaskDots !== false && taskForDay;
+
+                      return showTaskDot || showCycleDay ? (
                         <div className="calendar-tile-details">
-                          {cycleDay && <span>{cycleDay}</span>}
-                          {taskForDay && (
+                          {showCycleDay && <span>{cycleDay}</span>}
+                          {showTaskDot && (
                             <i style={{ backgroundColor: getCourseColor(taskForDay.course) }} />
                           )}
                         </div>
@@ -4060,77 +4262,208 @@ function App() {
           {/* SETTINGS: central home for appearance and future app preferences. */}
           {currentTab === "settings" && (
             <div className="card card-container" style={{ marginTop: "10px" }}>
-              <div className="settings-layout">
-                <nav className="settings-sidebar" aria-label="Settings categories">
+              <div className={`settings-layout${storageView ? " settings-storage-focus" : ""}`}>
+                {!storageView && <nav className="settings-sidebar" aria-label="Settings categories">
                   <p className="eyebrow">Settings</p>
-                  {SETTINGS_SECTIONS.map((section) => (
+                  <div className="settings-profile-chip">
+                    <span>Preferences for</span>
+                    <strong>{currentUser || "Guest profile"}</strong>
+                  </div>
+                  {getOrderedSettingsSections(userSettings.settingsSectionOrder).map((section) => (
+                    <div
+                      key={section.id}
+                      className={`settings-nav-item${draggedSettingsSection === section.id ? " dragging" : ""}${settingsDropTarget?.id === section.id ? ` drop-${settingsDropTarget.position}` : ""}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        const bounds = e.currentTarget.getBoundingClientRect();
+                        const position = e.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+                        setSettingsDropTarget({ id: section.id, position });
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleSettingsSectionDrop(section.id, settingsDropTarget?.position || "before");
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="settings-drag-handle"
+                        draggable
+                        aria-label={`Drag ${section.label} to reorder`}
+                        title="Drag to reorder. Press Alt+Up or Alt+Down to move with the keyboard."
+                        onKeyDown={(e) => {
+                          if (!e.altKey || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+                          e.preventDefault();
+                          handleSettingsSectionMove(section.id, e.key === "ArrowUp" ? -1 : 1);
+                        }}
+                        onDragStart={(e) => {
+                          setDraggedSettingsSection(section.id);
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", section.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedSettingsSection(null);
+                          setSettingsDropTarget(null);
+                        }}
+                      >
+                        ⋮⋮
+                      </button>
+                      <button
+                        type="button"
+                        className={`settings-nav-button ${settingsSection === section.id ? "active" : ""}`}
+                        aria-current={settingsSection === section.id ? "page" : undefined}
+                        onClick={() => {
+                          setStorageView(null);
+                          setSettingsSection(section.id);
+                        }}
+                      >
+                        <strong className="settings-nav-label">
+                          <span className="settings-nav-icon" aria-hidden="true">{section.icon}</span>
+                          {section.label}
+                        </strong>
+                        <span>{section.description}</span>
+                      </button>
+                    </div>
+                  ))}
+                </nav>}
+                <div className="settings-content">
+                  <div className={`settings-grid${storageView ? " settings-grid-hidden" : ""}`}>
+                <section className="settings-section" hidden={settingsSection !== "personalization"}>
+                  <div className="settings-collapse-header">
+                    <h4>Appearance</h4>
                     <button
                       type="button"
-                      key={section.id}
-                      className={`settings-nav-button ${settingsSection === section.id ? "active" : ""}`}
-                      aria-current={settingsSection === section.id ? "page" : undefined}
-                      onClick={() => setSettingsSection(section.id)}
+                      className="settings-collapse-button"
+                      onClick={() => setAppearanceSettingsOpen((isOpen) => !isOpen)}
+                      aria-expanded={appearanceSettingsOpen}
+                      aria-controls="appearance-settings-content"
+                      aria-label={`${appearanceSettingsOpen ? "Shrink" : "Enlarge"} Appearance`}
+                      title={`${appearanceSettingsOpen ? "Shrink" : "Enlarge"} Appearance`}
                     >
-                      <strong>{section.label}</strong>
-                      <span>{section.description}</span>
+                      {appearanceSettingsOpen ? "−" : "+"}
                     </button>
-                  ))}
-                </nav>
-                <div className="settings-content">
-                  <header className="settings-content-header">
-                    <p className="eyebrow">TaskCabinet Preferences</p>
-                    <h2>{activeSettingsSection.label}</h2>
-                    <p>{activeSettingsSection.description}</p>
-                  </header>
-                  <div className="settings-grid">
-                <section className="settings-section" hidden={settingsSection !== "personalization"}>
-                  <h4>Appearance</h4>
-                  <p className="hint-text">Currently using {theme} mode.</p>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={toggleTheme}
-                  >
-                    Use {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                  </button>
-                  <label className="settings-select-row">
-                    <span>School level</span>
-                    <select
-                      value={userSettings.schoolLevel || "high"}
-                      onChange={(e) => handleAddFieldSettingChange("schoolLevel", e.target.value)}
-                    >
-                      <option value="middle">Middle School</option>
-                      <option value="high">High School</option>
-                      <option value="college">College</option>
-                    </select>
-                  </label>
+                  </div>
+                  {appearanceSettingsOpen && (
+                    <div id="appearance-settings-content" className="settings-collapsible-content">
+                      <p className="hint-text">Currently using {theme} mode.</p>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={toggleTheme}
+                      >
+                        Use {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                      </button>
+                      <label className="settings-select-row">
+                        <span>School level</span>
+                        <select
+                          value={userSettings.schoolLevel || "high"}
+                          onChange={(e) => handleAddFieldSettingChange("schoolLevel", e.target.value)}
+                        >
+                          <option value="middle">Middle School</option>
+                          <option value="high">High School</option>
+                          <option value="college">College</option>
+                        </select>
+                      </label>
+                      <div className="settings-option-grid">
+                        <label className="settings-select-row settings-option-card">
+                          <span>Text size</span>
+                          <select
+                            value={userSettings.textSize || "medium"}
+                            onChange={(e) => handleAddFieldSettingChange("textSize", e.target.value)}
+                          >
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                          </select>
+                        </label>
+                        <label className="settings-select-row settings-option-card">
+                          <span>Interface spacing</span>
+                          <select
+                            value={userSettings.interfaceDensity || "comfortable"}
+                            onChange={(e) => handleAddFieldSettingChange("interfaceDensity", e.target.value)}
+                          >
+                            <option value="compact">Compact</option>
+                            <option value="comfortable">Comfortable</option>
+                            <option value="spacious">Spacious</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label className="settings-toggle settings-toggle-copy">
+                        <span><strong>Header description</strong><small>Show the school-level message below TaskCabinet.</small></span>
+                        <input
+                          type="checkbox"
+                          checked={userSettings.showHeaderSubtitle !== false}
+                          onChange={(e) => handleAddFieldSettingChange("showHeaderSubtitle", e.target.checked)}
+                        />
+                      </label>
+                      <label className="settings-toggle settings-toggle-copy">
+                        <span><strong>Reduce motion</strong><small>Turn off interface animation and smooth scrolling.</small></span>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(userSettings.reduceMotion)}
+                          onChange={(e) => handleAddFieldSettingChange("reduceMotion", e.target.checked)}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </section>
 
                 <section className="settings-section color-studio-section" hidden={settingsSection !== "personalization"}>
                   <div className="color-studio-header">
-                    <div>
-                      <h4>Full Color Studio</h4>
-                      <p className="hint-text">
-                        Personalize every major surface and action. Changes preview instantly and save to this profile.
-                      </p>
-                    </div>
+                    <h4>Full Color Studio</h4>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      onClick={() => handleAddFieldSettingChange("customColors", {})}
+                      className="settings-collapse-button"
+                      onClick={() => setColorStudioOpen((isOpen) => !isOpen)}
+                      aria-expanded={colorStudioOpen}
+                      aria-controls="color-studio-content"
+                      aria-label={`${colorStudioOpen ? "Shrink" : "Enlarge"} Full Color Studio`}
+                      title={`${colorStudioOpen ? "Shrink" : "Enlarge"} Full Color Studio`}
                     >
-                      Reset to {theme === "dark" ? "Dark" : "Light"} Defaults
+                      {colorStudioOpen ? "−" : "+"}
                     </button>
                   </div>
 
+                  {colorStudioOpen && (
+                    <div id="color-studio-content" className="settings-collapsible-content">
+                      <div className="color-studio-intro">
+                      <p className="hint-text">
+                        Personalize every major surface and action. Changes preview instantly and save to this profile.
+                      </p>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => handleAddFieldSettingChange("customColors", {})}
+                        >
+                          Reset to {theme === "dark" ? "Dark" : "Light"} Defaults
+                        </button>
+                      </div>
+
                   {[...new Set(COLOR_PERSONALIZATION_FIELDS.map((field) => field.group))].map((group) => (
                     <div className="color-studio-group" key={group}>
-                      <h5>{group}</h5>
-                      <div className="color-control-grid">
+                      <div className="settings-collapse-header settings-collapse-subheader">
+                        <h5>{group}</h5>
+                        <button
+                          type="button"
+                          className="settings-collapse-button settings-collapse-button-small"
+                          onClick={() => setColorGroupsOpen((openGroups) => ({
+                            ...openGroups,
+                            [group]: openGroups[group] !== true,
+                          }))}
+                          aria-expanded={colorGroupsOpen[group] === true}
+                          aria-label={`${colorGroupsOpen[group] === true ? "Shrink" : "Enlarge"} ${group}`}
+                          title={`${colorGroupsOpen[group] === true ? "Shrink" : "Enlarge"} ${group}`}
+                        >
+                          {colorGroupsOpen[group] === true ? "−" : "+"}
+                        </button>
+                      </div>
+                      {colorGroupsOpen[group] === true && (
+                        <div className="color-control-grid">
                         {COLOR_PERSONALIZATION_FIELDS.filter((field) => field.group === group).map((field) => {
                           const value =
                             userSettings.customColors?.[field.key] ||
                             THEME_COLOR_DEFAULTS[theme][field.key];
+                          const draftKey = `theme:${field.key}`;
                           return (
                             <label className="color-control" key={field.key}>
                               <span>{field.label}</span>
@@ -4138,44 +4471,107 @@ function App() {
                                 <input
                                   type="color"
                                   value={value}
-                                  onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                  onChange={(e) => {
+                                    handleCustomColorChange(field.key, e.target.value);
+                                    clearColorTextDraft(draftKey);
+                                  }}
                                   aria-label={`${field.label} color`}
                                 />
                                 <input
                                   type="text"
-                                  value={value.toUpperCase()}
-                                  readOnly
+                                  value={colorTextDrafts[draftKey] ?? value.toUpperCase()}
+                                  onChange={(e) => setColorTextDrafts((drafts) => ({
+                                    ...drafts,
+                                    [draftKey]: e.target.value,
+                                  }))}
+                                  onBlur={() => commitColorTextDraft(
+                                    draftKey,
+                                    value,
+                                    (color) => handleCustomColorChange(field.key, color),
+                                  )}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") e.currentTarget.blur();
+                                    if (e.key === "Escape") clearColorTextDraft(draftKey);
+                                  }}
+                                  maxLength={7}
+                                  spellCheck="false"
                                   aria-label={`${field.label} hex color`}
                                 />
                               </div>
                             </label>
                           );
                         })}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div className="color-studio-group">
-                    <h5>Course and category badges</h5>
-                    <div className="color-control-grid">
-                      {[...new Set([...courses, "Work", "Personal"])].map((label) => (
-                        <label className="color-control" key={label}>
+                    <div className="settings-collapse-header settings-collapse-subheader">
+                      <h5>Course and category badges</h5>
+                      <button
+                        type="button"
+                        className="settings-collapse-button settings-collapse-button-small"
+                        onClick={() => setColorGroupsOpen((openGroups) => ({
+                          ...openGroups,
+                          badges: openGroups.badges !== true,
+                        }))}
+                        aria-expanded={colorGroupsOpen.badges === true}
+                        aria-label={`${colorGroupsOpen.badges === true ? "Shrink" : "Enlarge"} Course and category badges`}
+                        title={`${colorGroupsOpen.badges === true ? "Shrink" : "Enlarge"} Course and category badges`}
+                      >
+                        {colorGroupsOpen.badges === true ? "−" : "+"}
+                      </button>
+                    </div>
+                    {colorGroupsOpen.badges === true && (
+                      <div className="color-control-grid">
+                      {[...new Set([...courses, "Work", "Personal"])].map((label) => {
+                        const value = getCourseColor(label);
+                        const draftKey = `badge:${label}`;
+                        return (
+                          <label className="color-control" key={label}>
                           <span>{label}</span>
                           <div className="badge-color-control">
                             <input
                               type="color"
-                              value={getCourseColor(label)}
-                              onChange={(e) => handleCourseColorChange(label, e.target.value)}
+                              value={value}
+                              onChange={(e) => {
+                                handleCourseColorChange(label, e.target.value);
+                                clearColorTextDraft(draftKey);
+                              }}
                               aria-label={`${label} badge color`}
                             />
-                            <input type="text" value={getCourseColor(label).toUpperCase()} readOnly />
+                            <input
+                              type="text"
+                              value={colorTextDrafts[draftKey] ?? value.toUpperCase()}
+                              onChange={(e) => setColorTextDrafts((drafts) => ({
+                                ...drafts,
+                                [draftKey]: e.target.value,
+                              }))}
+                              onBlur={() => commitColorTextDraft(
+                                draftKey,
+                                value,
+                                (color) => handleCourseColorChange(label, color),
+                              )}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") e.currentTarget.blur();
+                                if (e.key === "Escape") clearColorTextDraft(draftKey);
+                              }}
+                              maxLength={7}
+                              spellCheck="false"
+                              aria-label={`${label} badge hex color`}
+                            />
                           </div>
-                        </label>
-                      ))}
-                    </div>
+                          </label>
+                        );
+                      })}
+                      </div>
+                    )}
                   </div>
+                    </div>
+                  )}
                 </section>
 
-                <section className="settings-section" hidden={settingsSection !== "reminders"}>
+                <section className="settings-section" hidden>
                   <h4>Install TaskCabinet</h4>
                   <p className="hint-text">
                     Install the planner as a desktop or home-screen app with offline access.
@@ -4193,7 +4589,7 @@ function App() {
                   )}
                 </section>
 
-                <section className="settings-section" hidden={settingsSection !== "reminders"}>
+                <section className="settings-section" hidden>
                   <h4>Due Reminders</h4>
                   <p className="hint-text">
                     Browser reminders are checked while TaskCabinet is open.
@@ -4221,7 +4617,7 @@ function App() {
                   </label>
                 </section>
 
-                <section className="settings-section school-cycle-settings" hidden={settingsSection !== "cycle"}>
+                <section className="settings-section school-cycle-settings" hidden>
                   <h4>School-Day Cycle</h4>
                   <p className="hint-text">
                     The anchor date uses the first label. Weekends are skipped automatically.
@@ -4283,7 +4679,7 @@ function App() {
                   </div>
                 </section>
 
-                <section className="settings-section" hidden={settingsSection !== "assignments"}>
+                <section className="settings-section" hidden>
                   <h4>Add Assignment Fields</h4>
                   <p className="hint-text">
                     {currentUser
@@ -4332,7 +4728,135 @@ function App() {
                   </label>
                 </section>
 
-                <details className="settings-section settings-storage-section" hidden={settingsSection !== "storage"}>
+                {settingsSection === "reminders" && (
+                  <>
+                    <SettingsCard title="Install TaskCabinet" description="Install the planner as a desktop or home-screen app with offline access.">
+                      {isStandalone ? (
+                        <span className="settings-status-pill">Installed</span>
+                      ) : installPrompt ? (
+                        <button type="button" className="btn btn-primary" onClick={handleInstallApp}>Install App</button>
+                      ) : (
+                        <p className="hint-text">Use your browser’s “Install app” or “Add to Home Screen” menu.</p>
+                      )}
+                    </SettingsCard>
+                    <SettingsCard title="Due Reminders" description="Browser reminders are checked while TaskCabinet is open.">
+                      <label className="settings-toggle settings-toggle-copy">
+                        <span><strong>Notifications</strong><small>Alert me when an incomplete assignment approaches its deadline.</small></span>
+                        <input type="checkbox" checked={Boolean(userSettings.notificationsEnabled)} onChange={(e) => handleNotificationSettingChange(e.target.checked)} />
+                      </label>
+                      <label className="settings-select-row">
+                        <span>Reminder window</span>
+                        <select value={userSettings.reminderMinutes || 60} disabled={!userSettings.notificationsEnabled} onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}>
+                          <option value={15}>15 minutes before</option>
+                          <option value={30}>30 minutes before</option>
+                          <option value={60}>1 hour before</option>
+                          <option value={180}>3 hours before</option>
+                          <option value={1440}>1 day before</option>
+                        </select>
+                      </label>
+                    </SettingsCard>
+                  </>
+                )}
+
+                {settingsSection === "calendar" && (
+                  <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide">
+                    <div className="settings-option-grid">
+                      <label className="settings-select-row settings-option-card">
+                        <span>Week starts on</span>
+                        <select value={userSettings.calendarWeekStartsOn || "sunday"} onChange={(e) => handleAddFieldSettingChange("calendarWeekStartsOn", e.target.value)}>
+                          <option value="sunday">Sunday</option>
+                          <option value="monday">Monday</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label className="settings-toggle settings-toggle-copy"><span><strong>Neighboring-month dates</strong><small>Show faded dates from the previous and next month.</small></span><input type="checkbox" checked={userSettings.showNeighboringMonth !== false} onChange={(e) => handleAddFieldSettingChange("showNeighboringMonth", e.target.checked)} /></label>
+                    <label className="settings-toggle settings-toggle-copy"><span><strong>School-cycle labels</strong><small>Display A Day, B Day, and custom cycle labels on dates.</small></span><input type="checkbox" checked={userSettings.showCalendarCycleLabels !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarCycleLabels", e.target.checked)} /></label>
+                    <label className="settings-toggle settings-toggle-copy"><span><strong>Assignment indicators</strong><small>Show a course-colored dot on dates with assignments.</small></span><input type="checkbox" checked={userSettings.showCalendarTaskDots !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarTaskDots", e.target.checked)} /></label>
+                  </SettingsCard>
+                )}
+
+                {settingsSection === "cycle" && (
+                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings">
+                    <label className="settings-select-row">
+                      <span>Anchor date</span>
+                      <input
+                        type="date"
+                        value={userSettings.cycleAnchorDate || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const date = value ? new Date(`${value}T00:00:00`) : null;
+                          if (date && (date.getDay() === 0 || date.getDay() === 6)) {
+                            alert("Choose a weekday as the first school-cycle day.");
+                            return;
+                          }
+                          handleAddFieldSettingChange("cycleAnchorDate", value);
+                        }}
+                      />
+                    </label>
+                    <div className="cycle-day-list">
+                      {(userSettings.cycleDayNames || ["A Day", "B Day"]).map((dayName) => (
+                        <span className="cycle-day-chip" key={dayName}>{dayName}<button type="button" onClick={() => handleRemoveCycleDay(dayName)} aria-label={`Remove ${dayName}`}>×</button></span>
+                      ))}
+                    </div>
+                    <div className="cycle-day-add-row">
+                      <input value={newCycleDayName} onChange={(e) => setNewCycleDayName(e.target.value)} placeholder="e.g., C Day" />
+                      <button type="button" className="btn btn-secondary" onClick={handleAddCycleDay}>Add Day</button>
+                    </div>
+                    <div className="course-cycle-grid">
+                      {courses.map((course) => (
+                        <div className="course-cycle-row" key={course}>
+                          <strong>{course}</strong>
+                          <div>
+                            {(userSettings.cycleDayNames || ["A Day", "B Day"]).map((dayName) => {
+                              const assignedDays = userSettings.courseCycleDays?.[course];
+                              const isChecked = !Array.isArray(assignedDays) || assignedDays.includes(dayName);
+                              return <label key={dayName}><input type="checkbox" checked={isChecked} onChange={(e) => handleCourseCycleDayToggle(course, dayName, e.target.checked)} />{dayName}</label>;
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </SettingsCard>
+                )}
+
+                {settingsSection === "assignments" && (
+                  <>
+                    <SettingsCard title="Add Assignment Fields" description={currentUser ? `Saved for ${currentUser}.` : "Sign in to keep these preferences with a profile."}>
+                      <label className="settings-toggle"><span>Priority</span><input type="checkbox" checked={userSettings.showPriority} onChange={(e) => handleAddFieldSettingChange("showPriority", e.target.checked)} /></label>
+                      <label className="settings-toggle"><span>Repeat</span><input type="checkbox" checked={userSettings.showRepeat} onChange={(e) => handleAddFieldSettingChange("showRepeat", e.target.checked)} /></label>
+                      <label className="settings-toggle"><span>Estimated Minutes</span><input type="checkbox" checked={userSettings.showEstimatedMinutes} onChange={(e) => handleAddFieldSettingChange("showEstimatedMinutes", e.target.checked)} /></label>
+                    </SettingsCard>
+                    <SettingsCard title="New Assignment Defaults" description="These values prefill new assignments and return after each successful add." className="settings-section-wide">
+                      <div className="settings-option-grid assignment-defaults-grid">
+                        <label className="settings-select-row settings-option-card"><span>Category</span><select value={userSettings.defaultCategory || "School"} onChange={(e) => handleAssignmentDefaultChange("defaultCategory", e.target.value)}>{TASK_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                        <label className="settings-select-row settings-option-card"><span>Priority</span><select value={userSettings.defaultPriority || "MED"} onChange={(e) => handleAssignmentDefaultChange("defaultPriority", e.target.value)}><option value="LOW">Low</option><option value="MED">Medium</option><option value="HIGH">High</option></select></label>
+                        <label className="settings-select-row settings-option-card"><span>Estimated minutes</span><input type="number" min="0" value={userSettings.defaultEstimatedMinutes || ""} placeholder="None" onChange={(e) => handleAssignmentDefaultChange("defaultEstimatedMinutes", e.target.value)} /></label>
+                        <label className="settings-select-row settings-option-card"><span>Repeat</span><select value={userSettings.defaultRepeat || "NONE"} onChange={(e) => handleAssignmentDefaultChange("defaultRepeat", e.target.value)}><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="EVERY_OTHER_WEEKDAY">Every Other Weekday</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
+                        <label className="settings-select-row settings-option-card"><span>Due time</span><input type="text" value={userSettings.defaultDueTime || "11:00"} placeholder="11:00" onChange={(e) => handleAssignmentDefaultChange("defaultDueTime", e.target.value)} onBlur={() => handleAssignmentDefaultChange("defaultDueTime", normalizeDueTime(userSettings.defaultDueTime) || "11:00")} /></label>
+                        <label className="settings-select-row settings-option-card"><span>AM or PM</span><select value={userSettings.defaultDueAmPm || "PM"} onChange={(e) => handleAssignmentDefaultChange("defaultDueAmPm", e.target.value)}><option value="AM">AM</option><option value="PM">PM</option></select></label>
+                      </div>
+                    </SettingsCard>
+                    <SettingsCard title="Workflow & Safety" description="Control automatic behavior and extra safeguards.">
+                      <label className="settings-toggle settings-toggle-copy"><span><strong>Complete finished checklists</strong><small>Complete an assignment when every checklist item is checked.</small></span><input type="checkbox" checked={userSettings.autoCompleteChecklist !== false} onChange={(e) => handleAddFieldSettingChange("autoCompleteChecklist", e.target.checked)} /></label>
+                      <label className="settings-toggle settings-toggle-copy"><span><strong>Confirm before Trash</strong><small>Ask before moving an assignment into recoverable Trash.</small></span><input type="checkbox" checked={Boolean(userSettings.confirmBeforeTrash)} onChange={(e) => handleAddFieldSettingChange("confirmBeforeTrash", e.target.checked)} /></label>
+                    </SettingsCard>
+                  </>
+                )}
+
+                {settingsSection === "storage" && (
+                  <div className="storage-choice-grid settings-section-wide">
+                    <button type="button" className="storage-choice-card" onClick={() => setStorageView("archive")}>
+                      <span><strong>Archive</strong><small>Review and restore completed assignments you chose to archive.</small></span>
+                      <span className="settings-count">{archivedTasks.length}</span>
+                    </button>
+                    <button type="button" className="storage-choice-card" onClick={() => setStorageView("trash")}>
+                      <span><strong>Trash</strong><small>Recover assignments or remove them permanently.</small></span>
+                      <span className="settings-count">{trashTasks.length}</span>
+                    </button>
+                  </div>
+                )}
+
+                <details className="settings-section settings-storage-section" hidden>
                   <summary>
                     <span>Archive</span>
                     <span className="settings-count">{archivedTasks.length}</span>
@@ -4366,7 +4890,7 @@ function App() {
                   </div>
                 </details>
 
-                <details className="settings-section settings-storage-section" hidden={settingsSection !== "storage"}>
+                <details className="settings-section settings-storage-section" hidden>
                   <summary>
                     <span>Trash</span>
                     <span className="settings-count">{trashTasks.length}</span>
@@ -4417,7 +4941,72 @@ function App() {
                     )}
                   </div>
                 </details>
+
+                {settingsSection === "storage" && (
+                  <SettingsCard
+                    title="Reset Preferences"
+                    description="Return personalization, assignment, calendar, reminder, and school-cycle settings to their defaults."
+                    className="settings-danger-zone settings-section-wide"
+                  >
+                    <p className="hint-text">Assignments, courses, archived items, Trash, links, and files are not affected.</p>
+                    <button type="button" className="btn btn-danger" onClick={handleResetPreferences}>Reset All Preferences</button>
+                  </SettingsCard>
+                )}
                   </div>
+                  {storageView && (
+                    <section className="storage-management-view" aria-label={`${storageView === "archive" ? "Archive" : "Trash"} assignments`}>
+                      <div className="storage-management-header">
+                        <div>
+                          <button type="button" className="storage-back-button" onClick={() => setStorageView(null)}>← Back to Storage</button>
+                          <h2>{storageView === "archive" ? "Archive" : "Trash"}</h2>
+                          <p className="hint-text">
+                            {storageView === "archive"
+                              ? `${archivedTasks.length} archived assignment${archivedTasks.length === 1 ? "" : "s"}`
+                              : `${trashTasks.length} deleted assignment${trashTasks.length === 1 ? "" : "s"}`}
+                          </p>
+                        </div>
+                        {storageView === "archive" && archivedTasks.length > 0 && (
+                          <button type="button" className="btn btn-danger" onClick={handleMoveAllArchivedToTrash}>Move All to Trash</button>
+                        )}
+                        {storageView === "trash" && trashTasks.length > 0 && (
+                          <button type="button" className="btn btn-danger" onClick={handleEmptyTrash}>Empty Trash</button>
+                        )}
+                      </div>
+
+                      {storageView === "archive" && (
+                        archivedTasks.length === 0 ? (
+                          <div className="storage-empty-state"><strong>Archive is empty</strong><p>Completed assignments you archive will appear here.</p></div>
+                        ) : (
+                          <ul className="storage-management-list">
+                            {archivedTasks.map((task) => (
+                              <li key={task.id} className="task-card storage-management-card">
+                                <div><strong>{task.title}</strong><div className="task-details">{formatTaskDetails(task)}</div></div>
+                                <button type="button" className="btn btn-secondary" onClick={() => handleRestoreArchived(task.id)}>Restore</button>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      )}
+
+                      {storageView === "trash" && (
+                        trashTasks.length === 0 ? (
+                          <div className="storage-empty-state"><strong>Trash is empty</strong><p>Assignments moved to Trash can be recovered here.</p></div>
+                        ) : (
+                          <ul className="storage-management-list">
+                            {trashTasks.map((task) => (
+                              <li key={task.id} className="task-card storage-management-card">
+                                <div><strong>{task.title}</strong><div className="task-details">{formatTaskDetails(task)}</div></div>
+                                <div className="task-actions">
+                                  <button type="button" className="btn btn-secondary" onClick={() => handleRestoreDeleted(task.id)}>Restore</button>
+                                  <button type="button" className="btn btn-danger" onClick={() => handleDeletePermanently(task.id)}>Delete Permanently</button>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      )}
+                    </section>
+                  )}
                 </div>
               </div>
             </div>
@@ -4944,6 +5533,8 @@ function App() {
             </div>
             <Calendar
               activeStartDate={copyCalendarStart}
+              calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
+              showNeighboringMonth={userSettings.showNeighboringMonth !== false}
               onClickDay={handleCopyDateToggle}
               onActiveStartDateChange={({ activeStartDate }) => {
                 if (activeStartDate) setCopyCalendarStart(activeStartDate);

@@ -1128,19 +1128,55 @@ html[data-theme] .react-calendar__month-view__weekdays,
 html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted-text); }
 
 .color-studio-section { grid-column: 1 / -1; }
-.color-studio-header {
+.color-studio-header,
+.color-studio-intro {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 18px;
 }
-.color-studio-header h4 { margin-bottom: 4px; }
+.color-studio-header h4 { margin: 0; }
+.color-studio-intro { margin-top: 8px; }
+.color-studio-intro .hint-text { margin-top: 0; }
 .color-studio-group {
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
-.color-studio-group h5 { margin: 0 0 10px; font-size: 0.92rem; color: var(--muted-text); }
+.color-studio-group h5 { margin: 0; font-size: 0.92rem; color: var(--muted-text); }
+.settings-collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-collapse-header h4 { margin: 0; }
+.settings-collapse-subheader { margin-bottom: 10px; }
+.settings-collapse-button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: var(--surface-alt);
+  color: var(--text-color);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+.settings-collapse-button:hover,
+.settings-collapse-button:focus-visible {
+  border-color: var(--focus-color);
+}
+.settings-collapse-button-small {
+  width: 30px;
+  height: 30px;
+  font-size: 1.05rem;
+}
 .color-control-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
@@ -1175,8 +1211,8 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 }
 
 @media (max-width: 650px) {
-  .color-studio-header { flex-direction: column; }
-  .color-studio-header .btn { width: 100%; }
+  .color-studio-intro { flex-direction: column; }
+  .color-studio-intro .btn { width: 100%; }
 }
 
 /* ============================
@@ -1262,8 +1298,12 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 
 .calendar-add-action {
   margin-top: 20px;
-  padding-top: 18px;
+  padding: 18px 14px;
   border-top: 1px solid var(--border-color);
+}
+
+.calendar-add-action .hint-text {
+  margin: 3px 0 0;
 }
 
 .settings-grid {
@@ -1286,6 +1326,42 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   margin-bottom: 6px;
 }
 
+.settings-section-wide { grid-column: 1 / -1; }
+
+.settings-card-description {
+  margin: 10px 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.settings-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.assignment-defaults-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.assignment-defaults-grid .settings-option-card {
+  grid-column: span 3;
+}
+
+.assignment-defaults-grid .settings-option-card:nth-last-child(-n + 2) {
+  grid-column: span 6;
+}
+
+.settings-option-card {
+  margin: 0;
+  padding: 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-alt) 68%, transparent);
+  font-weight: 700;
+}
+
 .settings-toggle {
   display: flex;
   align-items: center;
@@ -1300,6 +1376,39 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
+}
+
+.settings-toggle-copy > span {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-toggle-copy small {
+  color: var(--muted-text);
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.settings-danger-zone { border-color: color-mix(in srgb, var(--danger-color) 55%, var(--border-color)); }
+
+.App.text-size-small { font-size: 0.92rem; }
+.App.text-size-large { font-size: 1.08rem; }
+.App.density-compact .card-container,
+.App.density-compact .task-card,
+.App.density-compact .settings-section { padding: 11px; }
+.App.density-compact .app-shell { gap: 12px; }
+.App.density-spacious .card-container,
+.App.density-spacious .task-card,
+.App.density-spacious .settings-section { padding: 22px; }
+.App.density-spacious .app-shell { gap: 24px; }
+.App.reduce-motion *,
+.App.reduce-motion *::before,
+.App.reduce-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
 
 .settings-storage-section summary {
@@ -2191,6 +2300,122 @@ a,
   align-items: start;
 }
 
+.settings-layout.settings-storage-focus {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-grid-hidden { display: none; }
+
+.storage-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.storage-choice-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 120px;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+}
+
+.storage-choice-card:hover,
+.storage-choice-card:focus-visible {
+  border-color: var(--focus-color);
+  transform: translateY(-1px);
+}
+
+.storage-choice-card > span:first-child { display: grid; gap: 5px; }
+.storage-choice-card strong { font-size: 1.05rem; }
+.storage-choice-card small { color: var(--muted-text); line-height: 1.4; }
+
+.storage-management-view {
+  width: 100%;
+  min-height: 60vh;
+  color: var(--text-color);
+}
+
+.storage-management-view h2,
+.storage-management-card,
+.storage-management-card strong,
+.storage-empty-state strong {
+  color: var(--text-color) !important;
+}
+
+.storage-management-card .task-details,
+.storage-management-view .hint-text,
+.storage-empty-state p {
+  color: var(--muted-text) !important;
+}
+
+.storage-management-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.storage-management-header h2 { margin: 10px 0 0; }
+.storage-management-header p { margin: 5px 0 0; }
+
+.storage-back-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--link-color);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.storage-management-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storage-management-card {
+  display: flex;
+  min-width: 0;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.storage-management-card .task-actions { margin-top: auto; }
+
+.storage-empty-state {
+  display: grid;
+  min-height: 45vh;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 30px;
+  border: 1px dashed var(--border-color);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-alt) 55%, transparent);
+  text-align: center;
+}
+
+.storage-empty-state p { margin: 0; color: var(--muted-text); }
+
 .settings-sidebar {
   position: sticky;
   top: 18px;
@@ -2208,6 +2433,45 @@ a,
   color: var(--muted-text);
 }
 
+.settings-profile-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-alt) 72%, transparent);
+}
+
+.settings-profile-chip span {
+  color: var(--muted-text);
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.settings-profile-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-nav-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 3px;
+  border-radius: 12px;
+}
+
+.settings-nav-item.dragging { opacity: 0.42; }
+.settings-nav-item.drop-before { box-shadow: inset 0 3px 0 var(--focus-color); }
+.settings-nav-item.drop-after { box-shadow: inset 0 -3px 0 var(--focus-color); }
+
 .settings-nav-button {
   display: grid;
   gap: 3px;
@@ -2219,12 +2483,46 @@ a,
   color: var(--text-color);
   text-align: left;
   cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, opacity 140ms ease;
 }
 
 .settings-nav-button span {
   color: var(--muted-text);
   font-size: 0.76rem;
   line-height: 1.3;
+}
+
+.settings-nav-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-drag-handle {
+  width: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-text);
+  cursor: grab;
+  font-size: 0.9rem;
+  letter-spacing: -0.22em;
+  line-height: 1;
+}
+
+.settings-drag-handle:hover,
+.settings-drag-handle:focus-visible {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
+}
+
+.settings-drag-handle:active { cursor: grabbing; }
+
+.settings-nav-label .settings-nav-icon {
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .settings-nav-button:hover {
@@ -2311,6 +2609,13 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
   .settings-sidebar .eyebrow { grid-column: 1 / -1; }
 }
 
+@media (max-width: 900px) {
+  .assignment-defaults-grid .settings-option-card,
+  .assignment-defaults-grid .settings-option-card:nth-last-child(-n + 2) {
+    grid-column: span 6;
+  }
+}
+
 @media (max-width: 600px) {
   .settings-sidebar { grid-template-columns: 1fr; }
   .settings-sidebar .eyebrow { grid-column: auto; }
@@ -2318,4 +2623,12 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
   .copy-cycle-toolbar .btn { width: 100%; }
   .link-form-row,
   .edit-link-row { grid-template-columns: 1fr; }
+  .storage-choice-grid { grid-template-columns: 1fr; }
+  .storage-management-header { align-items: stretch; flex-direction: column; }
+  .storage-management-header .btn { width: 100%; }
+  .storage-management-list { grid-template-columns: 1fr; }
+  .assignment-defaults-grid .settings-option-card,
+  .assignment-defaults-grid .settings-option-card:nth-last-child(-n + 2) {
+    grid-column: 1 / -1;
+  }
 }
