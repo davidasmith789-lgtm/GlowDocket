@@ -2362,6 +2362,52 @@ html[data-theme="dark"] .subtask-checklist-panel {
   background: rgba(99, 102, 241, 0.1);
 }
 
+.optional-assignment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-form .optional-assignment-header label {
+  margin: 0;
+}
+
+.optional-assignment-toggle {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-alt) 72%, transparent);
+  color: var(--text-color);
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.optional-assignment-toggle:hover,
+.optional-assignment-toggle:focus-visible {
+  border-color: var(--focus-color);
+}
+
+.optional-assignment-content {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.optional-assignment-content .subtask-form-hint,
+.optional-assignment-content .link-entry-feedback {
+  margin-top: 0;
+}
+
 .subtask-form-hint,
 .subtask-checklist-hint {
   margin: 6px 0 0;

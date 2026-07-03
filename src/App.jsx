@@ -838,6 +838,9 @@ function App() {
   const [draftLinkMessage, setDraftLinkMessage] = useState("");
   const [draftLinks, setDraftLinks] = useState([]);
   const [draftFiles, setDraftFiles] = useState([]);
+  const [optionalLinksOpen, setOptionalLinksOpen] = useState(false);
+  const [optionalFilesOpen, setOptionalFilesOpen] = useState(false);
+  const [optionalChecklistOpen, setOptionalChecklistOpen] = useState(false);
 
   // ---------------------------------------------------------------------------
   // TASK DATA, NAVIGATION, FILTERS, AND OPEN/CLOSED PANELS
@@ -1545,6 +1548,9 @@ function App() {
     setDraftLinks([]);
     setDraftLinkMessage("");
     setDraftFiles([]);
+    setOptionalLinksOpen(false);
+    setOptionalFilesOpen(false);
+    setOptionalChecklistOpen(false);
 
     if (currentTab === "calendar") {
       setCalendarAddOpen(false);
@@ -2562,7 +2568,10 @@ function App() {
     );
 
   const calendarTasks = tasks.filter(
-    (task) => !task.isArchived && !task.isDeleted,
+    (task) =>
+      !task.isArchived &&
+      !task.isDeleted &&
+      getTaskStatus(task) !== "completed",
   );
   const selectedDateTasks = calendarTasks.filter(
     (task) =>
@@ -3133,11 +3142,22 @@ function App() {
         </>
       )}
 
-      <div className="subtask-form-section assignment-links-form">
-        <div>
-          <label>Optional Assignment Links:</label>
-          <p className="subtask-form-hint">Name a website, document, or resource.</p>
+      <div className="subtask-form-section assignment-links-form optional-assignment-section">
+        <div className="optional-assignment-header">
+          <label>Optional Assignment Links</label>
+          <button
+            type="button"
+            className="optional-assignment-toggle"
+            onClick={() => setOptionalLinksOpen((open) => !open)}
+            aria-expanded={optionalLinksOpen}
+            aria-label={`${optionalLinksOpen ? "Minimize" : "Open"} Optional Assignment Links`}
+          >
+            {optionalLinksOpen ? "−" : "+"}
+          </button>
         </div>
+        {optionalLinksOpen && (
+          <div className="optional-assignment-content">
+        <p className="subtask-form-hint">Name a website, document, or resource.</p>
         <div className="link-form-row">
           <input
             type="text"
@@ -3184,10 +3204,25 @@ function App() {
             ))}
           </ul>
         )}
+          </div>
+        )}
       </div>
 
-      <div className="subtask-form-section attachment-form-section">
-        <label>Optional Files:</label>
+      <div className="subtask-form-section attachment-form-section optional-assignment-section">
+        <div className="optional-assignment-header">
+          <label>Optional Files</label>
+          <button
+            type="button"
+            className="optional-assignment-toggle"
+            onClick={() => setOptionalFilesOpen((open) => !open)}
+            aria-expanded={optionalFilesOpen}
+            aria-label={`${optionalFilesOpen ? "Minimize" : "Open"} Optional Files`}
+          >
+            {optionalFilesOpen ? "−" : "+"}
+          </button>
+        </div>
+        {optionalFilesOpen && (
+          <div className="optional-assignment-content">
         <input
           type="file"
           multiple
@@ -3203,16 +3238,29 @@ function App() {
             <button type="button" className="subtask-remove-button" onClick={() => setDraftFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
           </div>
         ))}
+          </div>
+        )}
       </div>
 
-      <div className="subtask-form-section">
-        <div>
-          <label>Optional Checklist Steps:</label>
+      <div className="subtask-form-section optional-assignment-section">
+        <div className="optional-assignment-header">
+          <label>Optional Checklist Steps</label>
+          <button
+            type="button"
+            className="optional-assignment-toggle"
+            onClick={() => setOptionalChecklistOpen((open) => !open)}
+            aria-expanded={optionalChecklistOpen}
+            aria-label={`${optionalChecklistOpen ? "Minimize" : "Open"} Optional Checklist Steps`}
+          >
+            {optionalChecklistOpen ? "−" : "+"}
+          </button>
+        </div>
+        {optionalChecklistOpen && (
+          <div className="optional-assignment-content">
           <p className="subtask-form-hint">
             Break the assignment into smaller pieces. Leave this blank if the
             assignment does not need steps.
           </p>
-        </div>
 
         <div className="subtask-form-row">
           <input
@@ -3288,6 +3336,8 @@ function App() {
               </li>
             ))}
           </ul>
+        )}
+          </div>
         )}
       </div>
 
