@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./App.css";
+import { Analytics } from "@vercel/analytics/react";
 
 const DEFAULT_USER_SETTINGS = {
   showPriority: true,
@@ -5849,6 +5850,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }
