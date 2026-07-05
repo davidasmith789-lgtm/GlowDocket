@@ -2895,6 +2895,81 @@ a,
 }
 .link-entry-feedback.success { color: var(--success-color); }
 .link-entry-feedback.error { color: var(--warning-color); }
+
+/* Assignment resource minimizers, calendar course dots, and AI voice creation. */
+.edit-optional-content {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.calendar-course-dots {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin: 2px auto 0;
+}
+
+.calendar-course-dots i,
+.calendar-tile-details .calendar-course-dots i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+}
+
+.voice-assignment-panel,
+.voice-inline-error {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-alt) 82%, transparent);
+  color: var(--text-color);
+}
+
+.voice-assignment-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.voice-assignment-panel p,
+.voice-assignment-panel small {
+  margin: 4px 0 0;
+  color: var(--muted-text);
+  line-height: 1.45;
+}
+
+.voice-assignment-panel small { grid-column: 1 / -1; }
+.voice-inline-error { border-color: var(--danger-color); color: var(--danger-color); }
+
+.btn-voice-undo,
+.btn-voice-undo:hover {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+@media (min-width: 1201px) {
+  .workspace-layout {
+    grid-template-columns: minmax(230px, 270px) minmax(0, 1fr) minmax(280px, 320px);
+  }
+
+  .dashboard-calendar-card .react-calendar__tile {
+    min-height: 42px;
+    padding: 6px 2px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .voice-assignment-panel { grid-template-columns: 1fr; }
+  .voice-assignment-panel .btn { width: 100%; }
+}
 .copy-cycle-toolbar small { color: var(--muted-text); font-weight: 500; }
 
 .copy-cycle-toolbar {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import "./App.css";
@@ -726,6 +726,157 @@ function getNextRepeatingTask(task) {
     })),
     copyGroupId: task.copyGroupId || task.id,
     createdFromRepeat: task.id,
+    createdByVoice: false,
+    voiceCreatedCourse: "",
+  };
+}
+
+const VOICE_MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+function splitLocalVoiceAssignments(transcript) {
+  const marker = /\b(?:(?:and\s+)?then\s+|also\s+)?(?:add|create)\s+(?:another\s+|an?\s+)?(?:assignment\s+)?/gi;
+  const matches = [...transcript.matchAll(marker)];
+  if (matches.length <= 1) return [transcript.replace(marker, "").trim()].filter(Boolean);
+  return matches.map((match, index) => {
+    const start = match.index + match[0].length;
+    const end = matches[index + 1]?.index ?? transcript.length;
+    return transcript.slice(start, end).trim().replace(/^(?:and|then)\s+/i, "");
+  }).filter(Boolean);
+}
+
+function getNextWeekdayDate(now, weekdayName) {
+  const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const targetDay = weekdays.indexOf(weekdayName.toLowerCase());
+  if (targetDay < 0) return null;
+  const result = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let daysAhead = (targetDay - result.getDay() + 7) % 7;
+  if (daysAhead === 0) daysAhead = 7;
+  result.setDate(result.getDate() + daysAhead);
+  return result;
+}
+
+function parseLocalVoiceDate(text, now) {
+  const lower = text.toLowerCase();
+  if (/\btoday\b/.test(lower)) return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (/\btomorrow\b/.test(lower)) {
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow;
+  }
+
+  const weekdayMatch = lower.match(/\b(?:next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/);
+  if (weekdayMatch) return getNextWeekdayDate(now, weekdayMatch[1]);
+
+  const monthMatch = lower.match(new RegExp(`\\b(${VOICE_MONTHS.join("|")})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`));
+  if (!monthMatch) return null;
+  const result = new Date(
+    Number(monthMatch[3]) || now.getFullYear(),
+    VOICE_MONTHS.indexOf(monthMatch[1]),
+    Number(monthMatch[2]),
+  );
+  return Number.isNaN(result.getTime()) ? null : result;
+}
+
+function parseLocalVoiceAssignments(transcript, courses, defaults) {
+  const now = new Date();
+  const skipped = [];
+  const assignments = splitLocalVoiceAssignments(transcript).slice(0, 10).flatMap((segment, index) => {
+    const lower = segment.toLowerCase();
+    const knownCourse = courses.find((course) => lower.includes(String(course).toLowerCase()));
+    const spokenCourse = segment.match(/\b(?:for|course)\s+([a-z][a-z0-9 &'’-]{1,40}?)(?=\s+(?:due|on|at|by|high|medium|low|priority|estimated|takes|repeat|notes?|checklist|steps?)\b|[,.]|$)/i)?.[1]?.trim();
+    const category = /\bwork\b/i.test(segment)
+      ? "Work"
+      : /\bpersonal\b/i.test(segment)
+        ? "Personal"
+        : defaults.category || "School";
+    const course = category === "School" ? knownCourse || spokenCourse || "Other" : category;
+    const dueDate = parseLocalVoiceDate(segment, now);
+    const timeMatch = lower.match(/\b(?:at|by)\s+(\d{1,2})(?::(\d{1,2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/);
+    const dueHour = timeMatch
+      ? `${Number(timeMatch[1])}:${String(Number(timeMatch[2] || 0)).padStart(2, "0")}`
+      : null;
+    const dueAmPm = timeMatch?.[3]
+      ? timeMatch[3].toLowerCase().startsWith("a") ? "AM" : "PM"
+      : null;
+    const estimateMatch = lower.match(/\b(?:estimated?|takes?|about)?\s*(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?)\b/);
+    const estimatedMinutes = estimateMatch
+      ? Math.round(Number(estimateMatch[1]) * (/hour|hr/.test(estimateMatch[2]) ? 60 : 1))
+      : null;
+    const priority = /\bhigh(?:\s+priority)?\b/.test(lower)
+      ? "HIGH"
+      : /\bmedium(?:\s+priority)?\b/.test(lower)
+        ? "MED"
+        : /\blow(?:\s+priority)?\b/.test(lower)
+          ? "LOW"
+          : null;
+    const repeat = /\bevery other weekday\b/.test(lower)
+      ? "EVERY_OTHER_WEEKDAY"
+      : /\b(?:every day|daily)\b/.test(lower)
+        ? "DAILY"
+        : /\b(?:every week|weekly)\b/.test(lower)
+          ? "WEEKLY"
+          : /\b(?:every month|monthly)\b/.test(lower)
+            ? "MONTHLY"
+            : null;
+    const notes = segment.match(/\bnotes?\s*(?:are|is|:)?\s+(.+?)(?=\s+(?:checklist|steps?)\b|$)/i)?.[1]?.trim() || "";
+    const checklistText = segment.match(/\b(?:checklist|steps?)\s*(?:are|include|:)?\s+(.+)$/i)?.[1] || "";
+    const subtasks = checklistText
+      ? checklistText.split(/\s*(?:,|\band then\b|\bthen\b|\band\b)\s*/i).map((text) => ({ text: text.trim() })).filter((item) => item.text)
+      : [];
+
+    const metadataPatterns = [
+      /\b(?:due|on)\s+(?:today|tomorrow|next\s+)?(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i,
+      new RegExp(`\\b(?:due\\s+)?(?:${VOICE_MONTHS.join("|")})\\s+\\d{1,2}(?:st|nd|rd|th)?`, "i"),
+      /\b(?:at|by)\s+\d{1,2}(?::\d{1,2})?\s*(?:a\.?m\.?|p\.?m\.?)?/i,
+      /\b(?:high|medium|low)(?:\s+priority)?\b/i,
+      /\b(?:estimated?|takes?|about)?\s*\d+(?:\.\d+)?\s*(?:minutes?|mins?|hours?|hrs?)\b/i,
+      /\b(?:daily|weekly|monthly|every day|every week|every month|every other weekday)\b/i,
+      /\bnotes?\b/i,
+      /\b(?:checklist|steps?)\b/i,
+    ];
+    const metadataIndexes = metadataPatterns.map((pattern) => segment.search(pattern)).filter((position) => position >= 0);
+    const titleEnd = metadataIndexes.length > 0 ? Math.min(...metadataIndexes) : segment.length;
+    let title = segment.slice(0, titleEnd).trim().replace(/[,:;-]+$/, "");
+    if (spokenCourse) {
+      const suffix = ` for ${spokenCourse}`;
+      if (title.toLowerCase().endsWith(suffix)) title = title.slice(0, -suffix.length).trim();
+    }
+    title = title.replace(/^(?:an?\s+)?assignment\s+(?:called\s+)?/i, "").trim();
+    if (!title) {
+      skipped.push({ reason: `Item ${index + 1} was skipped because no assignment title was understood.` });
+      return [];
+    }
+
+    const assumptions = [];
+    if (category === "School" && course === "Other") assumptions.push("No matching course was heard, so Other was used.");
+    if (!dueDate) assumptions.push("No due date was heard.");
+    if (!priority || !estimatedMinutes || !repeat) assumptions.push("Missing options use your assignment defaults.");
+
+    return [{
+      title,
+      category,
+      course,
+      dueYear: dueDate?.getFullYear() ?? null,
+      dueMonth: dueDate ? dueDate.getMonth() + 1 : null,
+      dueDay: dueDate?.getDate() ?? null,
+      dueHour,
+      dueAmPm,
+      estimatedMinutes,
+      priority,
+      repeat,
+      notes,
+      subtasks,
+      assumptions,
+    }];
+  });
+
+  return {
+    assignments,
+    assumptions: ["Voice details were interpreted locally in your browser without a paid AI service."],
+    skipped,
   };
 }
 
@@ -871,6 +1022,18 @@ function App() {
   const [editLinkMessage, setEditLinkMessage] = useState("");
   const [pendingEditFiles, setPendingEditFiles] = useState([]);
   const [removedEditAttachmentIds, setRemovedEditAttachmentIds] = useState([]);
+  const [editOptionalSections, setEditOptionalSections] = useState({
+    files: false,
+    links: false,
+    checklist: false,
+  });
+  const [voiceStatus, setVoiceStatus] = useState("idle");
+  const [voiceElapsed, setVoiceElapsed] = useState(0);
+  const [voiceError, setVoiceError] = useState("");
+  const voiceRecognitionRef = useRef(null);
+  const voiceTranscriptRef = useRef("");
+  const voiceTimerRef = useRef(null);
+  const voiceStopTimerRef = useRef(null);
   const [copyingTask, setCopyingTask] = useState(null);
   const [copyDates, setCopyDates] = useState([]);
   const [copyResult, setCopyResult] = useState("");
@@ -896,6 +1059,8 @@ function App() {
     window.matchMedia?.("(display-mode: standalone)").matches ||
     window.navigator.standalone === true,
   );
+  const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceRecordingSupported = Boolean(SpeechRecognitionApi);
 
   // ---------------------------------------------------------------------------
   // COLOR THEME
@@ -1028,6 +1193,12 @@ function App() {
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
+  }, []);
+
+  useEffect(() => () => {
+    window.clearInterval(voiceTimerRef.current);
+    window.clearTimeout(voiceStopTimerRef.current);
+    voiceRecognitionRef.current?.abort();
   }, []);
 
   useEffect(() => {
@@ -1554,6 +1725,8 @@ function App() {
 
     if (currentTab === "calendar") {
       setCalendarAddOpen(false);
+    } else if (currentTab === "dashboard") {
+      setAddAssignmentOpen(false);
     }
   };
 
@@ -1640,6 +1813,245 @@ function App() {
     } catch (error) {
       console.error("Failed to save tasks to localStorage:", error);
     }
+  };
+
+  const saveCoursesForCurrentUser = (updatedCourses) => {
+    try {
+      localStorage.setItem(courseStorageKey, JSON.stringify(updatedCourses));
+    } catch (error) {
+      console.error("Failed to save courses to localStorage:", error);
+    }
+  };
+
+  const handleApplyVoiceAssignments = (payload, createdAt) => {
+    const parsedAssignments = Array.isArray(payload?.assignments)
+      ? payload.assignments.slice(0, 10)
+      : [];
+    const currentYear = new Date().getFullYear();
+    const skipped = Array.isArray(payload?.skipped)
+      ? payload.skipped.filter(Boolean).map((item) => String(item.reason || item))
+      : [];
+    const newCourseNames = new Set();
+
+    const createdTasks = parsedAssignments.flatMap((assignment, index) => {
+      const title = String(assignment?.title || "").trim();
+      if (!title) {
+        skipped.push(`Assignment ${index + 1} was skipped because no title was understood.`);
+        return [];
+      }
+      const parsedCategory = TASK_CATEGORIES.includes(assignment.category)
+        ? assignment.category
+        : userSettings.defaultCategory || "School";
+      let parsedCourse = parsedCategory;
+      if (parsedCategory === "School") {
+        parsedCourse = String(assignment.course || "Other").trim() || "Other";
+        if (!courses.includes(parsedCourse)) newCourseNames.add(parsedCourse);
+      }
+
+      const dueYear = Number(assignment.dueYear);
+      const dueMonthNumber = Number(assignment.dueMonth);
+      const dueDayNumber = Number(assignment.dueDay);
+      const hasValidCurrentYearDate =
+        (!dueYear || dueYear === currentYear) &&
+        dueMonthNumber >= 1 && dueMonthNumber <= 12 &&
+        dueDayNumber >= 1 && dueDayNumber <= 31;
+      if (dueYear && dueYear !== currentYear) {
+        setVoiceError(`${title} was added without its ${dueYear} due date because TaskCabinet currently stores month and day only.`);
+      }
+
+      const normalizedTime = normalizeDueTime(assignment.dueHour) ||
+        normalizeDueTime(userSettings.defaultDueTime) || "11:00";
+      const parsedPriority = ["LOW", "MED", "HIGH"].includes(assignment.priority)
+        ? assignment.priority
+        : userSettings.defaultPriority || "MED";
+      const parsedRepeat = ["NONE", "DAILY", "EVERY_OTHER_WEEKDAY", "WEEKLY", "MONTHLY"].includes(assignment.repeat)
+        ? assignment.repeat
+        : userSettings.defaultRepeat || "NONE";
+      const parsedEstimate = Number(assignment.estimatedMinutes);
+      const subtasks = Array.isArray(assignment.subtasks)
+        ? assignment.subtasks.slice(0, 20).flatMap((subtask, subtaskIndex) => {
+            const text = String(subtask?.text || "").trim();
+            if (!text) return [];
+            return [{
+              id: `${createdAt}-${index}-voice-step-${subtaskIndex}`,
+              text,
+              isDone: false,
+              dueMonth: "",
+              dueDay: "",
+              dueHour: "",
+              dueAmPm: "PM",
+            }];
+          })
+        : [];
+
+      return [{
+        id: `${createdAt}-task-${index}`,
+        title,
+        category: parsedCategory,
+        course: parsedCourse,
+        dueMonth: hasValidCurrentYearDate ? String(dueMonthNumber).padStart(2, "0") : "",
+        dueDay: hasValidCurrentYearDate ? String(dueDayNumber).padStart(2, "0") : "",
+        dueHour: normalizedTime,
+        dueAmPm: assignment.dueAmPm === "AM" ? "AM" : assignment.dueAmPm === "PM" ? "PM" : userSettings.defaultDueAmPm || "PM",
+        estimatedMinutes: Number.isFinite(parsedEstimate) && parsedEstimate >= 0
+          ? String(Math.min(Math.round(parsedEstimate), 1440))
+          : String(userSettings.defaultEstimatedMinutes || ""),
+        priority: parsedPriority,
+        repeat: parsedRepeat,
+        isCompleted: false,
+        status: "todo",
+        notes: String(assignment.notes || "").trim(),
+        subtasks,
+        links: [],
+        attachments: [],
+        isArchived: false,
+        archivedAt: null,
+        isDeleted: false,
+        deletedAt: null,
+        createdByVoice: true,
+        voiceCreatedCourse: parsedCategory === "School" && !courses.includes(parsedCourse)
+          ? parsedCourse
+          : "",
+      }];
+    });
+
+    if (createdTasks.length === 0) {
+      throw new Error(skipped[0] || "No usable assignments were found in that recording.");
+    }
+
+    const updatedTasks = [...tasks, ...createdTasks];
+    setTasks(updatedTasks);
+    saveTasksForCurrentUser(updatedTasks);
+
+    const trulyNewCourses = [...newCourseNames].filter((course) => !courses.includes(course));
+    if (trulyNewCourses.length > 0) {
+      const updatedCourses = [...new Set([...courses, ...trulyNewCourses])].sort();
+      setCourses(updatedCourses);
+      saveCoursesForCurrentUser(updatedCourses);
+    }
+
+  };
+
+  const handleVoiceStop = () => {
+    window.clearTimeout(voiceStopTimerRef.current);
+    voiceRecognitionRef.current?.stop();
+  };
+
+  const handleVoiceStart = () => {
+    setVoiceError("");
+    const voiceBatchId = crypto.randomUUID();
+    try {
+      const recognition = new SpeechRecognitionApi();
+      let recognitionFailed = false;
+      recognition.lang = navigator.language || "en-US";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      voiceRecognitionRef.current = recognition;
+      voiceTranscriptRef.current = "";
+      setVoiceElapsed(0);
+
+      recognition.addEventListener("result", (event) => {
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+          if (event.results[index].isFinal) {
+            voiceTranscriptRef.current += `${event.results[index][0].transcript} `;
+          }
+        }
+      });
+      recognition.addEventListener("error", (event) => {
+        recognitionFailed = true;
+        window.clearInterval(voiceTimerRef.current);
+        window.clearTimeout(voiceStopTimerRef.current);
+        voiceRecognitionRef.current = null;
+        const messages = {
+          "not-allowed": "Microphone access was not allowed. You can still add assignments manually.",
+          "audio-capture": "No working microphone was found.",
+          "no-speech": "No speech was heard. Please try again and speak clearly.",
+          network: "The browser's speech service is unavailable. Please try again.",
+        };
+        setVoiceError(messages[event.error] || "The browser could not recognize that recording.");
+        setVoiceStatus("idle");
+      }, { once: true });
+      recognition.addEventListener("end", () => {
+        window.clearInterval(voiceTimerRef.current);
+        window.clearTimeout(voiceStopTimerRef.current);
+        voiceRecognitionRef.current = null;
+        if (recognitionFailed) return;
+        const transcript = voiceTranscriptRef.current.trim();
+        if (!transcript) {
+          setVoiceError("No speech was heard. Please try again and speak clearly.");
+          setVoiceStatus("idle");
+          return;
+        }
+        setVoiceStatus("processing");
+        try {
+          const payload = parseLocalVoiceAssignments(transcript, courses, {
+            category: userSettings.defaultCategory,
+            priority: userSettings.defaultPriority,
+            estimatedMinutes: userSettings.defaultEstimatedMinutes,
+            repeat: userSettings.defaultRepeat,
+            dueTime: userSettings.defaultDueTime,
+            dueAmPm: userSettings.defaultDueAmPm,
+          });
+          handleApplyVoiceAssignments(payload, voiceBatchId);
+        } catch (error) {
+          setVoiceError(error.message || "The spoken assignment could not be understood.");
+        } finally {
+          voiceTranscriptRef.current = "";
+          setVoiceStatus("idle");
+        }
+      }, { once: true });
+
+      recognition.start();
+      setVoiceStatus("recording");
+      voiceTimerRef.current = window.setInterval(() => {
+        setVoiceElapsed((seconds) => Math.min(seconds + 1, 90));
+      }, 1000);
+      voiceStopTimerRef.current = window.setTimeout(handleVoiceStop, 90000);
+    } catch {
+      setVoiceError("Microphone access was not allowed. You can still add assignments manually.");
+      setVoiceStatus("idle");
+    }
+  };
+
+  const handleUndoVoiceAdd = (id) => {
+    const taskToUndo = tasks.find((task) => task.id === id && task.createdByVoice);
+    if (!taskToUndo) return;
+    const remainingTasks = tasks.filter((task) => task.id !== id);
+    setTasks(remainingTasks);
+    saveTasksForCurrentUser(remainingTasks);
+    getSafeAttachments(taskToUndo).forEach((attachment) => {
+      const isStillReferenced = remainingTasks.some((task) =>
+        getSafeAttachments(task).some((item) => item.id === attachment.id),
+      );
+      if (!isStillReferenced) {
+        deleteAttachmentFile(attachment.id).catch((error) =>
+          console.error("Failed to remove voice assignment attachment:", error),
+        );
+      }
+    });
+
+    const shouldRemoveCreatedCourse =
+      taskToUndo.voiceCreatedCourse &&
+      !remainingTasks.some((task) => task.course === taskToUndo.voiceCreatedCourse);
+    const updatedCourses = shouldRemoveCreatedCourse
+      ? courses.filter((course) => course !== taskToUndo.voiceCreatedCourse)
+      : courses;
+    if (updatedCourses.length !== courses.length) {
+      setCourses(updatedCourses);
+      saveCoursesForCurrentUser(updatedCourses);
+      setCourseColors((previousColors) => {
+        const updatedColors = { ...previousColors };
+        delete updatedColors[taskToUndo.voiceCreatedCourse];
+        try {
+          localStorage.setItem(courseColorsStorageKey, JSON.stringify(updatedColors));
+        } catch (error) {
+          console.error("Failed to remove voice-created course color:", error);
+        }
+        return updatedColors;
+      });
+    }
+    setVoiceError("");
   };
 
   /**
@@ -1991,6 +2403,7 @@ function App() {
     setEditLinkMessage("");
     setPendingEditFiles([]);
     setRemovedEditAttachmentIds([]);
+    setEditOptionalSections({ files: false, links: false, checklist: false });
   };
 
   // One generic field handler works for every input in the edit modal.
@@ -2214,6 +2627,7 @@ function App() {
     setEditingTaskId(null);
     setEditingTask(null);
     setPendingEditFiles([]);
+    setEditOptionalSections({ files: false, links: false, checklist: false });
 
     removedEditAttachmentIds.forEach((attachmentId) => {
       const isStillReferenced = tasks.some(
@@ -2240,6 +2654,7 @@ function App() {
     setEditLinkMessage("");
     setPendingEditFiles([]);
     setRemovedEditAttachmentIds([]);
+    setEditOptionalSections({ files: false, links: false, checklist: false });
   };
 
   const handleAuthSubmit = async (e) => {
@@ -2426,6 +2841,8 @@ function App() {
         archivedAt: null,
         isDeleted: false,
         deletedAt: null,
+        createdByVoice: false,
+        voiceCreatedCourse: "",
         subtasks: getSafeSubtasks(copyingTask).map((subtask) => ({
           ...subtask,
           id: Date.now() + Math.random(),
@@ -2573,6 +2990,20 @@ function App() {
       !task.isDeleted &&
       getTaskStatus(task) !== "completed",
   );
+  const getCourseDotsForDate = (date) => {
+    const courseNames = calendarTasks
+      .filter(
+        (task) =>
+          Number(task.dueMonth) === date.getMonth() + 1 &&
+          Number(task.dueDay) === date.getDate(),
+      )
+      .map((task) => task.course || getTaskCategory(task));
+
+    return [...new Set(courseNames)].map((course) => ({
+      course,
+      color: getCourseColor(course),
+    }));
+  };
   const selectedDateTasks = calendarTasks.filter(
     (task) =>
       Number(task.dueMonth) === selectedDate.getMonth() + 1 &&
@@ -2968,6 +3399,19 @@ function App() {
     </button>
   );
 
+  const renderVoiceUndoAction = (task) => task.createdByVoice ? (
+    <button
+      type="button"
+      className="btn btn-voice-undo"
+      onClick={(event) => {
+        event.stopPropagation();
+        handleUndoVoiceAdd(task.id);
+      }}
+    >
+      ↩ Undo Voice Add
+    </button>
+  ) : null;
+
   const renderExpandedTaskDetails = (task, notesId) => (
     <>
       <div className="task-resource-grid">
@@ -2995,6 +3439,30 @@ function App() {
   // Dashboard and Calendar share one form so assignment behavior stays aligned.
   const renderAddAssignmentForm = (formId) => (
     <form onSubmit={handleAddTask} className="card-form">
+      {voiceRecordingSupported && (
+        <section className="voice-assignment-panel" aria-label="Create assignments with voice">
+          <div>
+            <strong>Voice Add</strong>
+            <p>Try: “Add biology worksheet due July 10 at 3 PM, high priority, 45 minutes.” Say “then add” before another assignment.</p>
+          </div>
+          <button
+            type="button"
+            className={`btn ${voiceStatus === "recording" ? "btn-danger" : "btn-secondary"}`}
+            onClick={voiceStatus === "recording" ? handleVoiceStop : handleVoiceStart}
+            disabled={voiceStatus === "processing"}
+          >
+            {voiceStatus === "recording"
+              ? `Stop Recording (${voiceElapsed}s)`
+              : voiceStatus === "processing"
+                ? "Interpreting Assignments…"
+                : "🎙️ Start Recording"}
+          </button>
+          <small>Speak one or more assignments. Maximum 90 seconds.</small>
+        </section>
+      )}
+
+      {voiceError && <div className="voice-inline-error" role="alert">{voiceError}</div>}
+
       <label htmlFor={`${formId}-assignment-name`}>Assignment Name:</label>
       <input
         id={`${formId}-assignment-name`}
@@ -3184,7 +3652,7 @@ function App() {
           className={`link-entry-feedback ${draftLinkMessage ? (draftLinkMessage.startsWith("Added") ? "success" : "error") : ""}`}
           role="status"
         >
-          {draftLinkMessage || "Complete both fields, then leave the field to add the link automatically."}
+          {draftLinkMessage || "Enter a link name and address, then click outside either field to add it. Confirm the link appears below before saving."}
         </p>
         {draftLinks.length > 0 && (
           <ul className="subtask-draft-list">
@@ -3466,6 +3934,17 @@ function App() {
         calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
         showNeighboringMonth={userSettings.showNeighboringMonth !== false}
         onClickDay={handleDashboardCalendarClick}
+        tileContent={({ date, view }) => {
+          if (view !== "month" || userSettings.showCalendarTaskDots === false) return null;
+          const dots = getCourseDotsForDate(date);
+          return dots.length > 0 ? (
+            <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
+              {dots.map((dot) => (
+                <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
+              ))}
+            </span>
+          ) : null;
+        }}
       />
     </section>
   );
@@ -3796,8 +4275,10 @@ function App() {
                   type="button"
                   className="btn btn-secondary assignment-toggle-button"
                   onClick={() => setAddAssignmentOpen((prev) => !prev)}
+                  aria-label={addAssignmentOpen ? "Close Add Assignment" : "Open Add Assignment"}
+                  title={addAssignmentOpen ? "Close Add Assignment" : undefined}
                 >
-                  {addAssignmentOpen ? "Minimize" : "Open"}
+                  {addAssignmentOpen ? "×" : "Open"}
                 </button>
               </div>
 
@@ -4012,6 +4493,8 @@ function App() {
                                   ✏️ Edit
                                 </button>
 
+                                {renderVoiceUndoAction(task)}
+
                                 <button
                                   className="btn btn-danger"
                                   onClick={(e) => {
@@ -4168,6 +4651,8 @@ function App() {
                                   ✏️ Edit
                                 </button>
 
+                                {renderVoiceUndoAction(task)}
+
                                 <button
                                   className="btn btn-danger"
                                   onClick={(e) => {
@@ -4305,6 +4790,8 @@ function App() {
                           Archive
                         </button>
 
+                        {renderVoiceUndoAction(task)}
+
                         <button
                           className="btn btn-danger"
                           onClick={(e) => {
@@ -4350,22 +4837,23 @@ function App() {
                     value={selectedDate}
                     calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
                     showNeighboringMonth={userSettings.showNeighboringMonth !== false}
-                    tileContent={({ date }) => {
-                      const taskForDay = calendarTasks.find(
-                        (task) =>
-                          Number(task.dueMonth) === date.getMonth() + 1 &&
-                          Number(task.dueDay) === date.getDate(),
-                      );
+                    tileContent={({ date, view }) => {
+                      if (view !== "month") return null;
+                      const dots = getCourseDotsForDate(date);
                       const cycleDay = getCycleDayForDate(date, userSettings);
 
                       const showCycleDay = userSettings.showCalendarCycleLabels !== false && cycleDay;
-                      const showTaskDot = userSettings.showCalendarTaskDots !== false && taskForDay;
+                      const showTaskDots = userSettings.showCalendarTaskDots !== false && dots.length > 0;
 
-                      return showTaskDot || showCycleDay ? (
+                      return showTaskDots || showCycleDay ? (
                         <div className="calendar-tile-details">
                           {showCycleDay && <span>{cycleDay}</span>}
-                          {showTaskDot && (
-                            <i style={{ backgroundColor: getCourseColor(taskForDay.course) }} />
+                          {showTaskDots && (
+                            <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
+                              {dots.map((dot) => (
+                                <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
+                              ))}
+                            </span>
                           )}
                         </div>
                       ) : null;
@@ -4448,6 +4936,7 @@ function App() {
                                 >
                                   ✏️ Edit Assignment
                                 </button>
+                                {renderVoiceUndoAction(task)}
                               </div>
                             </div>
 
@@ -5124,13 +5613,19 @@ function App() {
                                 {formatTaskDetails(task)}
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={() => handleRestoreArchived(task.id)}
-                            >
-                              Restore
-                            </button>
+                            <div className="task-actions">
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => handleRestoreArchived(task.id)}
+                              >
+                                Restore
+                              </button>
+                              {renderVoiceUndoAction(task)}
+                              <button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>
+                                Move to Trash
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -5229,7 +5724,11 @@ function App() {
                             {archivedTasks.map((task) => (
                               <li key={task.id} className="task-card storage-management-card">
                                 <div><strong>{task.title}</strong><div className="task-details">{formatTaskDetails(task)}</div></div>
-                                <button type="button" className="btn btn-secondary" onClick={() => handleRestoreArchived(task.id)}>Restore</button>
+                                <div className="task-actions">
+                                  <button type="button" className="btn btn-secondary" onClick={() => handleRestoreArchived(task.id)}>Restore</button>
+                                  {renderVoiceUndoAction(task)}
+                                  <button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>Move to Trash</button>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -5472,10 +5971,20 @@ function App() {
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div>
-                  <label>Files</label>
-                  <p className="subtask-form-hint">Files stay in this browser and may be up to 10 MB each.</p>
+                <div className="optional-assignment-header">
+                  <label>Files ({getSafeAttachments(editingTask).length + pendingEditFiles.length})</label>
+                  <button
+                    type="button"
+                    className="optional-assignment-toggle"
+                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, files: !sections.files }))}
+                    aria-expanded={editOptionalSections.files}
+                    aria-label={`${editOptionalSections.files ? "Minimize" : "Open"} Files`}
+                  >
+                    {editOptionalSections.files ? "−" : "+"}
+                  </button>
                 </div>
+                {editOptionalSections.files && <div className="edit-optional-content">
+                <p className="subtask-form-hint">Files stay in this browser and may be up to 10 MB each.</p>
                 <input
                   type="file"
                   multiple
@@ -5511,13 +6020,24 @@ function App() {
                     </button>
                   </div>
                 ))}
+                </div>}
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div>
-                  <label>Assignment Links</label>
-                  <p className="subtask-form-hint">Only http and https web links are accepted.</p>
+                <div className="optional-assignment-header">
+                  <label>Assignment Links ({getSafeLinks(editingTask).length})</label>
+                  <button
+                    type="button"
+                    className="optional-assignment-toggle"
+                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, links: !sections.links }))}
+                    aria-expanded={editOptionalSections.links}
+                    aria-label={`${editOptionalSections.links ? "Minimize" : "Open"} Assignment Links`}
+                  >
+                    {editOptionalSections.links ? "−" : "+"}
+                  </button>
                 </div>
+                {editOptionalSections.links && <div className="edit-optional-content">
+                <p className="subtask-form-hint">Only http and https web links are accepted.</p>
                 <div className="link-form-row">
                   <input
                     type="text"
@@ -5544,7 +6064,7 @@ function App() {
                   className={`link-entry-feedback ${editLinkMessage ? (editLinkMessage.startsWith("Added") ? "success" : "error") : ""}`}
                   role="status"
                 >
-                  {editLinkMessage || "Complete both fields, then leave the field to add the link automatically."}
+                  {editLinkMessage || "Enter a link name and address, then click outside either field to add it. Confirm the link appears below before saving changes."}
                 </p>
                 {getSafeLinks(editingTask).map((link) => (
                   <div className="edit-link-row" key={link.id}>
@@ -5584,17 +6104,28 @@ function App() {
                     </button>
                   </div>
                 ))}
+                </div>}
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div>
-                  <label>Checklist Steps</label>
+                <div className="optional-assignment-header">
+                  <label>Checklist Steps ({getSafeSubtasks(editingTask).length})</label>
+                  <button
+                    type="button"
+                    className="optional-assignment-toggle"
+                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, checklist: !sections.checklist }))}
+                    aria-expanded={editOptionalSections.checklist}
+                    aria-label={`${editOptionalSections.checklist ? "Minimize" : "Open"} Checklist Steps`}
+                  >
+                    {editOptionalSections.checklist ? "−" : "+"}
+                  </button>
+                </div>
+                {editOptionalSections.checklist && <div className="edit-optional-content">
                   <p className="subtask-form-hint">
                     Optional smaller steps that show up when the assignment card
                     is expanded. If every step is checked, the assignment
                     completes automatically.
                   </p>
-                </div>
 
                 <div className="subtask-form-row">
                   <input
@@ -5712,6 +6243,7 @@ function App() {
                     No checklist steps yet.
                   </p>
                 )}
+                </div>}
               </div>
 
               <label className="edit-checkbox edit-field-full">
