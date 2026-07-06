@@ -18,6 +18,7 @@ import { preparePastedAssignmentLines } from "./bulkImportUtils.js";
 import { extractSyllabusText, findLikelySyllabusAssignments } from "./syllabusImport.js";
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "./assignmentCountdown.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "./calendarWeekUtils.js";
+import { canUndoVoiceCreation, lockVoiceUndo } from "./voiceTaskUtils.js";
 const DEFAULT_USER_SETTINGS = {
   showPriority: true,
   showRepeat: true,
@@ -32,10 +33,12 @@ const DEFAULT_USER_SETTINGS = {
   confirmBeforeTrash: false,
   notificationsEnabled: false,
   reminderMinutes: 60,
+  dashboardReminderHours: 24,
   schoolLevel: "high",
   textSize: "medium",
   fontFamily: "sans",
   interfaceDensity: "comfortable",
+  taskActionLayout: "wrap",
   showHeaderSubtitle: true,
   reduceMotion: false,
   calendarWeekStartsOn: "sunday",
@@ -59,14 +62,47 @@ const SCHOOL_LEVEL_COPY = {
   middle: {
     eyebrow: "Homework Command Center",
     subtitle: "Keep classes, homework, and daily steps clear and manageable.",
+    taskSingular: "homework item",
+    taskPlural: "Homework",
+    todoLabel: "Homework",
+    addLabel: "Add Homework",
+    nameLabel: "Homework Name",
+    courseLabel: "Class",
+    planTitle: "Homework Game Plan",
+    guideTitle: "One Step at a Time",
+    guideCopy: "Choose one important homework item, break it into checklist steps, and finish the first small step before switching subjects.",
+    guidePrompts: ["Start with what is due soonest", "Use checklist steps for big homework", "Ask for help before a deadline"],
+    emptyCopy: "No homework matches these filters. Nice work!",
   },
   high: {
     eyebrow: "Student Productivity Hub",
     subtitle: "Organize assignments, track deadlines, manage courses, and plan your workload.",
+    taskSingular: "assignment",
+    taskPlural: "Assignments",
+    todoLabel: "To Do",
+    addLabel: "Add Assignment",
+    nameLabel: "Assignment Name",
+    courseLabel: "Course",
+    planTitle: "Recommended Plan of Attack",
+    guideTitle: "Balance the Week",
+    guideCopy: "Balance urgent assignments with longer projects so deadlines, activities, and study time do not pile up at once.",
+    guidePrompts: ["Protect time for long projects", "Start high-priority work early", "Check tomorrow before signing off"],
+    emptyCopy: "No assignments match these filters.",
   },
   college: {
     eyebrow: "College Coursework Planner",
     subtitle: "Coordinate courses, projects, readings, and independent work in one place.",
+    taskSingular: "coursework item",
+    taskPlural: "Coursework",
+    todoLabel: "Coursework",
+    addLabel: "Add Coursework",
+    nameLabel: "Coursework Title",
+    courseLabel: "Course",
+    planTitle: "Coursework Priority Plan",
+    guideTitle: "Plan Beyond the Next Deadline",
+    guideCopy: "Track readings, assessments, and long-term projects together. Use syllabus import and estimates to reserve work blocks before deadlines become urgent.",
+    guidePrompts: ["Import each course syllabus", "Schedule readings before class", "Break papers and projects into milestones"],
+    emptyCopy: "No coursework matches these filters.",
   },
 };
 
@@ -223,17 +259,34 @@ function getOrderedSettingsSections(savedOrder) {
   return completeOrder.map((id) => SETTINGS_SECTIONS.find((section) => section.id === id));
 }
 
+function toggleFromCollapseButton(event, toggle) {
+  event.stopPropagation();
+  if (event.detail > 1) return;
+  toggle();
+}
+
+function toggleFromHeaderDoubleClick(event, toggle) {
+  if (event.target.closest("button, input, select, textarea, a, summary, details")) return;
+  event.preventDefault();
+  toggle();
+}
+
+function stopControlDoubleClick(event) {
+  event.stopPropagation();
+}
+
 function SettingsCard({ title, description, className = "", children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <section className={`settings-section ${className}`.trim()}>
-      <div className="settings-collapse-header">
+      <div className="settings-collapse-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Double-click to expand or minimize">
         <h4>{title}</h4>
         <button
           type="button"
           className="settings-collapse-button"
-          onClick={() => setIsOpen((open) => !open)}
+          onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))}
+          onDoubleClick={stopControlDoubleClick}
           aria-expanded={isOpen}
           aria-label={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
           title={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
@@ -788,13 +841,16 @@ const WORKSPACE_TABS = [
 ];
 
 const PERSONALIZATION_TIPS = [
-  ["Move widgets", "Drag the dotted grip on a widget header to reorder it. Drop it on another navigation tab to move it there."],
+  ["Move widgets", "Drag the dotted grip to place a widget anywhere on the canvas. Moved widgets come to the front; drag over a navigation tab to relocate them."],
+  ["Lock a finished layout", "Open Widgets and choose Lock Layout to hide move and resize controls while keeping every widget interactive."],
+  ["Add features anywhere", "Search the Workspace Organizer and add any available widget to the current tab. Existing copies stay synchronized."],
   ["Resize anything", "Drag the bottom-right corner of a widget. Desktop and mobile sizes save independently."],
   ["Copy across tabs", "Open a widget's three-dot menu and choose a destination under Copy to. Its content stays synchronized."],
   ["Minimize sections", "Double-click or double-tap a widget header. Every copy of that widget uses the same minimized state."],
   ["Hide and restore", "Choose Hide widget, then use the Widgets button beside navigation to restore it later."],
   ["Reset layouts", "The Widgets tray can reset the current tab or every desktop and mobile layout without deleting data."],
   ["Fonts and text", "Choose an app-wide font and a text scale from 70% to 150% in Appearance."],
+  ["Task action buttons", "Choose wrapped, compact, or vertical task actions in Appearance to match your screen and working style."],
   ["Colors", "Full Color Studio controls the app and checklist palette. Individual lists can still use their own custom color."],
   ["Checklist deadlines", "Add dates to list items. Enable optional times in Checklist settings; date-only items are due at 11:59 PM."],
   ["Troubleshooting", "If a layout feels cramped after a major text-size change, resize the widget or reset that tab's layout."],
@@ -804,9 +860,10 @@ function WorkspaceWidget({
   instance,
   title,
   collapsed,
+  locked,
   onToggle,
   onResize,
-  onReorder,
+  onPosition,
   onMove,
   onCopy,
   onHide,
@@ -831,22 +888,37 @@ function WorkspaceWidget({
     window.addEventListener("pointerup", stop);
   };
 
-  const dragStart = (event) => {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/taskcabinet-widget", instance.id);
-  };
-
-  const touchDragStart = (event) => {
-    if (event.pointerType === "mouse") return;
+  const positionStart = (event) => {
+    if (locked) return;
     event.preventDefault();
+    event.stopPropagation();
+    const widget = event.currentTarget.closest(".workspace-widget");
+    const canvas = widget?.closest(".workspace-widget-canvas");
+    if (!widget || !canvas) return;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const widgetBounds = widget.getBoundingClientRect();
+    const canvasBounds = canvas.getBoundingClientRect();
+    const initialX = widgetBounds.left - canvasBounds.left;
+    const initialY = widgetBounds.top - canvasBounds.top;
+    let nextX = initialX;
+    let nextY = initialY;
+    let targetTab = null;
+    widget.classList.add("is-dragging");
     const move = (moveEvent) => {
-      const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".workspace-widget");
-      const targetId = target?.dataset.widgetId;
-      if (targetId && targetId !== instance.id) onReorder(instance.id, targetId);
+      const maxX = Math.max(0, canvas.clientWidth - widget.offsetWidth);
+      nextX = Math.max(0, Math.min(maxX, initialX + moveEvent.clientX - startX));
+      nextY = Math.max(0, initialY + moveEvent.clientY - startY);
+      widget.style.left = `${nextX}px`;
+      widget.style.top = `${nextY}px`;
+      targetTab = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.("[data-tab]")?.dataset.tab || null;
     };
     const stop = () => {
+      widget.classList.remove("is-dragging");
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
+      if (targetTab) onMove(targetTab);
+      else onPosition(nextX, nextY, canvas.clientWidth);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
@@ -854,25 +926,19 @@ function WorkspaceWidget({
 
   return (
     <section
-      className={`workspace-widget${collapsed ? " is-collapsed" : ""}`}
+      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}`}
       data-widget-id={instance.id}
-      style={{ width: `${instance.width}px`, height: collapsed ? "58px" : `${instance.height}px` }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        const sourceId = event.dataTransfer.getData("text/taskcabinet-widget");
-        if (sourceId && sourceId !== instance.id) onReorder(sourceId, instance.id);
-      }}
+      style={{ left: `max(0px, min(${Number.isFinite(instance.xRatio) ? instance.xRatio * 100 : 0}%, calc(100% - ${instance.width}px)))`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? "58px" : `${instance.height}px` }}
     >
-      <header className="workspace-widget-header" onDoubleClick={onToggle}>
+      <header className="workspace-widget-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, onToggle)} title="Double-click to expand or minimize">
         <button
           type="button"
           className="widget-drag-grip"
-          draggable
-          onDragStart={dragStart}
-          onPointerDown={touchDragStart}
+          onPointerDown={positionStart}
+          onDoubleClick={stopControlDoubleClick}
+          disabled={locked}
           aria-label={`Move ${title}`}
-          title="Drag to move"
+          title={locked ? "Unlock the layout to move widgets" : "Drag to move"}
         >
           ⠿
         </button>
@@ -890,13 +956,13 @@ function WorkspaceWidget({
         </details>
       </header>
       {!collapsed && <div className="workspace-widget-body">{children}</div>}
-      {!collapsed && <button type="button" className="widget-resize-handle" onPointerDown={resizeStart} aria-label={`Resize ${title}`} />}
+      {!collapsed && !locked && <button type="button" className="widget-resize-handle" onPointerDown={resizeStart} aria-label={`Resize ${title}`} />}
     </section>
   );
 }
 
-function WorkspaceCanvas({ children }) {
-  return <div className="workspace-widget-canvas">{children}</div>;
+function WorkspaceCanvas({ children, height }) {
+  return <div className="workspace-widget-canvas" style={{ height: `${height}px` }}>{children}</div>;
 }
 
 const VOICE_MONTHS = [
@@ -1202,6 +1268,7 @@ function App() {
     links: false,
     checklist: false,
   });
+  const schoolLevelCopy = SCHOOL_LEVEL_COPY[userSettings.schoolLevel] || SCHOOL_LEVEL_COPY.high;
   const [checklists, setChecklists] = useState(() => {
     try {
       const stored = localStorage.getItem(checklistStorageKey);
@@ -1257,6 +1324,7 @@ function App() {
   const [selectedChecklistId, setSelectedChecklistId] = useState(null);
   const [checklistNow, setChecklistNow] = useState(() => new Date());
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
+  const [widgetSearch, setWidgetSearch] = useState("");
   const [helpSearch, setHelpSearch] = useState("");
   const [workspaceMode, setWorkspaceMode] = useState(() => window.innerWidth < 768 ? "mobile" : "desktop");
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -2178,6 +2246,7 @@ function App() {
         isDeleted: false,
         deletedAt: null,
         createdByVoice: source === "voice",
+        voiceUndoLocked: false,
         voiceCreatedCourse: source === "voice" && parsedCategory === "School" && !courses.includes(parsedCourse)
           ? parsedCourse
           : "",
@@ -2366,7 +2435,7 @@ function App() {
   };
 
   const handleUndoVoiceAdd = (id) => {
-    const taskToUndo = tasks.find((task) => task.id === id && task.createdByVoice);
+    const taskToUndo = tasks.find((task) => task.id === id && canUndoVoiceCreation(task));
     if (!taskToUndo) return;
     const remainingTasks = tasks.filter((task) => task.id !== id);
     setTasks(remainingTasks);
@@ -2480,7 +2549,7 @@ function App() {
     setTasks((prev) => {
       const updated = prev.map((task) =>
         task.id === id
-          ? { ...task, isCompleted: false, status: "inProgress" }
+          ? { ...lockVoiceUndo(task), isCompleted: false, status: "inProgress" }
           : task,
       );
 
@@ -2494,7 +2563,7 @@ function App() {
     setTasks((prev) => {
       const updated = prev.map((task) =>
         task.id === id
-          ? { ...task, isCompleted: false, status: "todo" }
+          ? { ...lockVoiceUndo(task), isCompleted: false, status: "todo" }
           : task,
       );
 
@@ -3325,17 +3394,6 @@ function App() {
     saveWorkspace(next);
   };
 
-  const reorderWorkspaceWidgets = (sourceId, targetId) => {
-    const next = structuredClone(workspaceLayout);
-    const items = next[workspaceMode][currentTab] || [];
-    const sourceIndex = items.findIndex((item) => item.id === sourceId);
-    const targetIndex = items.findIndex((item) => item.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return;
-    const [moved] = items.splice(sourceIndex, 1);
-    items.splice(targetIndex, 0, moved);
-    saveWorkspace(next);
-  };
-
   const moveWorkspaceWidget = (instance, targetTab, copy = false) => {
     if (targetTab === "calendar") return;
     saveWorkspace(placeWidget(workspaceLayout, workspaceMode, targetTab, instance, { copy }));
@@ -3361,6 +3419,27 @@ function App() {
 
   const toggleWorkspaceWidget = (type) => {
     saveWorkspace({ ...workspaceLayout, collapsed: { ...workspaceLayout.collapsed, [type]: !workspaceLayout.collapsed[type] } });
+  };
+
+  const toggleWorkspaceLock = () => {
+    saveWorkspace({
+      ...workspaceLayout,
+      locked: {
+        ...(workspaceLayout.locked || {}),
+        [workspaceMode]: !workspaceLayout.locked?.[workspaceMode],
+      },
+    });
+  };
+
+  const addWidgetToCurrentTab = (type) => {
+    if (currentTab === "calendar") return;
+    const currentInstance = workspaceLayout[workspaceMode]?.[currentTab]?.find((item) => item.type === type);
+    if (currentInstance) {
+      if (currentInstance.hidden) restoreWorkspaceWidget(currentInstance);
+      return;
+    }
+    const source = Object.values(workspaceLayout[workspaceMode] || {}).flat().find((item) => item.type === type);
+    if (source) moveWorkspaceWidget(source, currentTab, true);
   };
 
   const resetWorkspaceTab = () => {
@@ -3697,7 +3776,7 @@ function App() {
             </select>
           </div>
           <div>
-            <label>Course:</label>
+            <label>{schoolLevelCopy.courseLabel}:</label>
             <select
               value={filterCourse}
               onChange={(e) => setFilterCourse(e.target.value)}
@@ -3921,8 +4000,9 @@ function App() {
       Copy to dates
     </button>
   );
+  const visibleWeekDates = getWeekDates(selectedDate, userSettings.calendarWeekStartsOn);
 
-  const renderVoiceUndoAction = (task) => task.createdByVoice ? (
+  const renderVoiceUndoAction = (task) => canUndoVoiceCreation(task) ? (
     <button
       type="button"
       className="btn btn-voice-undo"
@@ -4026,7 +4106,7 @@ function App() {
 
       {voiceError && <div className="voice-inline-error" role="alert">{voiceError}</div>}
 
-      <label htmlFor={`${formId}-assignment-name`}>Assignment Name:</label>
+      <label htmlFor={`${formId}-assignment-name`}>{schoolLevelCopy.nameLabel}:</label>
       <input
         id={`${formId}-assignment-name`}
         type="text"
@@ -4050,7 +4130,7 @@ function App() {
           marginTop: "8px",
         }}
       >
-        <label>Course:</label>
+        <label>{schoolLevelCopy.courseLabel}:</label>
         <button
           type="button"
           onClick={() => setIsCustomCourse(!isCustomCourse)}
@@ -4384,7 +4464,7 @@ function App() {
           opacity: isFormInvalid ? 0.6 : 1,
         }}
       >
-        Add Assignment
+        {schoolLevelCopy.addLabel}
       </button>
     </form>
   );
@@ -4628,6 +4708,18 @@ function App() {
     dueToday: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today")).length,
     noDate: overviewCourseTasks.filter((task) => getTaskDueBucket(task) === "No Due Date").length,
   };
+  const dashboardReminderHours = [24, 48, 72, 168, 336, 720].includes(Number(userSettings.dashboardReminderHours))
+    ? Number(userSettings.dashboardReminderHours)
+    : 24;
+  const reminderWindowEnd = checklistNow.getTime() + dashboardReminderHours * 60 * 60 * 1000;
+  const dashboardReminderTasks = activeDashboardTasks
+    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm) }))
+    .filter(({ deadline }) => deadline && deadline.getTime() >= checklistNow.getTime() && deadline.getTime() <= reminderWindowEnd)
+    .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
+  const dashboardOverdueTasks = activeDashboardTasks
+    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm) }))
+    .filter(({ deadline }) => deadline && deadline.getTime() < checklistNow.getTime())
+    .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
 
   const widgetTitles = {
     "quick-match": "What Should I Do?",
@@ -4635,15 +4727,17 @@ function App() {
     "stat-today": "Due Today",
     "stat-overdue": "Overdue",
     "stat-workload": "Workload",
-    recommended: "Recommended Plan of Attack",
+    recommended: schoolLevelCopy.planTitle,
     "mini-calendar": "Mini Calendar",
     checklists: "Checklists",
-    "add-assignment": "Add Assignment",
+    "add-assignment": schoolLevelCopy.addLabel,
     "course-colors": "Course Colors",
-    "course-overview": "Course Overview",
-    "todo-master": "To Do",
+    "course-overview": `${schoolLevelCopy.courseLabel} Overview`,
+    "school-guide": schoolLevelCopy.guideTitle,
+    reminders: "Reminders",
+    "todo-master": schoolLevelCopy.todoLabel,
     "in-progress-master": "In Progress",
-    "completed-master": "Completed",
+    "completed-master": `Completed ${schoolLevelCopy.taskPlural}`,
     "settings-master": "Settings",
   };
   const bucketKeys = ["overdue", "today", "tomorrow", "this-week", "next-week", "later", "no-date"];
@@ -4652,6 +4746,13 @@ function App() {
     if (bucketIndex >= 0) return `${type.startsWith("in-progress") ? "In Progress" : "To Do"}: ${bucketsOrder[bucketIndex]}`;
     return widgetTitles[type] || type;
   };
+  const workspaceWidgetCatalog = [...new Map(
+    Object.values(workspaceLayout[workspaceMode] || {}).flat().map((item) => [item.type, item]),
+  ).values()].sort((a, b) => getWorkspaceWidgetTitle(a.type).localeCompare(getWorkspaceWidgetTitle(b.type)));
+  const visibleWidgetCatalog = workspaceWidgetCatalog.filter((item) =>
+    getWorkspaceWidgetTitle(item.type).toLowerCase().includes(widgetSearch.trim().toLowerCase()),
+  );
+  const hiddenWorkspaceWidgets = Object.values(workspaceLayout[workspaceMode] || {}).flat().filter((item) => item.hidden);
 
   const renderRecommendedWidget = () => recommendedTasks.length === 0 ? <p className="recommended-plan-empty">You have no incomplete assignments. Nice work!</p> : (
     <ol className="recommended-plan-list portable-recommendations">
@@ -4670,11 +4771,11 @@ function App() {
     const courseColor = getCourseColor(overviewCourse);
     return (
       <section className="course-overview-widget">
-        <label><span>Choose a course</span><select value={overviewCourse} onChange={(event) => setCourseOverviewSelection(event.target.value)}>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
+        <label><span>Choose a {schoolLevelCopy.courseLabel.toLowerCase()}</span><select value={overviewCourse} onChange={(event) => setCourseOverviewSelection(event.target.value)}>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
         <button type="button" className="course-overview-primary" style={{ "--course-overview-color": courseColor, "--course-overview-text": getTextColorForCourse(overviewCourse) }} onClick={() => handleCourseOverviewOpen(overviewCourse)}>
-          <span>Upcoming To Do</span>
+          <span>Upcoming {schoolLevelCopy.taskPlural}</span>
           <strong>{courseOverviewSummary.todo}</strong>
-          <small>Open {overviewCourse} in To Do →</small>
+          <small>Open {overviewCourse} in {schoolLevelCopy.todoLabel} →</small>
         </button>
         <div className="course-overview-breakdown">
           <div><strong>{courseOverviewSummary.inProgress}</strong><span>In progress</span></div>
@@ -4682,6 +4783,41 @@ function App() {
           <div className={courseOverviewSummary.overdue > 0 ? "has-danger" : ""}><strong>{courseOverviewSummary.overdue}</strong><span>Overdue</span></div>
           <div><strong>{courseOverviewSummary.noDate}</strong><span>No date</span></div>
         </div>
+      </section>
+    );
+  };
+
+  const renderSchoolGuideWidget = () => (
+    <section className={`school-guide-widget school-guide-${userSettings.schoolLevel || "high"}`}>
+      <span className="school-guide-level">{userSettings.schoolLevel === "middle" ? "Middle School" : userSettings.schoolLevel === "college" ? "College" : "High School"} mode</span>
+      <h3>{schoolLevelCopy.guideTitle}</h3>
+      <p>{schoolLevelCopy.guideCopy}</p>
+      <ul>{schoolLevelCopy.guidePrompts.map((prompt) => <li key={prompt}>{prompt}</li>)}</ul>
+      <button type="button" className="btn btn-secondary" onClick={() => setCurrentTab("settings")}>Change school level</button>
+    </section>
+  );
+
+  const renderRemindersWidget = () => {
+    const reminderItems = [
+      ...dashboardOverdueTasks.slice(0, 3).map((item) => ({ ...item, overdue: true })),
+      ...dashboardReminderTasks,
+    ].slice(0, 10);
+    const rangeLabel = dashboardReminderHours < 72
+      ? `${dashboardReminderHours} hours`
+      : `${dashboardReminderHours / 24} days`;
+    return (
+      <section className="dashboard-reminders-widget">
+        <div className="reminder-widget-summary">
+          <div className={dueTodayCount > 0 ? "has-warning" : ""}><strong>{dueTodayCount}</strong><span>Due today</span></div>
+          <div className={dashboardOverdueTasks.length > 0 ? "has-danger" : ""}><strong>{dashboardOverdueTasks.length}</strong><span>Overdue</span></div>
+          <div><strong>{dashboardReminderTasks.length}</strong><span>Next {rangeLabel}</span></div>
+        </div>
+        <label className="reminder-horizon-control"><span>Upcoming window</span><select value={dashboardReminderHours} onChange={(event) => handleAddFieldSettingChange("dashboardReminderHours", Number(event.target.value))}><option value={24}>Next 24 hours</option><option value={48}>Next 48 hours</option><option value={72}>Next 3 days</option><option value={168}>Next 7 days</option><option value={336}>Next 14 days</option><option value={720}>Next 30 days</option></select></label>
+        {reminderItems.length === 0 ? <p className="reminder-widget-empty">Nothing is due inside this window.</p> : (
+          <ul className="reminder-widget-list">
+            {reminderItems.map(({ task, deadline, overdue }) => <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`}><button type="button" onClick={() => handleRecommendedTaskClick(task.id)}><span><strong>{task.title}</strong><small>{task.course}</small></span><span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {deadline.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></span></button></li>)}
+          </ul>
+        )}
       </section>
     );
   };
@@ -4709,9 +4845,9 @@ function App() {
     return (
       <div className="task-master-widget">
         {!onlyBucket && renderFilterToggle()}
-        <div className="task-master-heading"><h3>{status === "todo" ? `To Do (${source.length})` : status === "inProgress" ? `In Progress (${source.length})` : `Completed (${source.length})`}</h3>{status === "completed" && <button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button>}</div>
+        <div className="task-master-heading"><h3>{status === "todo" ? `${schoolLevelCopy.todoLabel} (${source.length})` : status === "inProgress" ? `In Progress (${source.length})` : `Completed ${schoolLevelCopy.taskPlural} (${source.length})`}</h3>{status === "completed" && <button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button>}</div>
         {!onlyBucket && renderFilterControls()}
-        {source.length === 0 ? <p className="placeholder-text">No assignments match your filters.</p> : (status === "completed" || onlyBucket) ? <ul className="task-list">{source.map(renderCard)}</ul> : <div>{bucketsOrder.map((bucket) => grouped[bucket]?.length ? <section className="bucket-section" key={bucket}><h4 className="bucket-title">{bucket}</h4><ul className="task-list">{grouped[bucket].map(renderCard)}</ul></section> : null)}</div>}
+        {source.length === 0 ? <p className="placeholder-text">{schoolLevelCopy.emptyCopy}</p> : (status === "completed" || onlyBucket) ? <ul className="task-list">{source.map(renderCard)}</ul> : <div>{bucketsOrder.map((bucket) => grouped[bucket]?.length ? <section className="bucket-section" key={bucket}><h4 className="bucket-title">{bucket}</h4><ul className="task-list">{grouped[bucket].map(renderCard)}</ul></section> : null)}</div>}
       </div>
     );
   };
@@ -4724,6 +4860,8 @@ function App() {
     if (type === "add-assignment") return renderAddAssignmentForm("workspace");
     if (type === "course-colors") return renderCourseColorsWidget();
     if (type === "course-overview") return renderCourseOverviewWidget();
+    if (type === "school-guide") return renderSchoolGuideWidget();
+    if (type === "reminders") return renderRemindersWidget();
     if (type === "todo-master") return renderTaskMasterWidget("todo");
     if (type === "in-progress-master") return renderTaskMasterWidget("inProgress");
     if (type === "completed-master") return renderTaskMasterWidget("completed");
@@ -4744,6 +4882,7 @@ function App() {
       key={instance.id}
       instance={instance}
       title={getWorkspaceWidgetTitle(instance.type)}
+      locked={Boolean(workspaceLayout.locked?.[workspaceMode])}
       collapsed={Boolean(workspaceLayout.collapsed[instance.type]) || (() => {
         const bucketIndex = bucketKeys.findIndex((key) => instance.type.endsWith(`-bucket-${key}`));
         if (bucketIndex < 0) return false;
@@ -4752,7 +4891,10 @@ function App() {
       })()}
       onToggle={() => toggleWorkspaceWidget(instance.type)}
       onResize={(width, height) => updateWidgetInstance(instance.id, { width, height })}
-      onReorder={reorderWorkspaceWidgets}
+      onPosition={(x, y, canvasWidth) => {
+        const highestLayer = Math.max(1, ...Object.values(workspaceLayout[workspaceMode] || {}).flat().map((item) => Number(item.zIndex) || 1));
+        updateWidgetInstance(instance.id, { x, xRatio: canvasWidth > 0 ? x / canvasWidth : 0, y, zIndex: highestLayer + 1 });
+      }}
       onMove={(tab) => moveWorkspaceWidget(instance, tab, false)}
       onCopy={(tab) => moveWorkspaceWidget(instance, tab, true)}
       onHide={() => hideWorkspaceWidget(instance)}
@@ -4761,15 +4903,17 @@ function App() {
     </WorkspaceWidget>
   );
 
-  const renderWorkspaceForTab = (tab) => (
-    <WorkspaceCanvas>
-      {(workspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden).map(renderWorkspaceInstance)}
+  const getWorkspaceCanvasHeight = (items) => Math.max(420, ...items.map((item) => (Number(item.y) || 0) + (workspaceLayout.collapsed[item.type] ? 58 : Number(item.height) || 320) + 30));
+  const renderWorkspaceForTab = (tab) => {
+    const items = (workspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden);
+    return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)}>
+      {items.map(renderWorkspaceInstance)}
     </WorkspaceCanvas>
-  );
+  };
   const homeMasterByTab = { settings: "settings-master" };
   const renderWorkspaceExtrasForTab = (tab) => {
     const extras = (workspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && item.type !== homeMasterByTab[tab]);
-    return extras.length > 0 ? <WorkspaceCanvas>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
+    return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
   };
 
   if (!currentUser) {
@@ -4850,10 +4994,8 @@ function App() {
   // ---------------------------------------------------------------------------
   // JSX resembles HTML but can insert JavaScript inside braces. Expressions
   // such as currentTab === "todo" conditionally show only the selected screen.
-  const schoolLevelCopy =
-    SCHOOL_LEVEL_COPY[userSettings.schoolLevel] || SCHOOL_LEVEL_COPY.high;
   return (
-    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"}${userSettings.reduceMotion ? " reduce-motion" : ""}`}>
+    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.reduceMotion ? " reduce-motion" : ""}`}>
       <div className="app-shell">
         {/* The header is always visible and identifies the active local profile. */}
         <header className="hero-card">
@@ -4901,7 +5043,7 @@ function App() {
             className={`tab-button ${currentTab === "todo" ? "active" : ""}`}
             onClick={() => setCurrentTab("todo")}
           >
-            To Do
+            {schoolLevelCopy.todoLabel}
           </button>
 
           <button
@@ -4943,16 +5085,40 @@ function App() {
             ⚙️ Settings
           </button>
 
-          <button type="button" className="tab-button widgets-tray-button" onClick={() => setWidgetsTrayOpen((open) => !open)} aria-expanded={widgetsTrayOpen}>
+          <button type="button" className={`tab-button widgets-tray-button${widgetsTrayOpen ? " active" : ""}`} onClick={() => setWidgetsTrayOpen((open) => !open)} aria-expanded={widgetsTrayOpen}>
             ▦ Widgets
           </button>
 
           {currentUser && (
-            <button className="btn btn-danger" onClick={handleSignOut}>
-              Sign Out
-            </button>
+            <div className="account-action-group">
+              <span>{currentUser}</span>
+              <button className="btn btn-danger sign-out-button" onClick={handleSignOut}>Sign Out</button>
+            </div>
           )}
         </div>
+
+        {widgetsTrayOpen && (
+          <section className="widgets-tray workspace-organizer" aria-label="Workspace organizer">
+            <div className="workspace-organizer-header">
+              <div><p className="eyebrow">{workspaceMode} layout</p><h2>Workspace Organizer</h2><span>Place features on this tab, recover hidden widgets, or lock the layout when everything feels right.</span></div>
+              <button type="button" className={`btn ${workspaceLayout.locked?.[workspaceMode] ? "btn-primary" : "btn-secondary"}`} onClick={toggleWorkspaceLock}>{workspaceLayout.locked?.[workspaceMode] ? "Unlock Layout" : "Lock Layout"}</button>
+            </div>
+            <label className="widget-library-search"><span>Find a widget</span><input type="search" value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search assignments, calendar, courses…" /></label>
+            <div className="widget-library-grid">
+              {visibleWidgetCatalog.map((catalogItem) => {
+                const currentInstance = workspaceLayout[workspaceMode]?.[currentTab]?.find((item) => item.type === catalogItem.type);
+                return (
+                  <article key={catalogItem.type}>
+                    <div><strong>{getWorkspaceWidgetTitle(catalogItem.type)}</strong><small>{currentInstance?.hidden ? "Hidden on this tab" : currentInstance ? "Available on this tab" : "Available to add"}</small></div>
+                    {currentTab === "calendar" ? <span className="widget-library-status">Calendar is fixed</span> : currentInstance?.hidden ? <button type="button" className="btn btn-secondary" onClick={() => restoreWorkspaceWidget(currentInstance)}>Restore</button> : currentInstance ? canHideWidget(workspaceLayout, workspaceMode, currentInstance.type) ? <button type="button" className="btn btn-secondary" onClick={() => hideWorkspaceWidget(currentInstance)}>Hide</button> : <span className="widget-library-status">Core widget</span> : <button type="button" className="btn btn-primary" onClick={() => addWidgetToCurrentTab(catalogItem.type)}>Add to tab</button>}
+                  </article>
+                );
+              })}
+            </div>
+            {hiddenWorkspaceWidgets.length > 0 && <div className="hidden-widget-summary"><strong>{hiddenWorkspaceWidgets.length} hidden placement{hiddenWorkspaceWidgets.length === 1 ? "" : "s"}</strong><span>Hidden widgets remain in the library above and never delete their data.</span></div>}
+            <div className="widgets-tray-actions"><button type="button" className="btn btn-secondary" disabled={currentTab === "calendar"} onClick={resetWorkspaceTab}>Reset this tab</button><button type="button" className="btn btn-danger" onClick={resetAllWorkspace}>Reset all layouts</button></div>
+          </section>
+        )}
 
         <div className={`workspace-layout${currentTab === "calendar" ? " workspace-calendar-only" : " workspace-customizable"}`}>
           <main className="workspace-main">
@@ -5213,7 +5379,7 @@ function App() {
             <div>
               {renderFilterToggle()}
 
-              <h3>📝 To Do ({todoTasks.length})</h3>
+              <h3>📝 {schoolLevelCopy.todoLabel} ({todoTasks.length})</h3>
 
               {renderFilterControls()}
 
@@ -5658,10 +5824,43 @@ function App() {
               className="panel-card resizable-panel calendar-panel"
               style={{ marginTop: "10px" }}
             >
-              <div className="panel-header">
+              <div className="panel-header calendar-view-header">
                 <h3>📅 Assignment Calendar</h3>
+                <div className="calendar-view-toggle" aria-label="Calendar view">
+                  <button type="button" className={userSettings.calendarViewMode !== "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "month")}>Month</button>
+                  <button type="button" className={userSettings.calendarViewMode === "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "week")}>Week</button>
+                </div>
               </div>
 
+              {userSettings.calendarViewMode === "week" ? (
+                <section className="weekly-calendar" aria-label="Weekly assignment calendar">
+                  <div className="weekly-calendar-navigation">
+                    <button type="button" className="btn btn-secondary" onClick={() => handleCalendarDateChange(shiftCalendarWeek(selectedDate, -1))}>← Previous week</button>
+                    <strong>{visibleWeekDates[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – {visibleWeekDates[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
+                    <button type="button" className="btn btn-secondary" onClick={() => handleCalendarDateChange(new Date())}>Today</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => handleCalendarDateChange(shiftCalendarWeek(selectedDate, 1))}>Next week →</button>
+                  </div>
+                  <div className="weekly-calendar-scroll">
+                    <div className="weekly-calendar-grid">
+                      {visibleWeekDates.map((date) => {
+                        const dayTasks = calendarTasks.filter((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate());
+                        const dots = getCourseDotsForDate(date);
+                        const cycleDay = getCycleDayForDate(date, userSettings);
+                        return (
+                          <button type="button" key={date.toISOString()} className={`${isSameCalendarDay(date, selectedDate) ? "selected" : ""}${isSameCalendarDay(date, new Date()) ? " today" : ""}`} onClick={() => handleCalendarDateChange(date)}>
+                            <span className="weekly-day-name">{date.toLocaleDateString(undefined, { weekday: "short" })}</span>
+                            <strong>{date.getDate()}</strong>
+                            <small>{date.toLocaleDateString(undefined, { month: "short" })}</small>
+                            {userSettings.showCalendarCycleLabels !== false && cycleDay && <span className="weekly-cycle-day">{cycleDay}</span>}
+                            {userSettings.showCalendarTaskDots !== false && dots.length > 0 && <span className="calendar-course-dots">{dots.map((dot) => <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />)}</span>}
+                            <span className="weekly-task-count">{dayTasks.length} assignment{dayTasks.length === 1 ? "" : "s"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              ) : (
                   <Calendar
                     onChange={handleCalendarDateChange}
                     value={selectedDate}
@@ -5689,6 +5888,7 @@ function App() {
                       ) : null;
                     }}
                   />
+              )}
 
                   <h4 style={{ marginTop: "20px" }}>
                     Assignments for {selectedDate.toDateString()}
@@ -5806,7 +6006,7 @@ function App() {
                         }
                       }}
                     >
-                      {calendarAddOpen ? "Cancel" : "➕ Add Assignment"}
+                      {calendarAddOpen ? "Cancel" : `➕ ${schoolLevelCopy.addLabel}`}
                     </button>
                   </div>
 
@@ -5816,7 +6016,7 @@ function App() {
                       style={{ marginTop: "16px" }}
                     >
                       <h3>
-                        Add Assignment for{" "}
+                        {schoolLevelCopy.addLabel} for{" "}
                         {selectedDate.toLocaleDateString(undefined, {
                           month: "long",
                           day: "numeric",
@@ -5932,6 +6132,11 @@ function App() {
                           <option value="college">College</option>
                         </select>
                       </label>
+                      <div className={`school-level-preview school-level-preview-${userSettings.schoolLevel || "high"}`}>
+                        <strong>{schoolLevelCopy.guideTitle}</strong>
+                        <p>{schoolLevelCopy.subtitle}</p>
+                        <small>Changes terminology and planning guidance only. Your saved work and available features stay intact.</small>
+                      </div>
                       <div className="settings-option-grid">
                         <label className="settings-select-row settings-option-card">
                           <span>Text size</span>
@@ -5965,6 +6170,14 @@ function App() {
                             <option value="compact">Compact</option>
                             <option value="comfortable">Comfortable</option>
                             <option value="spacious">Spacious</option>
+                          </select>
+                        </label>
+                        <label className="settings-select-row settings-option-card">
+                          <span>Task action layout</span>
+                          <select value={userSettings.taskActionLayout || "wrap"} onChange={(event) => handleAddFieldSettingChange("taskActionLayout", event.target.value)}>
+                            <option value="wrap">Comfortable wrap</option>
+                            <option value="compact">Compact buttons</option>
+                            <option value="stacked">Vertical actions</option>
                           </select>
                         </label>
                       </div>
@@ -6360,6 +6573,19 @@ function App() {
                         </select>
                       </label>
                     </SettingsCard>
+                    <SettingsCard title="Dashboard Reminder Range" description="Choose how far ahead the movable Reminders widget should look. This does not change browser-notification timing.">
+                      <label className="settings-select-row">
+                        <span>Show deadlines within</span>
+                        <select value={dashboardReminderHours} onChange={(event) => handleAddFieldSettingChange("dashboardReminderHours", Number(event.target.value))}>
+                          <option value={24}>Next 24 hours</option>
+                          <option value={48}>Next 48 hours</option>
+                          <option value={72}>Next 3 days</option>
+                          <option value={168}>Next 7 days</option>
+                          <option value={336}>Next 14 days</option>
+                          <option value={720}>Next 30 days</option>
+                        </select>
+                      </label>
+                    </SettingsCard>
                   </>
                 )}
 
@@ -6371,6 +6597,13 @@ function App() {
                         <select value={userSettings.calendarWeekStartsOn || "sunday"} onChange={(e) => handleAddFieldSettingChange("calendarWeekStartsOn", e.target.value)}>
                           <option value="sunday">Sunday</option>
                           <option value="monday">Monday</option>
+                        </select>
+                      </label>
+                      <label className="settings-select-row settings-option-card">
+                        <span>Default calendar view</span>
+                        <select value={userSettings.calendarViewMode || "month"} onChange={(e) => handleAddFieldSettingChange("calendarViewMode", e.target.value)}>
+                          <option value="month">Month</option>
+                          <option value="week">Week</option>
                         </select>
                       </label>
                     </div>
@@ -6630,15 +6863,6 @@ function App() {
           </main>
         </div>
 
-        {widgetsTrayOpen && (
-          <section className="widgets-tray" aria-label="Workspace widgets">
-            <div><strong>Hidden widgets</strong><span>Restore sections for the {workspaceMode} layout.</span></div>
-            <div className="widgets-tray-list">
-              {Object.values(workspaceLayout[workspaceMode] || {}).flat().filter((item) => item.hidden).length === 0 ? <span>No hidden widgets.</span> : Object.values(workspaceLayout[workspaceMode] || {}).flat().filter((item) => item.hidden).map((item) => <button type="button" className="btn btn-secondary" key={item.id} onClick={() => restoreWorkspaceWidget(item)}>Restore {getWorkspaceWidgetTitle(item.type)}</button>)}
-            </div>
-            <div className="widgets-tray-actions"><button type="button" className="btn btn-secondary" disabled={currentTab === "calendar"} onClick={resetWorkspaceTab}>Reset this tab</button><button type="button" className="btn btn-danger" onClick={resetAllWorkspace}>Reset all layouts</button></div>
-          </section>
-        )}
         </div>
       {/*
         EDIT MODAL

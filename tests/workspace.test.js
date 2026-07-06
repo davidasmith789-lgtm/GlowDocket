@@ -5,6 +5,7 @@ import { preparePastedAssignmentLines } from "../src/bulkImportUtils.js";
 import { findLikelySyllabusAssignments, getSyllabusFileKind } from "../src/syllabusImport.js";
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "../src/assignmentCountdown.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calendarWeekUtils.js";
+import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
 import { canHideWidget, createDefaultWorkspaceLayout, normalizeWorkspaceLayout, placeWidget } from "../src/workspaceLayout.js";
 
 test("date-only checklist deadlines use the end of the local day", () => {
@@ -34,11 +35,15 @@ test("the last protected widget cannot be hidden", () => {
 
 test("new widget types are added without resetting a saved layout", () => {
   const saved = createDefaultWorkspaceLayout();
-  saved.desktop.dashboard = saved.desktop.dashboard.filter((item) => item.type !== "course-overview");
+  saved.desktop.dashboard = saved.desktop.dashboard.filter((item) => !["course-overview", "school-guide", "reminders"].includes(item.type));
   saved.desktop.dashboard[0].width = 333;
   const normalized = normalizeWorkspaceLayout(saved);
   assert.equal(normalized.desktop.dashboard[0].width, 333);
+  assert.equal(Number.isFinite(normalized.desktop.dashboard[0].xRatio), true);
   assert.equal(normalized.desktop.dashboard.some((item) => item.type === "course-overview"), true);
+  assert.equal(normalized.desktop.dashboard.some((item) => item.type === "school-guide"), true);
+  assert.equal(normalized.desktop.dashboard.some((item) => item.type === "reminders"), true);
+  assert.equal(normalized.locked.desktop, false);
 });
 
 test("pasted assignment lists preserve course headings and remove bullets", () => {
@@ -71,4 +76,12 @@ test("weekly calendar honors Sunday and Monday starts", () => {
   assert.equal(getWeekDates(anchor, "monday")[0].getDay(), 1);
   assert.equal(shiftCalendarWeek(anchor, 1).getDate(), 15);
   assert.equal(isSameCalendarDay(anchor, new Date(2026, 6, 8, 23, 59)), true);
+});
+
+test("voice undo permanently locks once work starts", () => {
+  const untouched = { createdByVoice: true, status: "todo", isCompleted: false };
+  assert.equal(canUndoVoiceCreation(untouched), true);
+  const started = { ...lockVoiceUndo(untouched), status: "inProgress" };
+  assert.equal(canUndoVoiceCreation(started), false);
+  assert.equal(canUndoVoiceCreation({ ...started, status: "todo" }), false);
 });

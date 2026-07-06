@@ -19,6 +19,8 @@ export const DEFAULT_WIDGET_LAYOUT = {
     { type: "mini-calendar", width: 310, height: 430 },
     { type: "checklists", width: 370, height: 500 },
     { type: "course-overview", width: 370, height: 360 },
+    { type: "school-guide", width: 370, height: 330 },
+    { type: "reminders", width: 420, height: 470 },
     { type: "add-assignment", width: 760, height: 650 },
     { type: "course-colors", width: 370, height: 500 },
   ],
@@ -40,19 +42,49 @@ const makeInstance = (item, index) => ({
   hidden: item.hidden ?? false,
 });
 
+function addMissingPositions(items, mode) {
+  const canvasWidth = mode === "mobile" ? 720 : 1600;
+  const gap = mode === "mobile" ? 12 : 18;
+  let x = 0;
+  let y = 0;
+  let rowHeight = 0;
+  return items.map((item) => {
+    const width = Math.min(Number(item.width) || 320, canvasWidth);
+    const height = Number(item.height) || 320;
+    if (x > 0 && x + width > canvasWidth) {
+      x = 0;
+      y += rowHeight + gap;
+      rowHeight = 0;
+    }
+    const positioned = {
+      ...item,
+      x: Number.isFinite(item.x) ? item.x : x,
+      xRatio: Number.isFinite(item.xRatio)
+        ? item.xRatio
+        : Math.max(0, Math.min(1, (Number.isFinite(item.x) ? item.x : x) / canvasWidth)),
+      y: Number.isFinite(item.y) ? item.y : y,
+      zIndex: Number.isFinite(item.zIndex) ? item.zIndex : 1,
+    };
+    x += width + gap;
+    rowHeight = Math.max(rowHeight, height);
+    return positioned;
+  });
+}
+
 export function createDefaultWorkspaceLayout() {
-  const makeMode = () => Object.fromEntries(
+  const makeMode = (mode) => Object.fromEntries(
     Object.entries(DEFAULT_WIDGET_LAYOUT).map(([tab, items]) => [
       tab,
-      items.map(makeInstance),
+      addMissingPositions(items.map(makeInstance), mode),
     ]),
   );
 
   return {
     version: WORKSPACE_LAYOUT_VERSION,
-    desktop: makeMode(),
-    mobile: makeMode(),
+    desktop: makeMode("desktop"),
+    mobile: makeMode("mobile"),
     collapsed: {},
+    locked: { desktop: false, mobile: false },
   };
 }
 
@@ -73,9 +105,10 @@ export function normalizeWorkspaceLayout(value) {
         value[mode][tab] = [...value[mode][tab], ...missing];
         missing.forEach((item) => existingTypes.add(item.type));
       }
+      value[mode][tab] = addMissingPositions(value[mode][tab], mode);
     }
   }
-  return { ...defaults, ...value, collapsed: value.collapsed || {} };
+  return { ...defaults, ...value, collapsed: value.collapsed || {}, locked: { ...defaults.locked, ...(value.locked || {}) } };
 }
 
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {
