@@ -64,6 +64,8 @@ const DEFAULT_USER_SETTINGS = {
   cycleAnchorDate: "",
   courseCycleDays: {},
   customColors: {},
+  activeColorThemeId: "light",
+  customColorThemes: [],
 };
 
 const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
@@ -208,6 +210,93 @@ const THEME_COLOR_DEFAULTS = {
     heroStart: "#312e81", heroMiddle: "#581c87", heroEnd: "#1e3a8a", heroText: "#ffffff",
   },
 };
+
+const DEFAULT_COLOR_THEME_PRESETS = [
+  {
+    id: "ocean-focus",
+    name: "Ocean Focus",
+    mode: "light",
+    colors: {
+      ...THEME_COLOR_DEFAULTS.light,
+      page: "#eef8ff", surface: "#ffffff", surfaceAlt: "#dff1fb",
+      text: "#0f172a", muted: "#486174", border: "#b9d7e8", focus: "#0284c7",
+      primary: "#0284c7", primaryText: "#ffffff", secondary: "#dbeafe", secondaryText: "#0f172a",
+      link: "#0369a1", calendarSelected: "#0284c7", calendarToday: "#bae6fd",
+      checklistAccent: "#0ea5e9", heroStart: "#0284c7", heroMiddle: "#0f766e", heroEnd: "#1d4ed8",
+    },
+  },
+  {
+    id: "forest-study",
+    name: "Forest Study",
+    mode: "light",
+    colors: {
+      ...THEME_COLOR_DEFAULTS.light,
+      page: "#f2f8f1", surface: "#ffffff", surfaceAlt: "#e3f1df",
+      text: "#132019", muted: "#51624d", border: "#bdd5b8", focus: "#15803d",
+      primary: "#15803d", primaryText: "#ffffff", secondary: "#dcfce7", secondaryText: "#14532d",
+      success: "#16a34a", link: "#166534", calendarSelected: "#15803d", calendarToday: "#bbf7d0",
+      checklistAccent: "#22c55e", heroStart: "#166534", heroMiddle: "#15803d", heroEnd: "#0f766e",
+    },
+  },
+  {
+    id: "sunset-planner",
+    name: "Sunset Planner",
+    mode: "light",
+    colors: {
+      ...THEME_COLOR_DEFAULTS.light,
+      page: "#fff7ed", surface: "#ffffff", surfaceAlt: "#ffedd5",
+      text: "#2f1b12", muted: "#7c5847", border: "#fed7aa", focus: "#f97316",
+      primary: "#ea580c", primaryText: "#ffffff", secondary: "#fee2e2", secondaryText: "#7c2d12",
+      warning: "#f59e0b", link: "#c2410c", calendarSelected: "#ea580c", calendarToday: "#fed7aa",
+      checklistAccent: "#f97316", heroStart: "#f97316", heroMiddle: "#db2777", heroEnd: "#7c3aed",
+    },
+  },
+  {
+    id: "midnight-neon",
+    name: "Midnight Neon",
+    mode: "dark",
+    colors: {
+      ...THEME_COLOR_DEFAULTS.dark,
+      page: "#080b17", surface: "#111827", surfaceAlt: "#172033",
+      text: "#f8fafc", muted: "#a5b4fc", border: "#273449", focus: "#22d3ee",
+      primary: "#22d3ee", primaryText: "#06121f", secondary: "#312e81", secondaryText: "#ffffff",
+      link: "#67e8f9", calendarSelected: "#22d3ee", calendarToday: "#334155",
+      checklistAccent: "#a78bfa", heroStart: "#0f172a", heroMiddle: "#312e81", heroEnd: "#0891b2",
+    },
+  },
+  {
+    id: "berry-night",
+    name: "Berry Night",
+    mode: "dark",
+    colors: {
+      ...THEME_COLOR_DEFAULTS.dark,
+      page: "#130916", surface: "#211027", surfaceAlt: "#32153a",
+      text: "#fff7fb", muted: "#d8b4fe", border: "#4a2559", focus: "#f472b6",
+      primary: "#d946ef", primaryText: "#ffffff", secondary: "#581c87", secondaryText: "#ffffff",
+      link: "#f0abfc", calendarSelected: "#c026d3", calendarToday: "#4a044e",
+      checklistAccent: "#f472b6", heroStart: "#701a75", heroMiddle: "#be185d", heroEnd: "#7c2d12",
+    },
+  },
+];
+
+const BUILT_IN_COLOR_THEMES = [
+  { id: "light", name: "Light", mode: "light", colors: THEME_COLOR_DEFAULTS.light, builtIn: true },
+  { id: "dark", name: "Dark", mode: "dark", colors: THEME_COLOR_DEFAULTS.dark, builtIn: true },
+  ...DEFAULT_COLOR_THEME_PRESETS.map((themePreset) => ({ ...themePreset, builtIn: true })),
+];
+
+const getEffectiveThemeColors = (mode, customColors = {}) => ({
+  ...THEME_COLOR_DEFAULTS[mode],
+  ...(customColors || {}),
+});
+
+const getSafeColorThemeColors = (colors = {}) => (
+  Object.fromEntries(
+    Object.keys(COLOR_CSS_VARIABLES)
+      .map((key) => [key, normalizeHexColor(colors[key] || "")])
+      .filter(([, color]) => Boolean(color)),
+  )
+);
 
 const COLOR_CSS_VARIABLES = {
   page: ["--page-bg", "--background-color"],
@@ -1369,6 +1458,8 @@ function App() {
   const [colorStudioOpen, setColorStudioOpen] = useState(false);
   const [colorGroupsOpen, setColorGroupsOpen] = useState({});
   const [colorTextDrafts, setColorTextDrafts] = useState({});
+  const [themeSaveOpen, setThemeSaveOpen] = useState(false);
+  const [newThemeName, setNewThemeName] = useState("");
   const [selectedChecklistId, setSelectedChecklistId] = useState(null);
   const [checklistNow, setChecklistNow] = useState(() => new Date());
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
@@ -1444,6 +1535,17 @@ function App() {
 
     return brightness > 160 ? "#111827" : "#ffffff";
   };
+
+  const customColorThemes = Array.isArray(userSettings.customColorThemes)
+    ? userSettings.customColorThemes.filter((colorTheme) =>
+        colorTheme?.id &&
+        colorTheme?.name &&
+        colorTheme?.mode &&
+        colorTheme?.colors
+      )
+    : [];
+  const colorThemeChoices = [...BUILT_IN_COLOR_THEMES, ...customColorThemes];
+  const activeColorThemeId = userSettings.activeColorThemeId || theme;
 
   // Build the one-line details shown beneath task names in several tabs.
   const formatTaskDetails = (task) => {
@@ -1695,10 +1797,6 @@ useEffect(() => {
     return () => window.clearInterval(intervalId);
   }, [checklists, currentUser, userSettings.notificationsEnabled, userSettings.reminderMinutes]);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
-
   const handleInstallApp = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
@@ -1754,16 +1852,19 @@ useEffect(() => {
       "Reset appearance, assignment, calendar, reminder, and school-cycle preferences? Your assignments and courses will not be deleted.",
     );
     if (!confirmed) return;
+    const resetTheme = getSystemPreference();
 
     const resetSettings = {
       ...DEFAULT_USER_SETTINGS,
+      activeColorThemeId: resetTheme,
       cycleDayNames: [...DEFAULT_USER_SETTINGS.cycleDayNames],
       courseCycleDays: {},
       customColors: {},
+      customColorThemes: [],
     };
     setUserSettings(resetSettings);
     localStorage.setItem(settingsStorageKey, JSON.stringify(resetSettings));
-    setTheme(getSystemPreference());
+    setTheme(resetTheme);
     setCategory(resetSettings.defaultCategory);
     setPriority(resetSettings.defaultPriority);
     setEstTime(resetSettings.defaultEstimatedMinutes);
@@ -1807,9 +1908,124 @@ useEffect(() => {
   };
 
   const handleCustomColorChange = (key, value) => {
-    handleAddFieldSettingChange("customColors", {
-      ...(userSettings.customColors || {}),
-      [key]: value,
+    setUserSettings((prev) => {
+      const updated = {
+        ...prev,
+        activeColorThemeId: "custom",
+        customColors: {
+          ...(prev.customColors || {}),
+          [key]: value,
+        },
+      };
+
+      try {
+        localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to save user settings:", error);
+      }
+
+      return updated;
+    });
+  };
+
+  const handleApplyColorTheme = (themeId) => {
+    const customThemes = Array.isArray(userSettings.customColorThemes)
+      ? userSettings.customColorThemes
+      : [];
+    const selectedTheme = [...BUILT_IN_COLOR_THEMES, ...customThemes]
+      .find((colorTheme) => colorTheme.id === themeId);
+
+    if (!selectedTheme) return;
+
+    setTheme(selectedTheme.mode);
+    setUserSettings((prev) => {
+      const updated = {
+        ...prev,
+        activeColorThemeId: selectedTheme.id,
+        customColors:
+          selectedTheme.id === "light" || selectedTheme.id === "dark"
+            ? {}
+            : getSafeColorThemeColors(selectedTheme.colors),
+      };
+
+      try {
+        localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to save color theme:", error);
+      }
+
+      return updated;
+    });
+  };
+
+  const handleResetColorTheme = () => {
+    handleApplyColorTheme(theme === "dark" ? "dark" : "light");
+  };
+
+  const handleSaveCurrentColorTheme = (event) => {
+    event.preventDefault();
+
+    const trimmedName = newThemeName.trim();
+    if (!trimmedName) return;
+
+    const themeId = `custom-${trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme"}-${Date.now()}`;
+    const savedTheme = {
+      id: themeId,
+      name: trimmedName,
+      mode: theme,
+      colors: getSafeColorThemeColors(
+        getEffectiveThemeColors(theme, userSettings.customColors),
+      ),
+    };
+
+    setUserSettings((prev) => {
+      const existingThemes = Array.isArray(prev.customColorThemes)
+        ? prev.customColorThemes
+        : [];
+      const updated = {
+        ...prev,
+        activeColorThemeId: themeId,
+        customColorThemes: [...existingThemes, savedTheme],
+      };
+
+      try {
+        localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to save custom color theme:", error);
+      }
+
+      return updated;
+    });
+
+    setNewThemeName("");
+    setThemeSaveOpen(false);
+  };
+
+  const handleDeleteCustomColorTheme = (themeId) => {
+    const customThemes = Array.isArray(userSettings.customColorThemes)
+      ? userSettings.customColorThemes
+      : [];
+    const themeToDelete = customThemes.find((colorTheme) => colorTheme.id === themeId);
+    if (!themeToDelete) return;
+    if (!window.confirm(`Delete "${themeToDelete.name}"?`)) return;
+
+    setUserSettings((prev) => {
+      const deletingActiveTheme = prev.activeColorThemeId === themeId;
+      const updated = {
+        ...prev,
+        activeColorThemeId: deletingActiveTheme ? theme : prev.activeColorThemeId,
+        customColors: deletingActiveTheme ? {} : prev.customColors,
+        customColorThemes: (Array.isArray(prev.customColorThemes) ? prev.customColorThemes : [])
+          .filter((colorTheme) => colorTheme.id !== themeId),
+      };
+
+      try {
+        localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to delete custom color theme:", error);
+      }
+
+      return updated;
     });
   };
 
@@ -6617,14 +6833,53 @@ useEffect(() => {
                   </div>
                   {appearanceSettingsOpen && (
                     <div id="appearance-settings-content" className="settings-collapsible-content">
-                      <p className="hint-text">Currently using {theme} mode.</p>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={toggleTheme}
-                      >
-                        Use {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                      </button>
+                      <p className="hint-text">Choose a color theme or save your own from Full Color Studio.</p>
+                      <label className="settings-select-row">
+                        <span>Color theme</span>
+                        <select
+                          value={colorThemeChoices.some((colorTheme) => colorTheme.id === activeColorThemeId) ? activeColorThemeId : "custom"}
+                          onChange={(event) => {
+                            if (event.target.value !== "custom") {
+                              handleApplyColorTheme(event.target.value);
+                            }
+                          }}
+                        >
+                          {colorThemeChoices.map((colorTheme) => (
+                            <option key={colorTheme.id} value={colorTheme.id}>
+                              {colorTheme.name}
+                            </option>
+                          ))}
+                          <option value="custom">Unsaved custom colors</option>
+                        </select>
+                      </label>
+                      <div className="color-theme-grid">
+                        {colorThemeChoices.map((colorTheme) => (
+                          <article className="color-theme-card" key={colorTheme.id}>
+                            <button
+                              type="button"
+                              className={activeColorThemeId === colorTheme.id ? "active" : ""}
+                              onClick={() => handleApplyColorTheme(colorTheme.id)}
+                            >
+                              <span className="theme-swatch-row" aria-hidden="true">
+                                {[colorTheme.colors.page, colorTheme.colors.surface, colorTheme.colors.primary, colorTheme.colors.heroMiddle].map((color) => (
+                                  <i key={color} style={{ backgroundColor: color }} />
+                                ))}
+                              </span>
+                              <strong>{colorTheme.name}</strong>
+                              <small>{colorTheme.mode === "dark" ? "Dark base" : "Light base"}</small>
+                            </button>
+                            {!colorTheme.builtIn && (
+                              <button
+                                type="button"
+                                className="color-theme-delete"
+                                onClick={() => handleDeleteCustomColorTheme(colorTheme.id)}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </article>
+                        ))}
+                      </div>
                       <label className="settings-select-row">
                         <span>School level</span>
                         <select
@@ -6764,11 +7019,32 @@ useEffect(() => {
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          onClick={() => handleAddFieldSettingChange("customColors", {})}
+                          onClick={handleResetColorTheme}
                         >
                           Reset to {theme === "dark" ? "Dark" : "Light"} Defaults
                         </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => setThemeSaveOpen((isOpen) => !isOpen)}
+                        >
+                          Make into theme
+                        </button>
                       </div>
+                      {themeSaveOpen && (
+                        <form className="color-theme-save-form" onSubmit={handleSaveCurrentColorTheme}>
+                          <label htmlFor="new-theme-name">Theme name</label>
+                          <input
+                            id="new-theme-name"
+                            value={newThemeName}
+                            onChange={(event) => setNewThemeName(event.target.value)}
+                            placeholder="My study theme"
+                          />
+                          <button type="submit" className="btn btn-primary" disabled={!newThemeName.trim()}>
+                            Save Theme
+                          </button>
+                        </form>
+                      )}
 
                   {[...new Set(COLOR_PERSONALIZATION_FIELDS.map((field) => field.group))].map((group) => (
                     <div className="color-studio-group" key={group}>
