@@ -1317,13 +1317,15 @@ function App() {
     }
   });
   const [workspaceLayout, setWorkspaceLayout] = useState(() => {
-    try {
-      return normalizeWorkspaceLayout(JSON.parse(localStorage.getItem(workspaceStorageKey) || "null"));
-    } catch (error) {
-      console.error("Error reading workspace layout:", error);
-      return createDefaultWorkspaceLayout();
-    }
-  });
+  try {
+    return repairLoadedWorkspace(
+      JSON.parse(localStorage.getItem(workspaceStorageKey) || "null"),
+    );
+  } catch (error) {
+    console.error("Error reading workspace layout:", error);
+    return createDefaultWorkspaceLayout();
+  }
+});
   const workspaceLayoutRef = useRef(workspaceLayout);
   const [voiceStatus, setVoiceStatus] = useState("idle");
   const [voiceElapsed, setVoiceElapsed] = useState(0);
@@ -1858,7 +1860,23 @@ useEffect(() => {
       [course]: updatedDays,
     });
   };
+  const repairLoadedWorkspace = (layout) => {
+  const repaired = normalizeWorkspaceLayout(layout, {
+    preservePositions: true,
+  });
 
+  const isOldUnstampedLayout =
+    !repaired.userCustomized &&
+    !repaired.updatedAt;
+
+  return {
+    ...repaired,
+    locked: {
+      desktop: isOldUnstampedLayout ? false : Boolean(repaired.locked?.desktop),
+      mobile: isOldUnstampedLayout ? false : Boolean(repaired.locked?.mobile),
+    },
+  };
+};
   // Whenever the active profile changes, load that profile's saved datasets.
   // If stored JSON is damaged or unavailable, use safe empty/default values.
   // This effect intentionally copies an external browser data source into React
@@ -1888,15 +1906,9 @@ useEffect(() => {
       const rawChecklists = localStorage.getItem(checklistStorageKey);
       setChecklists(rawChecklists ? JSON.parse(rawChecklists) : []);
       const rawWorkspace = localStorage.getItem(workspaceStorageKey);
-      const loadedWorkspace = normalizeWorkspaceLayout(
+      const loadedWorkspace = repairLoadedWorkspace(
         rawWorkspace ? JSON.parse(rawWorkspace) : null,
-        {
-          preservePositions: true,
-        },
       );
-
-workspaceLayoutRef.current = loadedWorkspace;
-setWorkspaceLayout(loadedWorkspace);
 
       workspaceLayoutRef.current = loadedWorkspace;
       setWorkspaceLayout(loadedWorkspace);
