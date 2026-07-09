@@ -28,7 +28,9 @@ import {
   rankQuickMatchCandidates,
   rankRecommendedTasks,
   summarizeRecommendationWorkload,
-} from "./recommendationUtils.js";
+} 
+from "./recommendationUtils.js";
+const APP_BUILD_VERSION = "layout-save-fix-live-test-1";
 const DEFAULT_USER_SETTINGS = {
   showPriority: true,
   showRepeat: true,
@@ -1468,6 +1470,9 @@ function App() {
       console.error("Error writing theme to localStorage:", error);
     }
   }, [theme]);
+  useEffect(() => {
+  console.log("TaskCabinet build version:", APP_BUILD_VERSION);
+  }, []);
 
   useEffect(() => {
     const scale = { xsmall: 0.7, small: 0.85, medium: 1, large: 1.25, xlarge: 1.5 }[userSettings.textSize] || 1;
