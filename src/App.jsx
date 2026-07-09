@@ -1890,7 +1890,13 @@ useEffect(() => {
       const rawWorkspace = localStorage.getItem(workspaceStorageKey);
       const loadedWorkspace = normalizeWorkspaceLayout(
         rawWorkspace ? JSON.parse(rawWorkspace) : null,
+        {
+          preservePositions: true,
+        },
       );
+
+workspaceLayoutRef.current = loadedWorkspace;
+setWorkspaceLayout(loadedWorkspace);
 
       workspaceLayoutRef.current = loadedWorkspace;
       setWorkspaceLayout(loadedWorkspace);
@@ -3519,13 +3525,19 @@ useEffect(() => {
         ? nextOrUpdater(previousLayout)
         : nextOrUpdater;
 
-    const normalized = normalizeWorkspaceLayout(nextLayout, {
+    const stampedLayout = {
+      ...nextLayout,
+      userCustomized: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const normalized = normalizeWorkspaceLayout(stampedLayout, {
       mode: workspaceMode,
       canvasWidth: options.canvasWidth ?? workspaceCanvasWidth,
       activeId: options.activeId,
       reflowActiveWithNeighbors: options.reflowActiveWithNeighbors,
-      collapsed: options.collapsed ?? nextLayout?.collapsed,
-      preservePositions: options.preservePositions ?? true,
+      collapsed: options.collapsed ?? stampedLayout?.collapsed,
+      preservePositions: true,
     });
 
     workspaceLayoutRef.current = normalized;

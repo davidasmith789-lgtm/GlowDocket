@@ -371,43 +371,83 @@ export function createDefaultWorkspaceLayout() {
 
 export function normalizeWorkspaceLayout(value, options = {}) {
   const defaults = createDefaultWorkspaceLayout();
-  if (!value || value.version !== WORKSPACE_LAYOUT_VERSION) return defaults;
 
+  if (!value || value.version !== WORKSPACE_LAYOUT_VERSION) {
+    return defaults;
+  }
+
+  const userCustomized = Boolean(value.userCustomized);
   const modes = options.mode ? [options.mode] : ["desktop", "mobile"];
   const collapsedState = options.collapsed ?? value?.collapsed ?? {};
+
   for (const mode of modes) {
     value[mode] = value[mode] || {};
+
     const existingTypes = new Set(
       Object.values(value?.[mode] || {})
         .flat()
         .filter((item) => !REMOVED_WIDGET_TYPES.has(item.type))
         .map((item) => item.type),
     );
+
     for (const tab of Object.keys(DEFAULT_WIDGET_LAYOUT)) {
       if (!Array.isArray(value?.[mode]?.[tab])) {
-        value[mode] = { ...(value[mode] || {}), [tab]: defaults[mode][tab] };
+        value[mode] = {
+          ...(value[mode] || {}),
+          [tab]: defaults[mode][tab],
+        };
+
         defaults[mode][tab].forEach((item) => existingTypes.add(item.type));
         continue;
       }
-      if (
-        (mode === "desktop" && tab === "dashboard" && isOldDefaultDashboard(value[mode][tab])) ||
-        (mode === "desktop" && isDefaultLikeCenteredTab(tab, value[mode][tab]))
-      ) {
+
+      const shouldRunOldLayoutMigration =
+        !userCustomized &&
+        !options.preservePositions &&
+        (
+          (mode === "desktop" &&
+            tab === "dashboard" &&
+            isOldDefaultDashboard(value[mode][tab])) ||
+          (mode === "desktop" &&
+            isDefaultLikeCenteredTab(tab, value[mode][tab]))
+        );
+
+      if (shouldRunOldLayoutMigration) {
         value[mode][tab] = defaults[mode][tab];
         defaults[mode][tab].forEach((item) => existingTypes.add(item.type));
         continue;
       }
+
       value[mode][tab] = withoutRemovedWidgets(value[mode][tab]);
       value[mode][tab].forEach((item) => existingTypes.add(item.type));
-      const missing = defaults[mode][tab].filter((item) => !existingTypes.has(item.type));
+
+      const missing = defaults[mode][tab].filter(
+        (item) => !existingTypes.has(item.type),
+      );
+
       if (missing.length > 0) {
         value[mode][tab] = [...value[mode][tab], ...missing];
         missing.forEach((item) => existingTypes.add(item.type));
       }
-      value[mode][tab] = addMissingPositions(value[mode][tab], mode, { ...options, collapsed: collapsedState });
+
+      value[mode][tab] = addMissingPositions(value[mode][tab], mode, {
+        ...options,
+        collapsed: collapsedState,
+        preservePositions: userCustomized || options.preservePositions,
+      });
     }
   }
-  return { ...defaults, ...value, collapsed: value.collapsed || {}, locked: { ...defaults.locked, ...(value.locked || {}) } };
+
+  return {
+    ...defaults,
+    ...value,
+    userCustomized,
+    collapsed: value.collapsed || {},
+    locked: {
+      ...defaults.locked,
+      ...(value.locked || {}),
+    },
+  };
 }
 
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {
