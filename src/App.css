@@ -135,6 +135,47 @@ body,
   flex-wrap: wrap;
 }
 
+.task-actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-action-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-action-group-right {
+  justify-content: flex-end;
+}
+
+.task-inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-color);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.task-meta-pill-right {
+  margin-left: auto;
+}
+
 .task-details {
   font-size: 12px;
   color: var(--placeholder-color);
@@ -208,6 +249,31 @@ body,
 .btn-secondary:hover {
   background: var(--card-background);
   color: var(--text-color);
+}
+
+.task-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.task-title-text {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.task-course-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .course-name {

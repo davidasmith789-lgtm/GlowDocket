@@ -5051,16 +5051,13 @@ function App() {
     const grouped = status === "todo" ? groupedTasks : status === "inProgress" ? groupedInProgressTasks : null;
     const renderCard = (task) => (
       <li key={task.id} id={`${status}-task-${task.id}`} className={`task-card${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded" : ""}`} onClick={() => toggleTaskExpansion(task.id)}>
-        <div><strong>{task.title}</strong><span className="course-name" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span><div className="task-details">{formatTaskDetails(task)}</div>{renderAssignmentCountdown(task)}{renderSubtaskProgressLine(task)}</div>
-        <div className="task-actions">
-          {status === "todo" && <button type="button" className="btn btn-secondary" onClick={(event) => { event.stopPropagation(); handleStartTask(task.id); }}>Start</button>}
-          {status === "inProgress" && <button type="button" className="btn btn-secondary" onClick={(event) => { event.stopPropagation(); handleMoveToTodo(task.id); }}>Move to To Do</button>}
-          {status !== "completed" && <button type="button" className="btn btn-primary" onClick={(event) => { event.stopPropagation(); handleComplete(task.id); }}>Complete</button>}
-          {status === "completed" && <button type="button" className="btn btn-warning" onClick={(event) => { event.stopPropagation(); handleUndo(task.id); }}>Mark Undone</button>}
-          <button type="button" className="btn btn-secondary" onClick={(event) => { event.stopPropagation(); handleEditStart(task); }}>Edit</button>
-          {status === "completed" && <button type="button" className="btn btn-secondary" onClick={(event) => { event.stopPropagation(); handleArchive(task.id); }}>Archive</button>}
-          {renderVoiceUndoAction(task)}
-          <button type="button" className="btn btn-danger" onClick={(event) => { event.stopPropagation(); handleDelete(task.id); }}>Move to Trash</button>
+        <div>
+          <div className="task-title-row">
+            <strong className="task-title-text">{task.title}</strong>
+            {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+          </div>
+          <div className="task-details">{formatTaskDetails(task)}</div>
+          {renderAssignmentCountdown(task)}{renderSubtaskProgressLine(task)}
         </div>
         {expandedTaskId === task.id && <div className="task-notes-panel" onClick={(event) => event.stopPropagation()}>{renderExpandedTaskDetails(task, `${status}-widget-notes-${task.id}`)}</div>}
       </li>
@@ -5667,21 +5664,10 @@ function App() {
                               onClick={() => toggleTaskExpansion(task.id)}
                             >
                               <div>
-                                <strong>{task.title}</strong>
-                                <span
-                                  className="course-name"
-                                  style={{
-                                    backgroundColor: getCourseColor(
-                                      task.course,
-                                    ),
-                                    color: getTextColorForCourse(task.course),
-                                    padding: "4px 8px",
-                                    borderRadius: "999px",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  {task.course}
-                                </span>
+                                <div className="task-title-row">
+                                  <strong className="task-title-text">{task.title}</strong>
+                                  {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                </div>
                                 <div className="task-details">
                                   {formatTaskDetails(task)}
                                 </div>
@@ -5822,21 +5808,10 @@ function App() {
                               onClick={() => toggleTaskExpansion(task.id)}
                             >
                               <div>
-                                <strong>{task.title}</strong>
-                                <span
-                                  className="course-name"
-                                  style={{
-                                    backgroundColor: getCourseColor(
-                                      task.course,
-                                    ),
-                                    color: getTextColorForCourse(task.course),
-                                    padding: "4px 8px",
-                                    borderRadius: "999px",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  {task.course}
-                                </span>
+                                <div className="task-title-row">
+                                  <strong className="task-title-text">{task.title}</strong>
+                                  {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                </div>
                                 <span className="in-progress-status-pill">
                                   In Progress
                                 </span>
@@ -5967,19 +5942,10 @@ function App() {
                       onClick={() => toggleTaskExpansion(task.id)}
                     >
                       <div>
-                        <strong>{task.title}</strong>
-                        <span
-                          className="course-name"
-                          style={{
-                            backgroundColor: getCourseColor(task.course),
-                            color: getTextColorForCourse(task.course),
-                            padding: "4px 8px",
-                            borderRadius: "999px",
-                            fontWeight: "600",
-                          }}
-                        >
-                          {task.course}
-                        </span>
+                        <div className="task-title-row">
+                          <strong className="task-title-text">{task.title}</strong>
+                          {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                        </div>
                         <div className="task-details">
                           {formatTaskDetails(task)}
                         </div>
@@ -6173,19 +6139,10 @@ function App() {
                             onClick={() => toggleTaskExpansion(task.id)}
                           >
                             <div>
-                              <strong>{task.title}</strong> —{" "}
-                              <span
-                                className="course-name"
-                                style={{
-                                  backgroundColor: getCourseColor(task.course),
-                                  color: getTextColorForCourse(task.course),
-                                  padding: "4px 8px",
-                                  borderRadius: "999px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                {task.course}
-                              </span>
+                              <div className="task-title-row">
+                                <strong className="task-title-text">{task.title}</strong>
+                                {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                              </div>
                               <div className="task-details">
                                 {formatTaskDetails(task)}
                               </div>
