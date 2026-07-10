@@ -66,6 +66,7 @@ const DEFAULT_USER_SETTINGS = {
   customColors: {},
   activeColorThemeId: "light",
   customColorThemes: [],
+  deletedColorThemeIds: [],
 };
 
 const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
@@ -1565,7 +1566,15 @@ function App() {
         colorTheme?.colors
       )
     : [];
-  const colorThemeChoices = [...BUILT_IN_COLOR_THEMES, ...customColorThemes];
+  const deletedColorThemeIds = new Set(
+    Array.isArray(userSettings.deletedColorThemeIds)
+      ? userSettings.deletedColorThemeIds
+      : [],
+  );
+  const colorThemeChoices = [
+    ...BUILT_IN_COLOR_THEMES.filter((colorTheme) => !deletedColorThemeIds.has(colorTheme.id)),
+    ...customColorThemes,
+  ];
   const activeColorThemeId = userSettings.activeColorThemeId || theme;
 
   // Build the one-line details shown beneath task names in several tabs.
@@ -1882,6 +1891,7 @@ useEffect(() => {
       courseCycleDays: {},
       customColors: {},
       customColorThemes: [],
+      deletedColorThemeIds: [],
     };
     setUserSettings(resetSettings);
     localStorage.setItem(settingsStorageKey, JSON.stringify(resetSettings));
@@ -1950,10 +1960,7 @@ useEffect(() => {
   };
 
   const handleApplyColorTheme = (themeId) => {
-    const customThemes = Array.isArray(userSettings.customColorThemes)
-      ? userSettings.customColorThemes
-      : [];
-    const selectedTheme = [...BUILT_IN_COLOR_THEMES, ...customThemes]
+    const selectedTheme = colorThemeChoices
       .find((colorTheme) => colorTheme.id === themeId);
 
     if (!selectedTheme) return;
@@ -2022,28 +2029,80 @@ useEffect(() => {
     setThemeSaveOpen(false);
   };
 
-  const handleDeleteCustomColorTheme = (themeId) => {
+  const handleDeleteColorTheme = (themeId) => {
     const customThemes = Array.isArray(userSettings.customColorThemes)
       ? userSettings.customColorThemes
       : [];
-    const themeToDelete = customThemes.find((colorTheme) => colorTheme.id === themeId);
+    const deletedThemeIds = new Set(
+      Array.isArray(userSettings.deletedColorThemeIds)
+        ? userSettings.deletedColorThemeIds
+        : [],
+    );
+    const availableThemes = [
+      ...BUILT_IN_COLOR_THEMES.filter((colorTheme) => !deletedThemeIds.has(colorTheme.id)),
+      ...customThemes,
+    ];
+    const themeToDelete = availableThemes.find((colorTheme) => colorTheme.id === themeId);
     if (!themeToDelete) return;
     if (!window.confirm(`Delete "${themeToDelete.name}"?`)) return;
 
+    if (themeToDelete.builtIn) {
+      deletedThemeIds.add(themeId);
+    }
+
+    const remainingCustomThemes = customThemes.filter((colorTheme) => colorTheme.id !== themeId);
+    const remainingThemes = [
+      ...BUILT_IN_COLOR_THEMES.filter((colorTheme) => !deletedThemeIds.has(colorTheme.id)),
+      ...remainingCustomThemes,
+    ];
+    const deletingActiveTheme = activeColorThemeId === themeId;
+    const fallbackTheme = deletingActiveTheme ? remainingThemes[0] : null;
+
+    if (fallbackTheme) {
+      setTheme(fallbackTheme.mode);
+    }
+
     setUserSettings((prev) => {
-      const deletingActiveTheme = prev.activeColorThemeId === themeId;
       const updated = {
         ...prev,
-        activeColorThemeId: deletingActiveTheme ? theme : prev.activeColorThemeId,
-        customColors: deletingActiveTheme ? {} : prev.customColors,
+        activeColorThemeId: fallbackTheme
+          ? fallbackTheme.id
+          : deletingActiveTheme
+            ? "custom"
+            : prev.activeColorThemeId,
+        customColors: fallbackTheme
+          ? fallbackTheme.id === "light" || fallbackTheme.id === "dark"
+            ? {}
+            : getSafeColorThemeColors(fallbackTheme.colors)
+          : deletingActiveTheme
+            ? {}
+            : prev.customColors,
         customColorThemes: (Array.isArray(prev.customColorThemes) ? prev.customColorThemes : [])
           .filter((colorTheme) => colorTheme.id !== themeId),
+        deletedColorThemeIds: [...deletedThemeIds],
       };
 
       try {
         localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
       } catch (error) {
-        console.error("Failed to delete custom color theme:", error);
+        console.error("Failed to delete color theme:", error);
+      }
+
+      return updated;
+    });
+  };
+
+  const handleRestoreDefaultColorThemes = () => {
+    setUserSettings((prev) => {
+      const updated = {
+        ...prev,
+        deletedColorThemeIds: [],
+      };
+
+      try {
+        localStorage.setItem(settingsStorageKey, JSON.stringify(updated));
+      } catch (error) {
+        console.error("Failed to restore default color themes:", error);
       }
 
       return updated;
@@ -6890,18 +6949,25 @@ useEffect(() => {
                               <strong>{colorTheme.name}</strong>
                               <small>{colorTheme.mode === "dark" ? "Dark base" : "Light base"}</small>
                             </button>
-                            {!colorTheme.builtIn && (
-                              <button
-                                type="button"
-                                className="color-theme-delete"
-                                onClick={() => handleDeleteCustomColorTheme(colorTheme.id)}
-                              >
-                                Delete
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              className="color-theme-delete"
+                              onClick={() => handleDeleteColorTheme(colorTheme.id)}
+                            >
+                              Delete
+                            </button>
                           </article>
                         ))}
                       </div>
+                      {deletedColorThemeIds.size > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleRestoreDefaultColorThemes}
+                        >
+                          Restore default themes
+                        </button>
+                      )}
                       <label className="settings-select-row">
                         <span>School level</span>
                         <select
