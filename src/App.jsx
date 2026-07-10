@@ -3974,7 +3974,6 @@ function App() {
       reflowActiveWithNeighbors: options.reflowActiveWithNeighbors,
       collapsed: options.collapsed ?? stampedLayout?.collapsed,
       preservePositions: true,
-      reflowForCanvas: options.reflowForCanvas,
     });
 
     workspaceLayoutRef.current = normalized;
@@ -5150,13 +5149,6 @@ function App() {
     setQuickMatchSubmittedMinutes(minutes);
   };
 
-  const tidyWorkspaceOverlaps = () => {
-    saveWorkspace((previousLayout) => structuredClone(previousLayout), {
-      canvasWidth: workspaceMainRef.current?.clientWidth,
-      reflowForCanvas: true,
-    });
-  };
-
   const selectWidgetUnderneath = (instance) => {
     const items = (workspaceLayout[workspaceMode]?.[currentTab] || []).filter((item) => !item.hidden && item.id !== instance.id);
     const activeHeight = workspaceLayout.collapsed[instance.type] ? COLLAPSED_WIDGET_HEIGHT : Number(instance.height);
@@ -6051,7 +6043,6 @@ function App() {
             <div className="workspace-organizer-header">
               <div><h2>Workspace Organizer</h2><span>Place features on this tab, recover hidden widgets, or lock the layout when everything feels right.</span></div>
               <div className="workspace-organizer-actions">
-                <button type="button" className="btn btn-secondary" onClick={tidyWorkspaceOverlaps}>Tidy overlaps</button>
                 <button type="button" className={`btn ${workspaceLayout.locked?.[workspaceMode] ? "btn-primary" : "btn-secondary"}`} onClick={toggleWorkspaceLock}>{workspaceLayout.locked?.[workspaceMode] ? "Unlock Layout" : "Lock Layout"}</button>
               </div>
             </div>
