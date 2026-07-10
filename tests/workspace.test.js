@@ -7,7 +7,7 @@ import { formatAssignmentCountdown, getAssignmentCountdownTone } from "../src/as
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calendarWeekUtils.js";
 import { rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
-import { canHideWidget, createDefaultWorkspaceLayout, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { canHideWidget, createDefaultWorkspaceLayout, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -205,6 +205,74 @@ test("expanding a widget restores its expanded height", () => {
   const widget = expanded.desktop.dashboard.find((item) => item.id === "expanded-a");
 
   assert.equal(widget.height, 260);
+});
+
+test("normalization repairs a mini calendar saved at collapsed height", () => {
+  const saved = createDefaultWorkspaceLayout();
+  const calendar = saved.desktop.dashboard.find((item) => item.type === "mini-calendar");
+  calendar.height = 58;
+  delete calendar.expandedHeight;
+  saved.userCustomized = true;
+
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 1680,
+    preservePositions: true,
+  });
+  const repaired = normalized.desktop.dashboard.find((item) => item.type === "mini-calendar");
+
+  assert.equal(repaired.height, 460);
+  assert.equal(repaired.expandedHeight, 460);
+});
+
+test("collapsed normalization preserves a widget's expanded size", () => {
+  const saved = createDefaultWorkspaceLayout();
+  saved.desktop.dashboard = [
+    { id: "calendar-a", type: "mini-calendar", x: 0, y: 0, width: 494, height: 410 },
+  ];
+  saved.userCustomized = true;
+
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 900,
+    collapsed: { "mini-calendar": true },
+    preservePositions: true,
+  });
+  const calendar = normalized.desktop.dashboard[0];
+
+  assert.equal(calendar.height, 410);
+  assert.equal(calendar.expandedHeight, 410);
+});
+
+test("widget expanded-height rules repair unusable sizes without changing valid custom sizes", () => {
+  const saved = createDefaultWorkspaceLayout();
+  saved.desktop.dashboard = [
+    { id: "tiny-checklists", type: "checklists", x: 0, y: 0, width: 320, height: 90 },
+    { id: "custom-recommended", type: "recommended", x: 400, y: 0, width: 320, height: 275 },
+  ];
+  saved.userCustomized = true;
+
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 900,
+    preservePositions: true,
+  });
+
+  assert.equal(normalized.desktop.dashboard[0].height, getWidgetMinimumExpandedHeight("checklists"));
+  assert.equal(normalized.desktop.dashboard[1].height, 275);
+});
+
+test("expanding legacy collapsed widgets restores a usable default height", () => {
+  const saved = createDefaultWorkspaceLayout();
+  saved.desktop.dashboard = [
+    { id: "legacy-calendar", type: "mini-calendar", x: 0, y: 0, width: 494, height: 58 },
+  ];
+
+  const expanded = setWidgetCollapsedState(saved, "desktop", "legacy-calendar", false);
+  const calendar = expanded.desktop.dashboard[0];
+
+  assert.equal(calendar.height, 460);
+  assert.equal(calendar.expandedHeight, 460);
 });
 
 test("collapsing and expanding a widget preserves its size and nearby widgets", () => {

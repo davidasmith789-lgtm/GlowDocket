@@ -10,6 +10,25 @@ export const PROTECTED_WIDGETS = new Set([
 
 const REMOVED_WIDGET_TYPES = new Set(["school-guide"]);
 
+export const COLLAPSED_WIDGET_HEIGHT = 58;
+
+const WIDGET_MIN_EXPANDED_HEIGHTS = {
+  "mini-calendar": 360,
+  "add-assignment": 360,
+  checklists: 260,
+  "course-colors": 260,
+  reminders: 240,
+  "course-overview": 240,
+  "todo-master": 260,
+  "in-progress-master": 260,
+  "completed-master": 260,
+};
+
+export function getWidgetMinimumExpandedHeight(type) {
+  if (type?.includes("-bucket-")) return 220;
+  return WIDGET_MIN_EXPANDED_HEIGHTS[type] || 140;
+}
+
 const OLD_DEFAULT_DASHBOARD_MARKERS = [
   ["recommended", 0, 0],
   ["quick-match", 658, 0],
@@ -63,13 +82,32 @@ const finiteNumber = (value, fallback) => (
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+const getDefaultWidgetHeight = (type) => {
+  for (const items of Object.values(DEFAULT_WIDGET_LAYOUT)) {
+    const match = items.find((item) => item.type === type);
+    if (match) return match.height;
+  }
+  return 320;
+};
+
+const getExpandedWidgetHeight = (item) => {
+  const minimum = getWidgetMinimumExpandedHeight(item.type);
+  const explicitExpandedHeight = finiteNumber(item.expandedHeight, Number.NaN);
+  const savedHeight = finiteNumber(item.height, Number.NaN);
+  const candidate = Number.isFinite(explicitExpandedHeight) && explicitExpandedHeight > COLLAPSED_WIDGET_HEIGHT
+    ? explicitExpandedHeight
+    : savedHeight;
+
+  if (!Number.isFinite(candidate) || candidate <= COLLAPSED_WIDGET_HEIGHT) {
+    return Math.max(minimum, getDefaultWidgetHeight(item.type));
+  }
+
+  return Math.max(minimum, candidate);
+};
+
 const getEffectiveWidgetHeight = (item, collapsed = {}) => {
   const isCollapsed = Boolean(collapsed?.[item.type]);
-  if (isCollapsed) return 58;
-  const explicitExpandedHeight = finiteNumber(item.expandedHeight, Number.NaN);
-  return Number.isFinite(explicitExpandedHeight)
-    ? Math.max(58, explicitExpandedHeight)
-    : Math.max(58, finiteNumber(item.height, 320));
+  return isCollapsed ? COLLAPSED_WIDGET_HEIGHT : getExpandedWidgetHeight(item);
 };
 
 const closeTo = (value, expected, tolerance = 6) => (
@@ -193,9 +231,10 @@ function normalizeItemPosition(item, canvasWidth, fallbackWidth = 320) {
 function packVisibleWidgets(items, mode, options = {}) {
   const canvasWidth = getCanvasWidth(mode, options.canvasWidth);
   const gap = getGap(mode);
-  const collapsed = options.collapsed || {};
-  const sanitized = items.map((item, index) => {
-  const height = getEffectiveWidgetHeight(item, collapsed);
+const collapsed = options.collapsed || {};
+const sanitized = items.map((item, index) => {
+  const expandedHeight = getExpandedWidgetHeight(item);
+  const layoutHeight = getEffectiveWidgetHeight({ ...item, height: expandedHeight }, collapsed);
 
   if (options.preservePositions) {
     const width = clamp(finiteNumber(item.width, 320), 190, canvasWidth);
@@ -213,7 +252,8 @@ function packVisibleWidgets(items, mode, options = {}) {
         : canvasWidth > 0
           ? x / canvasWidth
           : 0,
-      height,
+      height: layoutHeight,
+      __expandedHeight: expandedHeight,
       y: Math.max(0, finiteNumber(item.y, 0)),
       zIndex: Math.max(1, finiteNumber(item.zIndex, 1)),
       __order: index,
@@ -224,7 +264,8 @@ function packVisibleWidgets(items, mode, options = {}) {
 
   return {
     ...normalized,
-    height,
+    height: layoutHeight,
+    __expandedHeight: expandedHeight,
     y: Math.max(0, finiteNumber(item.y, 0)),
     zIndex: Math.max(1, finiteNumber(item.zIndex, 1)),
     __order: index,
@@ -233,7 +274,8 @@ function packVisibleWidgets(items, mode, options = {}) {
 
 if (options.preservePositions) {
   return sanitized.map((item) => {
-    const cleanItem = { ...item };
+    const cleanItem = { ...item, height: item.__expandedHeight, expandedHeight: item.__expandedHeight };
+    delete cleanItem.__expandedHeight;
     delete cleanItem.__order;
     return cleanItem;
   });
@@ -259,7 +301,8 @@ if (options.preservePositions) {
 
     return sanitized.map((item) => {
       const packed = packedById.get(item.id) || item;
-      const cleanItem = { ...packed };
+      const cleanItem = { ...packed, height: packed.__expandedHeight, expandedHeight: packed.__expandedHeight };
+      delete cleanItem.__expandedHeight;
       delete cleanItem.__order;
       return cleanItem;
     });
@@ -267,7 +310,8 @@ if (options.preservePositions) {
 
   if (active) {
     return sanitized.map((item) => {
-      const cleanItem = { ...item };
+      const cleanItem = { ...item, height: item.__expandedHeight, expandedHeight: item.__expandedHeight };
+      delete cleanItem.__expandedHeight;
       delete cleanItem.__order;
       return cleanItem;
     });
@@ -288,7 +332,8 @@ if (options.preservePositions) {
 
   return sanitized.map((item) => {
     const packed = packedById.get(item.id) || item;
-    const cleanItem = { ...packed };
+    const cleanItem = { ...packed, height: packed.__expandedHeight, expandedHeight: packed.__expandedHeight };
+    delete cleanItem.__expandedHeight;
     delete cleanItem.__order;
     return cleanItem;
   });
@@ -315,13 +360,7 @@ export function setWidgetCollapsedState(layout, mode, instanceId, collapsed) {
 
   if (!activeItem) return next;
 
-  const explicitExpandedHeight = finiteNumber(activeItem.expandedHeight, Number.NaN);
-  const fallbackExpandedHeight = Number.isFinite(explicitExpandedHeight)
-    ? explicitExpandedHeight
-    : finiteNumber(activeItem.height, 320);
-  const nextExpandedHeight = Number.isFinite(fallbackExpandedHeight)
-    ? Math.max(58, fallbackExpandedHeight)
-    : 320;
+  const nextExpandedHeight = getExpandedWidgetHeight(activeItem);
 
   next.collapsed = { ...(next.collapsed || {}), [activeItem.type]: Boolean(collapsed) };
 

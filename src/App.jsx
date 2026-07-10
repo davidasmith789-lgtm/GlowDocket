@@ -11,7 +11,9 @@ import {
 } from "./checklistUtils.js";
 import {
   canHideWidget,
+  COLLAPSED_WIDGET_HEIGHT,
   createDefaultWorkspaceLayout,
+  getWidgetMinimumExpandedHeight,
   normalizeWorkspaceLayout,
   placeWidget,
   setWidgetCollapsedState,
@@ -936,6 +938,7 @@ function WorkspaceWidget({
   children,
 }) {
   const widgetRef = useRef(null);
+  const minimumExpandedHeight = getWidgetMinimumExpandedHeight(instance.type);
   const resizeStart = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -964,7 +967,7 @@ function WorkspaceWidget({
         x: widgetX,
         y: widgetY,
         width: Math.min(maxWidth, Math.max(190, startWidth + moveEvent.clientX - startX)),
-        height: Math.max(58, startHeight + moveEvent.clientY - startY),
+        height: Math.max(minimumExpandedHeight, startHeight + moveEvent.clientY - startY),
       };
       const legal = chooseLegalWorkspaceRect(
         desired,
@@ -995,7 +998,7 @@ function WorkspaceWidget({
     const canvas = widget?.closest(".workspace-widget-canvas");
     const canvasWidth = canvas?.clientWidth || instance.width;
     const nextHeight = Math.max(
-      140,
+      minimumExpandedHeight,
       Math.min(1100, Number(instance.height) + heightChange),
     );
     onResize(canvasWidth, nextHeight, canvasWidth);
@@ -1064,7 +1067,7 @@ function WorkspaceWidget({
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
-      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? "58px" : `${instance.height}px` }}
+      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? `${COLLAPSED_WIDGET_HEIGHT}px` : `${instance.height}px` }}
     >
       <header className="workspace-widget-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, onToggle)}>
         <button
