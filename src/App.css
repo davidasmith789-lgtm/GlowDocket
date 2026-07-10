@@ -3761,26 +3761,27 @@ html[data-theme="dark"] {
 .portable-course-color-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
 .portable-course-color-row > span { overflow: hidden; padding: 6px 9px; border-radius: 999px; text-overflow: ellipsis; white-space: nowrap; }
 .portable-course-color-row .btn { padding: 6px 8px; }
+.workspace-widget.uses-fluid-course-colors .workspace-widget-scaled-content {
+  width: 100%;
+  min-height: 100%;
+  transform: none;
+}
 
 @container (max-width: 360px) {
-  .portable-course-colors { gap: 6px; font-size: 0.82rem; }
-  .portable-course-colors .hint-text { font-size: 0.72rem; line-height: 1.3; }
+  .portable-course-colors { gap: 6px; }
   .portable-course-add-form { gap: 6px; }
-  .portable-course-add-form label { font-size: 0.74rem; }
-  .portable-course-add-form input { min-height: 34px; padding: 7px 9px; font-size: 0.78rem; }
+  .portable-course-add-form input { min-height: 34px; padding: 7px 9px; }
   .portable-course-color-row { gap: 5px; }
-  .portable-course-color-row > span { padding: 4px 7px; font-size: 0.74rem; }
+  .portable-course-color-row > span { min-width: 0; padding: 4px 7px; }
   .portable-course-color-row input[type="color"] { width: 30px; height: 26px; padding: 2px; }
-  .portable-course-color-row .btn { padding: 5px 6px; font-size: 0.68rem; }
+  .portable-course-color-row .btn { padding: 5px 6px; }
 }
 
 @container (max-width: 280px) {
-  .portable-course-colors { gap: 4px; font-size: 0.72rem; }
-  .portable-course-colors .hint-text,
-  .portable-course-add-form label { font-size: 0.64rem; }
-  .portable-course-color-row > span { padding: 3px 6px; font-size: 0.66rem; }
+  .portable-course-colors { gap: 4px; }
+  .portable-course-color-row > span { padding: 3px 5px; }
   .portable-course-color-row input[type="color"] { width: 25px; height: 22px; }
-  .portable-course-color-row .btn { padding: 4px 5px; font-size: 0.61rem; }
+  .portable-course-color-row .btn { padding: 4px 5px; }
 }
 
 .course-overview-widget { display: grid; gap: 13px; }

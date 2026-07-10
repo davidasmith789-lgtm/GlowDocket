@@ -1013,7 +1013,7 @@ function WorkspaceWidget({
     "quick-match",
     "course-overview",
   ].includes(instance.type);
-  const contentScale = mobileResize
+  const contentScale = mobileResize || instance.type === "course-colors"
     ? 1
     : Math.min(
         1,
@@ -1175,7 +1175,7 @@ function WorkspaceWidget({
   return (
     <section
       ref={widgetRef}
-      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}`}
+      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}${instance.type === "course-colors" ? " uses-fluid-course-colors" : ""}`}
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
