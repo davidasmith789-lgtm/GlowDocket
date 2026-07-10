@@ -426,15 +426,37 @@ function isWorkspaceRectOpen(rect, obstacles) {
   return !obstacles.some((obstacle) => workspaceRectsOverlap(rect, obstacle));
 }
 
-function chooseLegalWorkspaceRect(desired, xOnly, yOnly, lastSafe, obstacles) {
+function chooseLegalWorkspaceRect(desired, xOnly, yOnly, lastSafe, obstacles, options = {}) {
   if (isWorkspaceRectOpen(desired, obstacles)) return desired;
 
-  const candidates = [xOnly, yOnly].filter((candidate) =>
+  // Besides axis-only movement, try the nearest legal edges around every
+  // obstacle. This lets a widget slide through tight layouts instead of
+  // appearing frozen as soon as the pointer crosses another widget.
+  const candidates = [xOnly, yOnly];
+  if (options.snapToEdges) {
+    for (const obstacle of obstacles) {
+      candidates.push(
+      { ...desired, x: obstacle.x - desired.width - WORKSPACE_COLLISION_GAP },
+      { ...desired, x: obstacle.x + obstacle.width + WORKSPACE_COLLISION_GAP },
+      { ...desired, y: obstacle.y - desired.height - WORKSPACE_COLLISION_GAP },
+      { ...desired, y: obstacle.y + obstacle.height + WORKSPACE_COLLISION_GAP },
+      { ...desired, x: obstacle.x - desired.width - WORKSPACE_COLLISION_GAP, y: lastSafe.y },
+      { ...desired, x: obstacle.x + obstacle.width + WORKSPACE_COLLISION_GAP, y: lastSafe.y },
+      { ...desired, x: lastSafe.x, y: obstacle.y - desired.height - WORKSPACE_COLLISION_GAP },
+      { ...desired, x: lastSafe.x, y: obstacle.y + obstacle.height + WORKSPACE_COLLISION_GAP },
+      );
+    }
+  }
+
+  const legalCandidates = candidates.filter((candidate) =>
+    candidate.x >= 0 &&
+    candidate.y >= 0 &&
+    (!Number.isFinite(options.maxX) || candidate.x <= options.maxX) &&
     isWorkspaceRectOpen(candidate, obstacles)
   );
-  if (candidates.length === 0) return lastSafe;
+  if (legalCandidates.length === 0) return lastSafe;
 
-  return candidates.sort((a, b) => {
+  return legalCandidates.sort((a, b) => {
     const aDistance = Math.abs(a.x - desired.x) + Math.abs(a.y - desired.y);
     const bDistance = Math.abs(b.x - desired.x) + Math.abs(b.y - desired.y);
     return aDistance - bDistance;
@@ -1041,10 +1063,12 @@ function WorkspaceWidget({
     const stop = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
       onResize(nextWidth, nextHeight, canvas?.clientWidth);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   };
 
   const resizeForMobile = (heightChange = 0) => {
@@ -1079,7 +1103,9 @@ function WorkspaceWidget({
       x: initialX,
       y: initialY,
       width: Number(widget.dataset.widgetWidth) || widget.offsetWidth,
-      height: Number(widget.dataset.expandedHeight) || widget.offsetHeight,
+      height: widget.classList.contains("is-collapsed")
+        ? widget.offsetHeight
+        : Number(widget.dataset.expandedHeight) || widget.offsetHeight,
     };
     widget.classList.add("is-dragging");
     const move = (moveEvent) => {
@@ -1095,6 +1121,7 @@ function WorkspaceWidget({
         { ...desired, x: lastSafe.x },
         lastSafe,
         obstacles,
+        { snapToEdges: true, maxX },
       );
       nextX = legal.x;
       nextY = legal.y;
@@ -1107,11 +1134,13 @@ function WorkspaceWidget({
       widget.classList.remove("is-dragging");
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
       if (targetTab) onMove(targetTab);
       else onPosition(nextX, nextY, canvas.clientWidth);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   };
 
   return (
