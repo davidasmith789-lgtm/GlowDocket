@@ -631,7 +631,7 @@ html[data-theme="dark"] .tab-row {
   min-width: 0;
 }
 .assignment-course-heading {
-  grid-column: 2;
+  grid-column: 1;
   display: grid !important;
   width: 100%;
   justify-items: center;
