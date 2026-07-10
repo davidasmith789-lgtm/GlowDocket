@@ -3568,6 +3568,7 @@ html[data-theme="dark"] {
   transition: opacity 180ms ease, padding 220ms ease;
 }
 .workspace-widget.is-small-widget .workspace-widget-body { overflow: hidden; }
+.workspace-widget.has-fixed-overflow .workspace-widget-body { overflow: hidden; }
 .workspace-widget.is-display-only .workspace-widget-body {
   display: flex;
   align-items: center;

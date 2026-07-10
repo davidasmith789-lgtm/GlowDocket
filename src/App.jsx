@@ -1004,6 +1004,7 @@ function WorkspaceWidget({
   const availableBodyHeight = Math.max(1, Number(instance.height) - COLLAPSED_WIDGET_HEIGHT);
   const smallWidget = Number(instance.width) <= 320 && Number(instance.height) <= 220;
   const displayOnlyWidget = instance.type.startsWith("stat-");
+  const fixedOverflowWidget = instance.type === "mini-calendar";
   const contentScale = mobileResize
     ? 1
     : Math.min(
@@ -1166,7 +1167,7 @@ function WorkspaceWidget({
   return (
     <section
       ref={widgetRef}
-      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}`}
+      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}`}
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
