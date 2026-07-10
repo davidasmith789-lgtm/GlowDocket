@@ -1222,13 +1222,16 @@ function WorkspaceWidget({
           </div>
         </div>
       )}
-      {!collapsed && !locked && !mobileResize && (
+      {!locked && !mobileResize && (
         <div className="widget-resize-edges" aria-label={`Resize ${title}`}>
-          {[
-            ["top", { top: true }], ["right", { right: true }], ["bottom", { bottom: true }], ["left", { left: true }],
-            ["top-left", { top: true, left: true }], ["top-right", { top: true, right: true }],
-            ["bottom-right", { bottom: true, right: true }], ["bottom-left", { bottom: true, left: true }],
-          ].map(([edge, directions]) => <button key={edge} type="button" className={`widget-resize-edge is-${edge}`} onPointerDown={(event) => resizeStart(event, directions)} aria-label={`Resize ${title} from ${edge}`} />)}
+          {(collapsed
+            ? [["right", { right: true }], ["left", { left: true }]]
+            : [
+                ["top", { top: true }], ["right", { right: true }], ["bottom", { bottom: true }], ["left", { left: true }],
+                ["top-left", { top: true, left: true }], ["top-right", { top: true, right: true }],
+                ["bottom-right", { bottom: true, right: true }], ["bottom-left", { bottom: true, left: true }],
+              ]
+          ).map(([edge, directions]) => <button key={edge} type="button" className={`widget-resize-edge is-${edge}`} onPointerDown={(event) => resizeStart(event, directions)} aria-label={`Resize ${title} from ${edge}`} />)}
         </div>
       )}
       {!collapsed && !locked && mobileResize && (
