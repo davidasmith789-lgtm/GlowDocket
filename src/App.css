@@ -631,13 +631,14 @@ html[data-theme="dark"] .tab-row {
   min-width: 0;
 }
 .assignment-course-heading {
-  grid-column: 1;
+  grid-column: 2;
   display: grid !important;
-  justify-items: start;
+  width: 100%;
+  justify-items: center;
   gap: 2px;
 }
 .assignment-course-heading label { margin: 0; }
-.assignment-course-heading button { padding: 0 !important; text-align: left; }
+.assignment-course-heading button { padding: 0 !important; text-align: center; }
 
 @container (max-width: 390px) {
   .assignment-entry-form { grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 6px 8px; }
