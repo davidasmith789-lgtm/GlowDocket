@@ -1753,7 +1753,7 @@ function App() {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateCanvasWidth);
     };
-  }, [currentTab, workspaceMode]);
+  }, [currentTab, currentUser, workspaceMode]);
 
   useEffect(() => {
   workspaceLayoutRef.current = workspaceLayout;
@@ -3873,10 +3873,20 @@ useEffect(() => {
       userCustomized: true,
       updatedAt: new Date().toISOString(),
     };
+    const requestedCanvasWidth = Number(options.canvasWidth);
+    const mountedCanvasWidth = Number(workspaceMainRef.current?.clientWidth);
+    const savedCanvasWidth = Number(workspaceCanvasWidth);
+    const usableCanvasWidth = requestedCanvasWidth > 0
+      ? requestedCanvasWidth
+      : mountedCanvasWidth > 0
+        ? mountedCanvasWidth
+        : savedCanvasWidth > 0
+          ? savedCanvasWidth
+          : undefined;
 
     const normalized = normalizeWorkspaceLayout(stampedLayout, {
       mode: workspaceMode,
-      canvasWidth: options.canvasWidth ?? workspaceCanvasWidth,
+      canvasWidth: usableCanvasWidth,
       activeId: options.activeId,
       reflowActiveWithNeighbors: options.reflowActiveWithNeighbors,
       collapsed: options.collapsed ?? stampedLayout?.collapsed,
@@ -5687,7 +5697,7 @@ useEffect(() => {
         return !source.some((task) => getTaskDueBucket(task) === bucketsOrder[bucketIndex]);
       })()}
       onToggle={() => toggleWorkspaceWidget(instance)}
-      onResize={(width, height, canvasWidth) => updateWidgetInstance(instance.id, { width, height }, { canvasWidth })}
+      onResize={(width, height, canvasWidth) => updateWidgetInstance(instance.id, { width, height, expandedHeight: height }, { canvasWidth })}
       onPosition={(x, y, canvasWidth) => {
         const highestLayer = Math.max(1, ...Object.values(workspaceLayout[workspaceMode] || {}).flat().map((item) => Number(item.zIndex) || 1));
         updateWidgetInstance(instance.id, { x, xRatio: canvasWidth > 0 ? x / canvasWidth : 0, y, zIndex: highestLayer + 1 }, { canvasWidth });

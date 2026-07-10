@@ -166,6 +166,54 @@ test("workspace normalization re-centers widgets based on the actual canvas widt
   assert.equal(widget.xRatio, 0.24444444444444444);
 });
 
+test("an unmeasured zero-width canvas preserves the distributed desktop layout", () => {
+  const saved = createDefaultWorkspaceLayout();
+  const expectedPositions = saved.desktop.dashboard.map(({ type, x }) => [type, x]);
+
+  const collapsed = setWidgetCollapsedState(saved, "desktop", "mini-calendar-2", true);
+  const normalized = normalizeWorkspaceLayout(collapsed, {
+    mode: "desktop",
+    canvasWidth: 0,
+    collapsed: collapsed.collapsed,
+    preservePositions: true,
+  });
+  const actualPositions = normalized.desktop.dashboard.map(({ type, x }) => [type, x]);
+
+  assert.deepEqual(actualPositions, expectedPositions);
+  assert.ok(actualPositions.some(([, x]) => x > 1000));
+});
+
+test("missing and invalid canvas widths use the mode fallback", () => {
+  const saved = createDefaultWorkspaceLayout();
+  const miniCalendar = saved.desktop.dashboard.find((item) => item.type === "mini-calendar");
+
+  for (const canvasWidth of [undefined, Number.NaN, -1]) {
+    const normalized = normalizeWorkspaceLayout(structuredClone(saved), {
+      mode: "desktop",
+      canvasWidth,
+      preservePositions: true,
+    });
+    const normalizedCalendar = normalized.desktop.dashboard.find((item) => item.type === "mini-calendar");
+    assert.equal(normalizedCalendar.x, miniCalendar.x);
+    assert.equal(normalizedCalendar.width, miniCalendar.width);
+  }
+});
+
+test("a measured narrow canvas still clamps widgets to the available width", () => {
+  const saved = createDefaultWorkspaceLayout();
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 700,
+    preservePositions: true,
+  });
+
+  for (const widget of normalized.desktop.dashboard) {
+    assert.ok(widget.width <= 700);
+    assert.ok(widget.x >= 0);
+    assert.ok(widget.x + widget.width <= 700);
+  }
+});
+
 test("collapsed widgets reserve only their compact header footprint", () => {
   const saved = createDefaultWorkspaceLayout();
   saved.desktop.dashboard = [
@@ -242,6 +290,32 @@ test("collapsed normalization preserves a widget's expanded size", () => {
 
   assert.equal(calendar.height, 410);
   assert.equal(calendar.expandedHeight, 410);
+});
+
+test("a resized checklist replaces its stale expanded height and collision footprint", () => {
+  const saved = createDefaultWorkspaceLayout();
+  saved.desktop.dashboard = [
+    { id: "checklists-a", type: "checklists", x: 0, y: 0, width: 540, height: 300, expandedHeight: 520 },
+    { id: "calendar-a", type: "mini-calendar", x: 558, y: 0, width: 494, height: 460, expandedHeight: 460 },
+  ];
+  saved.userCustomized = true;
+
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 1200,
+    preservePositions: true,
+  });
+  const checklist = normalized.desktop.dashboard.find((item) => item.id === "checklists-a");
+
+  assert.equal(checklist.height, 300);
+  assert.equal(checklist.expandedHeight, 300);
+
+  const collapsed = setWidgetCollapsedState(normalized, "desktop", "checklists-a", true);
+  const expanded = setWidgetCollapsedState(collapsed, "desktop", "checklists-a", false);
+  const reopenedChecklist = expanded.desktop.dashboard.find((item) => item.id === "checklists-a");
+
+  assert.equal(reopenedChecklist.height, 300);
+  assert.equal(reopenedChecklist.expandedHeight, 300);
 });
 
 test("widget expanded-height rules repair unusable sizes without changing valid custom sizes", () => {

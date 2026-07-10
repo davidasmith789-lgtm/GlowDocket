@@ -71,7 +71,8 @@ const makeInstance = (item, index) => ({
 
 const getCanvasWidth = (mode, override) => {
   const fallback = mode === "mobile" ? 720 : 1680;
-  return Math.max(320, Number.isFinite(override) ? override : fallback);
+  const measuredWidth = Number(override);
+  return Math.max(320, Number.isFinite(measuredWidth) && measuredWidth > 0 ? measuredWidth : fallback);
 };
 
 const getGap = (mode) => mode === "mobile" ? 12 : 18;
@@ -94,9 +95,9 @@ const getExpandedWidgetHeight = (item) => {
   const minimum = getWidgetMinimumExpandedHeight(item.type);
   const explicitExpandedHeight = finiteNumber(item.expandedHeight, Number.NaN);
   const savedHeight = finiteNumber(item.height, Number.NaN);
-  const candidate = Number.isFinite(explicitExpandedHeight) && explicitExpandedHeight > COLLAPSED_WIDGET_HEIGHT
-    ? explicitExpandedHeight
-    : savedHeight;
+  const candidate = Number.isFinite(savedHeight) && savedHeight > COLLAPSED_WIDGET_HEIGHT
+    ? savedHeight
+    : explicitExpandedHeight;
 
   if (!Number.isFinite(candidate) || candidate <= COLLAPSED_WIDGET_HEIGHT) {
     return Math.max(minimum, getDefaultWidgetHeight(item.type));
