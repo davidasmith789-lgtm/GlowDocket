@@ -1211,7 +1211,9 @@ function WorkspaceWidget({
         </button>
         <details className="widget-menu" onDoubleClick={(event) => event.stopPropagation()}>
           <summary aria-label={`${title} options`}>•••</summary>
-          <div className="widget-menu-popover">
+          <div className="widget-menu-popover" onClick={(event) => {
+            if (event.target.closest("button")) event.currentTarget.closest("details")?.removeAttribute("open");
+          }}>
             <strong>Copy to</strong>
             {WORKSPACE_TABS.filter(([tab]) => tab !== "calendar").map(([tab, label]) => <button type="button" key={`copy-${tab}`} onClick={() => onCopy(tab)}>{label}</button>)}
             {onSelectUnderneath && <button type="button" onClick={onSelectUnderneath}>Select widget underneath</button>}
