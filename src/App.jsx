@@ -4043,6 +4043,12 @@ function App() {
   const restoreWorkspaceWidget = (instance) => updateWidgetInstance(instance.id, { hidden: false });
 
   const toggleWorkspaceWidget = (instance) => {
+  const isCollapsing = !workspaceLayout.collapsed?.[instance.type];
+  if (isCollapsing) {
+    const heightReduction = Math.max(0, Number(instance.height) - COLLAPSED_WIDGET_HEIGHT);
+    const nextMaximumScroll = Math.max(0, document.documentElement.scrollHeight - heightReduction - window.innerHeight);
+    if (window.scrollY > nextMaximumScroll) window.scrollTo({ top: nextMaximumScroll, behavior: "auto" });
+  }
   saveWorkspace(
     (previousLayout) => {
       const nextCollapsed = !previousLayout.collapsed?.[instance.type];
