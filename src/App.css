@@ -3684,7 +3684,7 @@ html[data-theme="dark"] {
 
 .workspace-organizer { gap: 16px; margin-top: -8px; box-shadow: var(--shadow-soft); }
 .workspace-organizer-header { align-items: center; }
-.workspace-organizer-header h2 { margin: 2px 0 4px; }
+.workspace-organizer-header h2 { margin: 2px 0 4px; color: var(--text-color); }
 .workspace-organizer-header p { margin: 0; }
 .workspace-organizer-header span { color: var(--muted-text); }
 .widget-library-search { display: grid; gap: 6px; color: var(--muted-text); font-size: 0.78rem; font-weight: 800; }
