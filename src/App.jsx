@@ -4672,7 +4672,7 @@ function App() {
     : bulkImportRowsWithWarnings;
 
   const renderAddAssignmentForm = (formId) => (
-    <form onSubmit={handleAddTask} className="card-form">
+    <form onSubmit={handleAddTask} className="card-form assignment-entry-form">
       <section className="bulk-import-panel" aria-label="Paste assignment list">
         <div className="bulk-import-heading">
           <div><strong>Paste Assignment List</strong><p>Create several assignments from one line each, with a review before saving.</p></div>
@@ -4767,11 +4767,11 @@ function App() {
       </select>
 
       {category === "School" && <><div
+        className="assignment-course-heading"
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "8px",
         }}
       >
         <label>{schoolLevelCopy.courseLabel}:</label>

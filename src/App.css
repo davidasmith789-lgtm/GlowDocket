@@ -613,6 +613,38 @@ html[data-theme="dark"] .tab-row {
   margin-top: 6px;
 }
 
+.assignment-entry-form {
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+}
+.assignment-entry-form > * { grid-column: 1 / -1; }
+.assignment-entry-form > label {
+  grid-column: 1;
+  margin: 0;
+  align-self: center;
+}
+.assignment-entry-form > label + :is(input, select, textarea, div),
+.assignment-entry-form > .assignment-course-heading + :is(input, select) {
+  grid-column: 2;
+  width: 100%;
+  min-width: 0;
+}
+.assignment-course-heading {
+  grid-column: 1;
+  display: grid !important;
+  justify-items: start;
+  gap: 2px;
+}
+.assignment-course-heading label { margin: 0; }
+.assignment-course-heading button { padding: 0 !important; text-align: left; }
+
+@container (max-width: 390px) {
+  .assignment-entry-form { grid-template-columns: minmax(90px, auto) minmax(0, 1fr); gap: 6px 8px; }
+  .assignment-entry-form > label,
+  .assignment-course-heading { font-size: 0.78rem; }
+}
+
 input,
 select,
 textarea {
