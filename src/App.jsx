@@ -1014,6 +1014,7 @@ function WorkspaceWidget({
     event.stopPropagation();
     const widget = event.currentTarget.closest(".workspace-widget");
     const canvas = widget?.closest(".workspace-widget-canvas");
+    widget?.classList.add("is-resizing");
     const startX = event.clientX;
     const startY = event.clientY;
     const startWidth = instance.width;
@@ -1061,6 +1062,7 @@ function WorkspaceWidget({
       }
     };
     const stop = () => {
+      widget?.classList.remove("is-resizing");
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);

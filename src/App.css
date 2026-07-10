@@ -3488,10 +3488,15 @@ html[data-theme="dark"] {
   border-radius: 18px;
   background: var(--card-bg);
   box-shadow: var(--shadow-card);
-  transition: height 220ms cubic-bezier(0.2, 0.8, 0.2, 1), width 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
-  will-change: height, width, box-shadow;
+  transition: height 180ms cubic-bezier(0.2, 0.8, 0.2, 1), width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
-.workspace-widget.is-dragging { z-index: 10000 !important; opacity: 0.94; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28); }
+.workspace-widget.is-dragging,
+.workspace-widget.is-resizing {
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+  will-change: left, top, width, height;
+}
+.workspace-widget.is-dragging { z-index: 10000 !important; opacity: 0.97; border-color: color-mix(in srgb, var(--focus-color) 52%, var(--border-color)); box-shadow: 0 22px 56px rgba(0, 0, 0, 0.24); }
+.workspace-widget.is-resizing { z-index: 9999 !important; border-color: color-mix(in srgb, var(--focus-color) 42%, var(--border-color)); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18); }
 
 .workspace-widget.is-collapsed { overflow: visible; }
 
@@ -3569,6 +3574,7 @@ html[data-theme="dark"] {
   transform-origin: top left;
   transition: transform 120ms ease;
 }
+.workspace-widget.is-resizing .workspace-widget-scaled-content { transition: none; }
 .workspace-widget-scaled-content > .quick-match-card,
 .workspace-widget-scaled-content > .dashboard-calendar-card { padding: 0; border: 0; border-radius: 0; box-shadow: none; }
 
@@ -3589,6 +3595,7 @@ html[data-theme="dark"] {
   border: 0;
   background: linear-gradient(135deg, transparent 45%, var(--muted-text) 46% 55%, transparent 56% 65%, var(--muted-text) 66% 75%, transparent 76%);
   cursor: nwse-resize;
+  touch-action: none;
 }
 
 .quick-match-preset-settings { display: grid; gap: 12px; }
@@ -4129,6 +4136,76 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 
   .workspace-organizer { max-height: min(72dvh, 620px); overflow-y: auto; }
   .widget-library-grid { grid-template-columns: 1fr; }
+}
+
+/* ========================================================================== */
+/* Interaction polish: one calm motion language across the existing UI.       */
+/* ========================================================================== */
+
+:root {
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--focus-color) 24%, transparent);
+}
+
+:where(button, .btn, .tab-button, summary, [role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(.btn, .tab-button, .settings-nav-item, .recommended-plan-button,
+  .portable-task-list button, .reminder-widget-main, .reminder-widget-start,
+  .calendar-view-toggle button, .weekly-calendar-grid > button,
+  .widget-menu-popover button) {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.btn, .tab-button, .settings-nav-item, .recommended-plan-button,
+    .portable-task-list button, .reminder-widget-main, .reminder-widget-start,
+    .weekly-calendar-grid > button):not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+}
+
+:where(.btn, .tab-button, .settings-nav-item, .recommended-plan-button,
+  .portable-task-list button, .reminder-widget-main, .reminder-widget-start,
+  .weekly-calendar-grid > button):not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 60ms;
+}
+
+:where(button, input, select, textarea, summary, [role="button"]):focus-visible {
+  outline: 2px solid var(--focus-color);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+:where(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.workspace-widget-header,
+.widget-drag-grip,
+.widget-resize-handle {
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (max-width: 420px) {
