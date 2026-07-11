@@ -5167,10 +5167,14 @@ function App() {
       return Number(item.x) < Number(instance.x) + Number(instance.width)
         && Number(item.x) + Number(item.width) > Number(instance.x)
         && Number(item.y) < Number(instance.y) + activeHeight
-        && Number(item.y) + itemHeight > Number(instance.y)
-        && Number(item.zIndex || 1) < Number(instance.zIndex || 1);
+        && Number(item.y) + itemHeight > Number(instance.y);
     });
-    const underneath = overlaps.sort((a, b) => Number(b.zIndex || 1) - Number(a.zIndex || 1))[0];
+    const underneath = overlaps
+      .sort((a, b) => {
+        const aIsLower = Number(a.zIndex || 1) < Number(instance.zIndex || 1) ? 1 : 0;
+        const bIsLower = Number(b.zIndex || 1) < Number(instance.zIndex || 1) ? 1 : 0;
+        return bIsLower - aIsLower || Number(b.zIndex || 1) - Number(a.zIndex || 1);
+      })[0];
     if (!underneath) return;
     const highestLayer = Math.max(1, ...items.map((item) => Number(item.zIndex) || 1), Number(instance.zIndex) || 1);
     updateWidgetInstance(underneath.id, { zIndex: highestLayer + 1 });
@@ -5841,7 +5845,7 @@ function App() {
       onSelectUnderneath={(() => {
         const instanceHeight = workspaceLayout.collapsed[instance.type] ? COLLAPSED_WIDGET_HEIGHT : Number(instance.height);
         const hasUnderneath = (workspaceLayout[workspaceMode]?.[currentTab] || []).some((item) => {
-          if (item.hidden || item.id === instance.id || Number(item.zIndex || 1) >= Number(instance.zIndex || 1)) return false;
+          if (item.hidden || item.id === instance.id) return false;
           const itemHeight = workspaceLayout.collapsed[item.type] ? COLLAPSED_WIDGET_HEIGHT : Number(item.height);
           return Number(item.x) < Number(instance.x) + Number(instance.width)
             && Number(item.x) + Number(item.width) > Number(instance.x)
@@ -6073,7 +6077,7 @@ function App() {
           </section>
         )}
 
-        <div className={`workspace-layout${currentTab === "calendar" ? " workspace-calendar-only" : " workspace-customizable"}`}>
+        <div className={`workspace-layout${currentTab === "calendar" ? " workspace-calendar-only" : " workspace-customizable"}${workspaceCanvasWidth > 0 ? " is-measured" : " is-measuring"}`}>
           <main className="workspace-main" ref={workspaceMainRef}>
 
         {currentTab === "dashboard" && renderWorkspaceForTab("dashboard")}

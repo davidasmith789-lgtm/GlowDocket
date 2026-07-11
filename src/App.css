@@ -3615,6 +3615,7 @@ html[data-theme="dark"] {
   height: 100%;
   transform: none;
 }
+.workspace-layout.is-measuring { visibility: hidden; }
 .workspace-widget-scaled-content {
   width: calc(100% / var(--widget-content-scale, 1));
   min-height: calc(100% / var(--widget-content-scale, 1));
