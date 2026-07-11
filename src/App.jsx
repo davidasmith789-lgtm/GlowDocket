@@ -1774,6 +1774,8 @@ function App() {
         rootStyle.setProperty(variable, value);
       });
     });
+    const appBarColor = normalizeHexColor(activeColors.nav || "") || THEME_COLOR_DEFAULTS[theme].nav;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", appBarColor);
   }, [currentUser, theme, userSettings.customColors]);
 
   useEffect(() => {
