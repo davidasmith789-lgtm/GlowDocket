@@ -1622,6 +1622,8 @@ function App() {
   const [themeSaveOpen, setThemeSaveOpen] = useState(false);
   const [newThemeName, setNewThemeName] = useState("");
   const [selectedChecklistId, setSelectedChecklistId] = useState(null);
+  const [checklistSelectionMode, setChecklistSelectionMode] = useState(false);
+  const [selectedChecklistIds, setSelectedChecklistIds] = useState([]);
   const [checklistNow, setChecklistNow] = useState(() => new Date());
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
   const [widgetSearch, setWidgetSearch] = useState("");
@@ -3888,12 +3890,6 @@ function App() {
     saveChecklistData(checklists.map((list) => list.id === listId ? updater(list) : list));
   };
 
-  const handleDeleteChecklist = (listId) => {
-    if (!window.confirm("Delete this checklist permanently?")) return;
-    saveChecklistData(checklists.filter((list) => list.id !== listId));
-    if (selectedChecklistId === listId) setSelectedChecklistId(null);
-  };
-
   const handleReorderChecklist = (sourceId, targetId) => {
     if (!sourceId || sourceId === targetId) return;
     const items = [...checklists];
@@ -5162,6 +5158,15 @@ function App() {
     setQuickMatchSubmittedMinutes(minutes);
   };
 
+  const handleDeleteSelectedChecklists = () => {
+    if (selectedChecklistIds.length === 0) return;
+    const label = selectedChecklistIds.length === 1 ? "this checklist" : `these ${selectedChecklistIds.length} checklists`;
+    if (!window.confirm(`Delete ${label} permanently?`)) return;
+    saveChecklistData(checklists.filter((list) => !selectedChecklistIds.includes(list.id)));
+    setSelectedChecklistIds([]);
+    setChecklistSelectionMode(false);
+  };
+
   const selectWidgetUnderneath = (instance) => {
     const items = (workspaceLayout[workspaceMode]?.[currentTab] || []).filter((item) => !item.hidden && item.id !== instance.id);
     const activeHeight = workspaceLayout.collapsed[instance.type] ? COLLAPSED_WIDGET_HEIGHT : Number(instance.height);
@@ -5316,8 +5321,24 @@ function App() {
         <section className="standalone-checklists" aria-label="Standalone checklists">
           <div className="checklist-gallery-toolbar">
             <div><h2>Checklists</h2><p>Quick lists that stay separate from assignments.</p></div>
-            <button type="button" className="btn btn-primary" onClick={handleCreateChecklist}>New list</button>
+            <div className="checklist-gallery-actions">
+              {checklists.length > 0 && (
+                <button type="button" className="btn btn-secondary" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>
+                  {checklistSelectionMode ? "Cancel" : "Select"}
+                </button>
+              )}
+              <button type="button" className="btn btn-primary" onClick={handleCreateChecklist}>New list</button>
+            </div>
           </div>
+          {checklistSelectionMode && (
+            <div className="checklist-selection-toolbar">
+              <button type="button" className="btn btn-secondary" onClick={() => setSelectedChecklistIds(selectedChecklistIds.length === checklists.length ? [] : checklists.map((list) => list.id))}>
+                {selectedChecklistIds.length === checklists.length ? "Clear all" : "Select all"}
+              </button>
+              <span>{selectedChecklistIds.length} selected</span>
+              <button type="button" className="btn btn-danger" disabled={selectedChecklistIds.length === 0} onClick={handleDeleteSelectedChecklists}>Delete selected</button>
+            </div>
+          )}
           {orderedLists.length === 0 ? <p className="checklist-empty">No lists yet. Create one whenever something needs keeping track of.</p> : (
             <div className="checklist-gallery">
               {orderedLists.map((list) => (
@@ -5326,13 +5347,14 @@ function App() {
                   className="checklist-gallery-card"
                   data-reorder-id={list.id}
                   style={{ backgroundColor: list.color, color: getContrastText(list.color) }}
-                  draggable
+                  draggable={!checklistSelectionMode}
                   onDragStart={(event) => event.dataTransfer.setData("text/checklist-list", list.id)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => handleReorderChecklist(event.dataTransfer.getData("text/checklist-list"), list.id)}
                 >
-                  <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistTouchReorder(event, ".checklist-gallery-card", list.id, handleReorderChecklist)} aria-label={`Reorder ${list.title}`}>⠿</button>
-                  <button type="button" className="checklist-card-open" onClick={() => setSelectedChecklistId(list.id)}>
+                  {!checklistSelectionMode && <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistTouchReorder(event, ".checklist-gallery-card", list.id, handleReorderChecklist)} aria-label={`Reorder ${list.title}`}>⠿</button>}
+                  {checklistSelectionMode && <input className="checklist-list-select" type="checkbox" checked={selectedChecklistIds.includes(list.id)} onChange={(event) => setSelectedChecklistIds((ids) => event.target.checked ? [...ids, list.id] : ids.filter((id) => id !== list.id))} aria-label={`Select ${list.title || "Untitled checklist"}`} />}
+                  <button type="button" className="checklist-card-open" onClick={() => checklistSelectionMode ? setSelectedChecklistIds((ids) => ids.includes(list.id) ? ids.filter((id) => id !== list.id) : [...ids, list.id]) : setSelectedChecklistId(list.id)}>
                     <strong>{list.pinned ? "📌 " : ""}{list.title || "Untitled checklist"}</strong>
                     <span>{(list.items || []).filter((item) => item.isDone).length}/{(list.items || []).length} checked</span>
                   </button>
@@ -5349,7 +5371,6 @@ function App() {
         <div className="checklist-editor-toolbar">
           <button type="button" className="btn btn-secondary" onClick={() => setSelectedChecklistId(null)}>← Lists</button>
           <button type="button" className={`checklist-pin-button${selectedList.pinned ? " active" : ""}`} onClick={() => updateChecklist(selectedList.id, (list) => ({ ...list, pinned: !list.pinned }))}>{selectedList.pinned ? "Unpin" : "Pin"}</button>
-          <button type="button" className="btn btn-danger" onClick={() => handleDeleteChecklist(selectedList.id)}>Delete list</button>
         </div>
         <input className="checklist-title-input" value={selectedList.title} onChange={(event) => updateChecklist(selectedList.id, (list) => ({ ...list, title: event.target.value }))} aria-label="Checklist title" />
         <div className="checklist-color-row">
