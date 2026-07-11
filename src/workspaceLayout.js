@@ -62,14 +62,12 @@ export const DEFAULT_DESKTOP_LAYOUT = {
   ],
   todo: [
     { type: "todo-master", width: 761, height: 618, xRatio: 0.2942266949, desktopY: 11, zIndex: 358 },
-    ...["overdue", "today", "tomorrow", "this-week", "next-week", "later", "no-date"].map((bucket) => ({ type: `todo-bucket-${bucket}`, width: 480, height: 430, hidden: true })),
     { type: "course-colors", width: 269, height: 487, xRatio: 0, desktopY: 0, zIndex: 322 },
     { type: "add-assignment", width: 783, height: 618.5, xRatio: 0, desktopY: 1141, zIndex: 326 },
     { type: "reminders", width: 276.5, height: 385, xRatio: 0.8196504237, desktopY: 12.5, zIndex: 357 },
   ],
   inProgress: [
     { type: "in-progress-master", width: 691, height: 673.5, xRatio: 0.2738347458, desktopY: 24, zIndex: 359 },
-    ...["overdue", "today", "tomorrow", "this-week", "next-week", "later", "no-date"].map((bucket) => ({ type: `in-progress-bucket-${bucket}`, width: 480, height: 430, hidden: true })),
     { type: "checklists", width: 397.5, height: 520, xRatio: 0, desktopY: 0, zIndex: 31 },
   ],
   completed: [
@@ -83,8 +81,8 @@ export const DEFAULT_DESKTOP_LAYOUT = {
 // the finalized monitor arrangement above.
 export const DEFAULT_WIDGET_LAYOUT = DEFAULT_DESKTOP_LAYOUT;
 
-const makeInstance = (item, index) => ({
-  id: `${item.type}-${index}`,
+const makeInstance = (item, index, tab = "workspace") => ({
+  id: `${item.type}-${tab}-${index}`,
   ...item,
   hidden: item.hidden ?? false,
 });
@@ -479,7 +477,7 @@ export function createDefaultWorkspaceLayout() {
   const makeMode = (mode) => Object.fromEntries(
     Object.entries(DEFAULT_DESKTOP_LAYOUT).map(([tab, items]) => [
       tab,
-      addMissingPositions(items.map((item, index) => makeInstance(getModeDefaultItem(item, mode), index)), mode),
+      addMissingPositions(items.map((item, index) => makeInstance(getModeDefaultItem(item, mode), index, tab)), mode),
     ]),
   );
 

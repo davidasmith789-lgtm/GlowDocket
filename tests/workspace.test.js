@@ -116,6 +116,20 @@ test("settings shortcut widget is removed from defaults and saved layouts", () =
   assert.equal(normalized.desktop.settings.some((item) => item.type === "settings-master"), false);
 });
 
+test("tab-specific task bucket widgets are removed from defaults and saved layouts", () => {
+  const layout = createDefaultWorkspaceLayout();
+  const defaultTypes = Object.values(layout.desktop).flat().map((item) => item.type);
+  assert.equal(defaultTypes.some((type) => type.startsWith("todo-bucket-") || type.startsWith("in-progress-bucket-")), false);
+
+  const saved = createDefaultWorkspaceLayout();
+  saved.desktop.todo.push({ id: "todo-bucket-old", type: "todo-bucket-today", x: 0, y: 0, width: 480, height: 430 });
+  saved.desktop.inProgress.push({ id: "progress-bucket-old", type: "in-progress-bucket-overdue", x: 0, y: 0, width: 480, height: 430 });
+  const normalized = normalizeWorkspaceLayout(saved);
+  const normalizedTypes = Object.values(normalized.desktop).flat().map((item) => item.type);
+  assert.equal(normalizedTypes.includes("todo-bucket-today"), false);
+  assert.equal(normalizedTypes.includes("in-progress-bucket-overdue"), false);
+});
+
 test("course colors stays available and its finalized settings copy is hidden", () => {
   const layout = createDefaultWorkspaceLayout();
 

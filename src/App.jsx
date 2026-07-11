@@ -5514,7 +5514,6 @@ function App() {
   const visibleWidgetCatalog = workspaceWidgetCatalog.filter((item) =>
     getWorkspaceWidgetTitle(item.type).toLowerCase().includes(widgetSearch.trim().toLowerCase()),
   );
-  const hiddenWorkspaceWidgets = Object.values(workspaceLayout[workspaceMode] || {}).flat().filter((item) => item.hidden);
 
   const renderRecommendedWidget = () => recommendationItems.length === 0 ? <p className="recommended-plan-empty">You have no incomplete assignments. Nice work!</p> : (
     <>
@@ -6096,7 +6095,6 @@ function App() {
                 );
               })}
             </div>
-            {hiddenWorkspaceWidgets.length > 0 && <div className="hidden-widget-summary"><strong>{hiddenWorkspaceWidgets.length} hidden placement{hiddenWorkspaceWidgets.length === 1 ? "" : "s"}</strong><span>Hidden widgets remain in the library above and never delete their data.</span></div>}
             <div className="widgets-tray-actions"><button type="button" className="btn btn-secondary" disabled={currentTab === "calendar"} onClick={resetWorkspaceTab}>Reset this tab</button><button type="button" className="btn btn-danger" onClick={resetAllWorkspace}>Reset all layouts</button></div>
           </section>
         )}
