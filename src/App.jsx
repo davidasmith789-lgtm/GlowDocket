@@ -3696,7 +3696,8 @@ function App() {
         }
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const verifier = await derivePasswordVerifier(authPassword, salt);
-        const profileKey = findLegacyProfileKey(trimmedName) || trimmedName;
+        const legacyProfileKey = findLegacyProfileKey(trimmedName);
+        const profileKey = legacyProfileKey || trimmedName;
         accounts[normalizedName] = {
           username: trimmedName,
           profileKey,
@@ -3704,6 +3705,9 @@ function App() {
           verifier,
         };
         localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+        if (!legacyProfileKey) {
+          localStorage.setItem(`courses_${profileKey}`, JSON.stringify(["Other"]));
+        }
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
         setCurrentUser(profileKey);
       }
