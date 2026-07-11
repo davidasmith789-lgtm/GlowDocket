@@ -625,9 +625,10 @@ html[data-theme="dark"] .tab-row {
 .recommendations-header h2 { margin: 0; }
 .recommendations-header > p:last-child {
   max-width: 650px;
-  margin: 10px 0 0;
+  margin: 10px auto 0;
   color: var(--muted-text);
   line-height: 1.6;
+  text-align: center;
 }
 
 .recommendations-form {
@@ -659,6 +660,7 @@ html[data-theme="dark"] .tab-row {
 }
 
 .recommendations-counter { color: var(--muted-text); font-size: 0.9rem; }
+.recommendations-keyboard-hint { color: var(--muted-text); }
 .recommendations-feedback { margin: 4px 0 0; font-weight: 700; }
 .recommendations-feedback.success { color: var(--success-color); }
 .recommendations-feedback.error { color: var(--danger-color); }

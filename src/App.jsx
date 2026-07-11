@@ -7069,11 +7069,21 @@ function App() {
                       setRecommendationFeedback("");
                     }
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                      event.preventDefault();
+                      event.currentTarget.form?.requestSubmit();
+                    }
+                  }}
                   placeholder="Write your recommendation here..."
                   maxLength={2000}
                   rows={8}
                   disabled={recommendationStatus === "sending"}
+                  aria-describedby="recommendation-keyboard-hint"
                 />
+                <small id="recommendation-keyboard-hint" className="recommendations-keyboard-hint">
+                  Press Enter to send. Use Shift+Enter for a new line.
+                </small>
                 <div className="recommendations-form-footer">
                   <span className="recommendations-counter" aria-live="polite">
                     {recommendationMessage.length.toLocaleString()} / 2,000 characters
