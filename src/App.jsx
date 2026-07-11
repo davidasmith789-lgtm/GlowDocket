@@ -7053,6 +7053,7 @@ function App() {
                 <h2 id="recommendations-title">Recommendations</h2>
                 <p>
                   Suggest an improvement, report something confusing, or recommend a change.
+                  Please keep it respectful; profanity is blocked, and each account may send up to 10 messages per day.
                 </p>
               </div>
 
