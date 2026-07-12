@@ -38,6 +38,7 @@ import {
 import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
 import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
+import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -66,6 +67,7 @@ const DEFAULT_USER_SETTINGS = {
   notificationsEnabled: false,
   externalPushEnabled: false,
   reminderMinutes: 60,
+  reminderSuggestionDismissed: false,
   dashboardReminderHours: 24,
   quickMatchCustomPresets: [],
   schoolLevel: "high",
@@ -1022,6 +1024,30 @@ const PERSONALIZATION_TIPS = [
   ["Add Assignment fields", "Hide optional fields you rarely use. This only cleans up the form; it does not remove information from assignments you already made."],
   ["New Assignment defaults", "Defaults prefill new assignments and return after a successful add. You can still change any field before saving."],
   ["Dark and light themes", "Theme mode controls whether TaskCabinet uses a light or dark base. Custom themes remember which base they were made for."],
+  ["Turn on push reminders", "Open Reminders & App in Settings and choose Enable Push Reminders. TaskCabinet waits for you to press that button before asking for notification permission."],
+  ["Choose when reminders arrive", "The Remind me setting uses one timing choice for every assignment. The sentence below it shows exactly how early TaskCabinet will try to remind you."],
+  ["Reminder bell icons", "A small bell on an assignment means its reminder is healthy, still syncing, or needs attention. Hover over it or focus it to hear the exact status."],
+  ["Repair reminder sync", "If Push Reminders says Needs attention, choose Repair Reminder Sync. Healthy reminders hide that button because there is nothing you need to fix."],
+  ["Notifications are blocked", "TaskCabinet cannot reopen a permission prompt after the browser blocks it. Allow notifications from your browser’s site settings, then return and repair the sync."],
+  ["Test your reminders", "Send Test Reminder becomes available once Push Reminders is fully active. It checks this browser without changing any assignment deadline."],
+  ["Reminders while the app is closed", "Push reminders can arrive while TaskCabinet is closed when your browser, device, internet, and notification settings allow it. Open-app reminders stay available as a fallback."],
+  ["Push reminders on iPhone or iPad", "Add TaskCabinet to the Home Screen, open the installed app, and enable Push Reminders from there. Regular browser tabs on Apple mobile devices cannot always receive web push."],
+  ["Deadline is too close for a reminder", "If the chosen reminder time has already passed, TaskCabinet skips the late alert instead of surprising you after the useful moment."],
+  ["Overdue assignments", "Overdue work gets stronger red highlighting in assignments, reminders, recommendations, course summaries, and calendars. TaskCabinet never changes the deadline for you."],
+  ["Recommended Plan of Attack", "This plan weighs due dates, priority, estimated time, and progress. Open an item to work with the real assignment; the plan never creates a duplicate."],
+  ["What Should I Do?", "Enter how much time you have and TaskCabinet will look for work that fits. If nothing fits perfectly, it favors the most urgent useful choice."],
+  ["To Do and In Progress", "Use Start when you begin something so it moves to In Progress. Move it back to To Do if you started by accident; your notes and checklist steps stay with it."],
+  ["Repeating assignments", "Completing a repeating assignment creates its next occurrence. Each occurrence keeps its own deadline and reminder instead of reusing the finished one."],
+  ["Assignment checklist steps", "Use optional checklist steps to break a large assignment into smaller pieces. If automatic completion is on, checking the final step completes the assignment."],
+  ["Files stay on this browser", "Assignment files are stored in this browser, not uploaded with your reminder. Clearing site data can remove them, so keep another copy of anything important."],
+  ["Assignment links", "Give each link a useful name and web address. Leave the link field after typing so it is added to the list before you save the assignment."],
+  ["Import a syllabus", "Paste a list or choose a PDF, DOCX, TXT, Markdown, or CSV file. Review the preview before importing so dates and course headings look right."],
+  ["Voice assignments", "On supported browsers, voice creation uses the browser’s speech recognition. You can review what was understood before relying on the new assignment."],
+  ["Archive and Trash", "Archive keeps finished assignments out of the way. Trash is recoverable until you permanently delete it, so moving something there is not immediately final."],
+  ["Calendar assignment details", "Choose a date to see everything due that day. Course-colored dots help you scan the month without changing the colors of the assignments themselves."],
+  ["Dashboard reminder range", "The reminder widget’s upcoming range only changes what appears on the dashboard. It does not change when push notifications are sent."],
+  ["Local profiles", "Each username on this browser has its own assignments, settings, themes, layouts, and reminder connection. These are local profiles, not cloud accounts."],
+  ["Keep local data safe", "TaskCabinet saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
 ];
 
 function WorkspaceWidget({
@@ -1576,6 +1602,11 @@ function App() {
   const [externalPushStatus, setExternalPushStatus] = useState(EXTERNAL_PUSH_CLIENT_ENABLED ? "idle" : "client_disabled");
   const [externalPushMessage, setExternalPushMessage] = useState("");
   const [externalPushLastSync, setExternalPushLastSync] = useState("");
+  const [externalPushAction, setExternalPushAction] = useState("");
+  const [externalPushDiagnostics, setExternalPushDiagnostics] = useState({ providerConnected: false, serverEnrolled: false, scheduling: "idle", lastError: "" });
+  const [assignmentReminderStates, setAssignmentReminderStates] = useState({});
+  const [testReminderSent, setTestReminderSent] = useState(false);
+  const externalPushActionGuardRef = useRef(createReminderActionGuard());
   const [externalPushSubscriptionVersion, setExternalPushSubscriptionVersion] = useState(0);
   const externalPushSyncTimerRef = useRef(null);
   const [currentTab, setCurrentTab] = useState("dashboard");
@@ -1873,8 +1904,8 @@ function App() {
     const handleSubscriptionChange = () => setExternalPushSubscriptionVersion((version) => version + 1);
     const handleOnline = async () => {
       if (!currentUser) return;
-      try { const result = await retryPendingExternalCleanup(currentUser); if (result.status === "cleaned") { setExternalPushStatus(userSettings.externalPushEnabled ? "sync_needed" : "idle"); setExternalPushMessage("Pending reminder cleanup finished."); } }
-      catch { setExternalPushStatus("cleanup_pending"); setExternalPushMessage("Reminder cleanup is still waiting for a connection."); }
+      try { const result = await retryPendingExternalCleanup(currentUser); if (result.status === "cleaned") { setExternalPushStatus(userSettings.externalPushEnabled ? "sync_needed" : "idle"); setExternalPushDiagnostics((details) => clearReminderFailure(details, { scheduling: "sync_needed" })); setExternalPushMessage("Pending reminder cleanup finished."); } }
+      catch (error) { setExternalPushStatus("cleanup_pending"); setExternalPushDiagnostics((details) => ({ ...details, scheduling: "cleanup_pending", lastError: String(error?.message || error) })); setExternalPushMessage("TaskCabinet will retry when you’re back online."); }
       setExternalPushSubscriptionVersion((version) => version + 1);
     };
     window.addEventListener("taskcabinet-push-subscription-change", handleSubscriptionChange);
@@ -1931,10 +1962,14 @@ function App() {
         const result = await reconcileExternalReminders(currentUser, reminders);
         setExternalPushStatus(result.status);
         if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
-        setExternalPushMessage(result.status === "active" ? `${reminders.length} reminder${reminders.length === 1 ? "" : "s"} synced.` : "External reminders need attention.");
+        const taskByOccurrence = new Map(reminders.map((reminder) => [reminder.occurrenceKey, reminder.taskId]));
+        setAssignmentReminderStates(Object.fromEntries((result.results || []).map((item) => [taskByOccurrence.get(item.occurrenceKey), ["scheduled", "pending_horizon"].includes(item.action) ? item.action : ["scheduling_failed", "cleanup_pending"].includes(item.action) ? item.action : "pending"]).filter(([taskId]) => taskId)));
+        setExternalPushDiagnostics({ providerConnected: Boolean(result.device?.subscriptionId), serverEnrolled: Boolean(result.device?.token), scheduling: result.status, lastError: "" });
+        setExternalPushMessage(result.status === "active" ? "Reminders are up to date." : "Some reminders could not be updated.");
       } catch (error) {
         setExternalPushStatus(error.code === "external_push_disabled" ? "server_disabled" : "failed");
-        setExternalPushMessage(error.message || "External reminders could not sync. Open-app reminders are still working.");
+        setExternalPushDiagnostics((details) => ({ ...details, scheduling: "failed", lastError: String(error?.message || error) }));
+        setExternalPushMessage(friendlyReminderError(error, !navigator.onLine));
       }
     }, 800);
     return () => window.clearTimeout(externalPushSyncTimerRef.current);
@@ -2088,49 +2123,58 @@ function App() {
     getDeadline: getEffectiveDeadline,
   })[0] || null;
 
+  const runImmediateReminderMutation = (taskId, operation) => {
+    setAssignmentReminderStates((states) => ({ ...states, [taskId]: "pending" }));
+    void operation.then(() => {
+      setAssignmentReminderStates((states) => ({ ...states, [taskId]: "healthy" }));
+      setExternalPushDiagnostics((details) => clearReminderFailure(details));
+      if (externalPushStatus === "active") setExternalPushMessage("Reminders are up to date.");
+    }).catch((error) => {
+      setAssignmentReminderStates((states) => ({ ...states, [taskId]: "failed" }));
+      setExternalPushDiagnostics((details) => ({ ...details, lastError: String(error?.message || error) }));
+      setExternalPushStatus("sync_needed");
+      setExternalPushMessage(friendlyReminderError(error, !navigator.onLine));
+    });
+  };
+
   const handleExternalPushSettingChange = async (isEnabled) => {
-    setExternalPushMessage("");
-    if (!isEnabled) {
-      setExternalPushStatus("syncing");
-      const cleanup = await cancelAllExternalReminders(currentUser);
-      handleAddFieldSettingChange("externalPushEnabled", false);
-      setExternalPushStatus(cleanup.confirmed === false ? "cleanup_pending" : "idle");
-      setExternalPushMessage(cleanup.confirmed === false ? "External reminders are off here, but cleanup is still pending and will retry when you reconnect." : "External reminders were turned off and scheduled reminders were cleared.");
-      return;
-    }
-    setExternalPushStatus("connecting");
-    try {
-      const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders(), { requestPermission: true });
-      if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
-      setExternalPushStatus(result.status);
-      if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
-      if (result.status !== "active") { setExternalPushMessage("Your browser did not finish enabling external reminders."); return; }
-      handleAddFieldSettingChange("externalPushEnabled", true);
-      setExternalPushMessage("External reminders are connected to this browser.");
-    } catch (error) {
-      if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
-      setExternalPushStatus(error.code === "external_push_disabled" ? "server_disabled" : "failed");
-      setExternalPushMessage(error.message || "External reminders could not connect.");
-    }
+    if (externalPushActionGuardRef.current.isBusy()) return;
+    setExternalPushAction(isEnabled ? "enabling" : "disabling"); setExternalPushMessage(""); setTestReminderSent(false);
+    await externalPushActionGuardRef.current.run(async () => {
+      try {
+        if (!isEnabled) {
+          setExternalPushStatus("syncing"); const cleanup = await cancelAllExternalReminders(currentUser); handleAddFieldSettingChange("externalPushEnabled", false);
+          setExternalPushStatus(cleanup.confirmed === false ? "cleanup_pending" : "idle");
+          setExternalPushMessage(cleanup.confirmed === false ? "TaskCabinet will retry when you’re back online." : "Push reminders were turned off and cleared.");
+          if (cleanup.confirmed !== false) setExternalPushDiagnostics({ providerConnected: false, serverEnrolled: false, scheduling: "idle", lastError: "" });
+          return;
+        }
+        setExternalPushStatus("connecting"); const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders(), { requestPermission: true });
+        if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
+        setExternalPushStatus(result.status); if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
+        setExternalPushDiagnostics({ providerConnected: Boolean(result.device?.subscriptionId), serverEnrolled: Boolean(result.device?.token), scheduling: result.status, lastError: "" });
+        if (result.status !== "active") { setExternalPushMessage(result.status === "permission_blocked" ? "Notifications are blocked in your browser settings." : "Some reminders could not be updated."); return; }
+        handleAddFieldSettingChange("externalPushEnabled", true); setExternalPushMessage("Reminders are up to date.");
+      } catch (error) {
+        if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
+        setExternalPushStatus(error.code === "external_push_disabled" ? "server_disabled" : "failed");
+        setExternalPushDiagnostics((details) => ({ ...details, scheduling: "failed", lastError: String(error?.message || error) }));
+        setExternalPushMessage(friendlyReminderError(error, !navigator.onLine));
+      }
+    });
+    setExternalPushAction("");
   };
 
   const handleExternalPushSync = async () => {
-    setExternalPushStatus("syncing");
-    try {
-      const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders());
-      setExternalPushStatus(result.status);
-      if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
-      setExternalPushMessage(result.status === "active" ? "Reminders are up to date." : "External reminders still need attention.");
-    } catch (error) { setExternalPushStatus("failed"); setExternalPushMessage(error.message || "Reminders could not sync."); }
+    if (externalPushActionGuardRef.current.isBusy()) return; setExternalPushAction("repairing");
+    await externalPushActionGuardRef.current.run(async () => { try { setExternalPushStatus("syncing"); const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders()); setExternalPushStatus(result.status); if (result.syncedAt) setExternalPushLastSync(result.syncedAt); setExternalPushDiagnostics({ providerConnected: Boolean(result.device?.subscriptionId), serverEnrolled: Boolean(result.device?.token), scheduling: result.status, lastError: "" }); setExternalPushMessage(result.status === "active" ? "Reminder sync repaired." : "Some reminders could not be updated."); } catch (error) { setExternalPushStatus("failed"); setExternalPushDiagnostics((details) => ({ ...details, scheduling: "failed", lastError: String(error?.message || error) })); setExternalPushMessage(friendlyReminderError(error, !navigator.onLine)); } });
+    setExternalPushAction("");
   };
 
   const handleExternalPushTest = async () => {
-    setExternalPushStatus("connecting");
-    try {
-      const result = await sendExternalReminderTest(currentUser);
-      setExternalPushStatus(result.status);
-      setExternalPushMessage(result.status === "active" ? "Test sent — it should arrive shortly." : "The test could not be sent yet.");
-    } catch (error) { setExternalPushStatus("failed"); setExternalPushMessage(error.message || "The test reminder could not be sent."); }
+    if (externalPushActionGuardRef.current.isBusy()) return; setExternalPushAction("testing"); setTestReminderSent(false);
+    await externalPushActionGuardRef.current.run(async () => { try { const result = await sendExternalReminderTest(currentUser); setExternalPushStatus(result.status); setExternalPushDiagnostics((details) => clearReminderFailure(details, { providerConnected: true, serverEnrolled: true })); setExternalPushMessage(result.status === "active" ? "Test sent" : "Some reminders could not be updated."); if (result.status === "active") { setTestReminderSent(true); window.setTimeout(() => { setTestReminderSent(false); setExternalPushMessage((message) => message === "Test sent" ? "Reminders are up to date." : message); }, 3000); } } catch (error) { setExternalPushStatus("failed"); setExternalPushDiagnostics((details) => ({ ...details, lastError: String(error?.message || error) })); setExternalPushMessage(friendlyReminderError(error, !navigator.onLine)); } });
+    setExternalPushAction("");
   };
 
   const handleAddFieldSettingChange = (field, isEnabled) => {
@@ -2475,7 +2519,6 @@ function App() {
   // This effect intentionally copies an external browser data source into React
   // state. The targeted lint exception documents that profile switching is the
   // synchronization event, rather than an accidental state-calculation effect.
-  /* eslint-disable react-hooks/set-state-in-effect -- Load the selected localStorage profile when its keys change. */
   useEffect(() => {
     try {
       const rawTasks = localStorage.getItem(currentStorageKey);
@@ -2538,9 +2581,6 @@ function App() {
     checklistStorageKey,
     workspaceStorageKey,
   ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  /* eslint-disable react-hooks/set-state-in-effect -- Restore the explicit, profile-scoped first-use flag from browser storage. */
   useEffect(() => {
     if (!tutorialOpen) return undefined;
     const previousFocus = document.activeElement;
@@ -2576,7 +2616,6 @@ function App() {
       }
     } catch { /* A damaged optional tutorial flag must never block the planner. */ }
   }, [currentUser]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const finishTutorial = () => {
     localStorage.setItem(getTutorialStorageKey(currentUser), JSON.stringify({ complete: true }));
@@ -2818,7 +2857,7 @@ function App() {
 
     if (userSettings.externalPushEnabled) {
       const reminder = getExternalReminderForTask(newTask);
-      if (reminder) void scheduleExternalReminder(currentUser, reminder).catch(() => {});
+      if (reminder) runImmediateReminderMutation(newTask.id, scheduleExternalReminder(currentUser, reminder));
     }
 
     // Return the form to friendly defaults after a successful submission.
@@ -3389,7 +3428,7 @@ function App() {
       saveTasksForCurrentUser(updated);
       return updated;
     });
-    if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) void cancelExternalReminder(currentUser, reminder.occurrenceKey).catch(() => {}); }
+    if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) runImmediateReminderMutation(completedTask.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
   };
 
   // Starting an assignment moves it from To Do into the new In Progress tab.
@@ -3585,7 +3624,7 @@ function App() {
       saveTasksForCurrentUser(updated);
       return updated;
     });
-    if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) void cancelExternalReminder(currentUser, reminder.occurrenceKey).catch(() => {}); }
+    if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) runImmediateReminderMutation(taskBeingDeleted.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
   };
 
   const handleRestoreDeleted = (id) => {
@@ -3908,8 +3947,8 @@ function App() {
 
     if (userSettings.externalPushEnabled) {
       const reminder = getExternalReminderForTask(updatedTask);
-      if (reminder) void replaceExternalReminder(currentUser, reminder).catch(() => {});
-      else { const oldReminder = taskBeforeEdit ? getExternalReminderForTask(taskBeforeEdit) : null; if (oldReminder) void cancelExternalReminder(currentUser, oldReminder.occurrenceKey).catch(() => {}); }
+      if (reminder) runImmediateReminderMutation(updatedTask.id, replaceExternalReminder(currentUser, reminder));
+      else { const oldReminder = taskBeforeEdit ? getExternalReminderForTask(taskBeforeEdit) : null; if (oldReminder) runImmediateReminderMutation(updatedTask.id, cancelExternalReminder(currentUser, oldReminder.occurrenceKey)); }
     }
 
     setEditingTaskId(null);
@@ -6086,6 +6125,21 @@ function App() {
 
   return null;
 };
+  const browserNotificationPermission = "Notification" in window ? Notification.permission : "unsupported";
+  const reminderUserStatus = deriveReminderUserStatus({
+    featureEnabled: EXTERNAL_PUSH_CLIENT_ENABLED,
+    remindersEnabled: Boolean(userSettings.externalPushEnabled),
+    supported: browserNotificationPermission !== "unsupported" && externalPushStatus !== "unsupported",
+    permission: browserNotificationPermission,
+    providerConnected: externalPushDiagnostics.providerConnected,
+    serverEnrolled: externalPushDiagnostics.serverEnrolled,
+    rawStatus: externalPushStatus,
+  });
+  const reminderStatusCopy = getReminderStatusCopy(reminderUserStatus);
+  const renderTaskReminderIndicator = (task) => {
+    const indicator = getAssignmentReminderIndicator({ remindersEnabled: Boolean(userSettings.externalPushEnabled), hasDeadline: Boolean(getExternalReminderForTask(task)) && getTaskStatus(task) !== "completed" && !task.isDeleted && !task.isArchived, taskState: assignmentReminderStates[task.id] || (reminderUserStatus === "active" ? "healthy" : "pending"), userStatus: reminderUserStatus });
+    return indicator ? <span className={`task-reminder-indicator is-${indicator.tone}`} aria-label={indicator.label} title={indicator.label}>🔔</span> : null;
+  };
   const renderTaskMasterWidget = (status, onlyBucket = null) => {
     const allSource = status === "todo" ? sortedTodoTasks : status === "inProgress" ? sortedInProgressTasks : completedTasks;
     const source = onlyBucket ? allSource.filter((task) => getTaskDueBucket(task) === onlyBucket) : allSource;
@@ -6116,6 +6170,7 @@ function App() {
         {status === "inProgress" ? (
           <span className="in-progress-status-pill">In Progress</span>
         ) : null}
+        {renderTaskReminderIndicator(task)}
       </div>
 
       <div className="task-details">{formatTaskDetails(task)}</div>
@@ -6298,6 +6353,9 @@ function App() {
   // ---------------------------------------------------------------------------
   // JSX resembles HTML but can insert JavaScript inside braces. Expressions
   // such as currentTab === "todo" conditionally show only the selected screen.
+  const showReminderSuggestion = shouldShowReminderSuggestion({ hasProfile: Boolean(currentUser), remindersEnabled: Boolean(userSettings.externalPushEnabled), dismissed: Boolean(userSettings.reminderSuggestionDismissed), hasDatedAssignment: tasks.some((task) => !task.isDeleted && !task.isCompleted && getEffectiveDeadline(task)) });
+  const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const reminderLeadAlreadyPassedCount = tasks.filter((task) => { const deadline = getEffectiveDeadline(task); return deadline && deadline.getTime() > checklistNow.getTime() && deadline.getTime() - Number(userSettings.reminderMinutes || 60) * 60000 < checklistNow.getTime() && !task.isDeleted && !task.isCompleted; }).length;
   return (
     <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.reduceMotion ? " reduce-motion" : ""}`}>
       <div className="app-shell">
@@ -6324,6 +6382,7 @@ function App() {
             <button type="button" onClick={() => setCopyResult("")}>Dismiss</button>
           </div>
         )}
+        {showReminderSuggestion && <aside className="reminder-suggestion" role="status"><span>Want a reminder before this is due? Enable push reminders in Settings.</span><button type="button" onClick={() => handleAddFieldSettingChange("reminderSuggestionDismissed", true)} aria-label="Dismiss reminder suggestion">×</button></aside>}
 
         {/*
           Navigation changes currentTab. The active class lets CSS highlight the
@@ -6780,6 +6839,7 @@ function App() {
                                 <div className="task-title-row">
                                   <strong className="task-title-text">{task.title}</strong>
                                   {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                  {renderTaskReminderIndicator(task)}
                                 </div>
                                 <div className="task-details">
                                   {formatTaskDetails(task)}
@@ -6924,6 +6984,7 @@ function App() {
                                 <div className="task-title-row">
                                   <strong className="task-title-text">{task.title}</strong>
                                   {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                  {renderTaskReminderIndicator(task)}
                                 </div>
                                 <span className="in-progress-status-pill">
                                   In Progress
@@ -7058,6 +7119,7 @@ function App() {
                         <div className="task-title-row">
                           <strong className="task-title-text">{task.title}</strong>
                           {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                          {renderTaskReminderIndicator(task)}
                         </div>
                         <div className="task-details">
                           {formatTaskDetails(task)}
@@ -7256,6 +7318,7 @@ function App() {
                               <div className="task-title-row">
                                 <strong className="task-title-text">{task.title}</strong>
                                 {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                {renderTaskReminderIndicator(task)}
                               </div>
                               <div className="task-details">
                                 {formatTaskDetails(task)}
@@ -7649,8 +7712,8 @@ function App() {
                   </div>
                   {personalizationTipsOpen && (
                     <div id="personalization-tips-content" className="settings-collapsible-content personalization-tips-content">
-                      <p className="hint-text">Learn how to reshape TaskCabinet around the way you work.</p>
-                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search layout, colors, fonts, checklists…" aria-label="Search personalization help" />
+                      <p className="hint-text">Find friendly explanations for personalizing TaskCabinet and using its features your way.</p>
+                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search reminders, assignments, layouts, colors…" aria-label="Search TaskCabinet tips" />
                       <div className="personalization-tip-grid">
                         {PERSONALIZATION_TIPS.filter(([title, copy]) => `${title} ${copy}`.toLowerCase().includes(helpSearch.trim().toLowerCase())).map(([title, copy]) => <PersonalizationTip key={title} title={title} forceOpen={Boolean(helpSearch.trim())}>{copy}</PersonalizationTip>)}
                       </div>
@@ -8003,12 +8066,12 @@ function App() {
                       )}
                     </SettingsCard>
                     <SettingsCard title="Due Reminders" description="Choose when TaskCabinet should give you a heads-up.">
-                      <div className={`external-push-status is-${externalPushStatus}`} role="status">
-                        <strong>{({ active: "Push reminders active", syncing: "Syncing reminders…", connecting: "Connecting this browser…", permission_needed: "Permission not requested", permission_blocked: "Notifications blocked", unsupported: "Push is not supported here", client_disabled: "External push is turned off in this build", server_disabled: "External push is paused", failed: "Scheduling failed", sync_needed: "Synchronization needed", cleanup_pending: "Cleanup still pending", connected: "Browser connected", idle: "Push reminders are off", not_configured: "External push is not configured", subscription_pending: "Waiting for OneSignal subscription" })[externalPushStatus] || "Push reminders are off"}</strong>
-                        <small>{externalPushStatus === "active" ? "These can arrive while TaskCabinet is closed." : "Open-app reminders stay available as a fallback."}</small>
+                      <div className={`external-push-status is-${reminderUserStatus}`} role="status">
+                        <strong>{reminderStatusCopy.title}</strong>
+                        <small>{reminderStatusCopy.detail}</small>
                       </div>
-                      <div className="external-push-detail-grid"><span><strong>Browser permission</strong><small>{"Notification" in window ? Notification.permission === "default" ? "Not requested" : Notification.permission : "Unsupported"}</small></span><span><strong>OneSignal subscription</strong><small>{["active", "syncing", "connected"].includes(externalPushStatus) ? "Connected" : "Not connected"}</small></span><span><strong>External scheduling</strong><small>{externalPushStatus === "active" ? "Up to date" : externalPushStatus === "sync_needed" ? "Needs sync" : "Not active"}</small></span></div>
-                      <button type="button" className={`btn ${userSettings.externalPushEnabled ? "btn-danger" : "btn-primary"}`} disabled={!EXTERNAL_PUSH_CLIENT_ENABLED || ["connecting", "syncing"].includes(externalPushStatus)} onClick={() => handleExternalPushSettingChange(!userSettings.externalPushEnabled)}>{userSettings.externalPushEnabled ? "Disable Push Reminders" : "Enable Push Reminders"}</button>
+                      <div className="external-push-detail-grid"><span><strong>Push reminders</strong><small>{reminderUserStatus === "off" ? "Off" : reminderUserStatus === "connecting" ? "Connecting" : reminderUserStatus === "active" ? "Active" : "Needs attention"}</small></span><span><strong>Browser permission</strong><small>{browserNotificationPermission === "default" ? "Not requested" : browserNotificationPermission === "granted" ? "Allowed" : browserNotificationPermission === "denied" ? "Blocked" : "Unsupported"}</small></span><span><strong>Reminder timing</strong><small>{formatReminderLeadTime(userSettings.reminderMinutes || 60)} before</small></span></div>
+                      {reminderUserStatus === "blocked" ? <div className="reminder-permission-guidance"><strong>Allow notifications in your browser settings</strong><p>TaskCabinet cannot reopen a blocked permission prompt. Open this site’s browser permissions, change Notifications to Allow, then return here and repair the sync.</p></div> : <button type="button" className={`btn ${userSettings.externalPushEnabled ? "btn-danger" : "btn-primary"}`} disabled={!EXTERNAL_PUSH_CLIENT_ENABLED || Boolean(externalPushAction)} onClick={() => handleExternalPushSettingChange(!userSettings.externalPushEnabled)}>{externalPushAction === "enabling" ? "Connecting…" : externalPushAction === "disabling" ? "Turning off…" : userSettings.externalPushEnabled ? "Disable Push Reminders" : "Enable Push Reminders"}</button>}
                       <label className="settings-select-row">
                         <span>Remind me</span>
                         <select value={userSettings.reminderMinutes || 60} onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}>
@@ -8019,11 +8082,14 @@ function App() {
                           <option value={1440}>1 day before</option>
                         </select>
                       </label>
-                      {userSettings.externalPushEnabled && <div className="external-push-actions"><button type="button" className="btn btn-secondary" onClick={handleExternalPushTest} disabled={["connecting", "syncing"].includes(externalPushStatus)}>Send test reminder</button><button type="button" className="btn btn-secondary" onClick={handleExternalPushSync} disabled={["connecting", "syncing"].includes(externalPushStatus)}>Sync now</button></div>}
+                      <p className="reminder-lead-copy">You’ll be reminded {formatReminderLeadTime(userSettings.reminderMinutes || 60)} before each assignment deadline.</p>
+                      {reminderLeadAlreadyPassedCount > 0 && <p className="hint-text">{reminderLeadAlreadyPassedCount} upcoming assignment{reminderLeadAlreadyPassedCount === 1 ? " is" : "s are"} already inside that reminder window, so TaskCabinet won’t schedule a late alert.</p>}
+                      <div className="external-push-actions"><button type="button" className="btn btn-secondary" onClick={handleExternalPushTest} disabled={!canSendReminderTest(reminderUserStatus, Boolean(externalPushAction))}>{externalPushAction === "testing" ? "Sending test…" : testReminderSent ? "Test sent" : "Send Test Reminder"}</button>{shouldShowRepairReminderSync(reminderUserStatus, externalPushStatus) && <button type="button" className="btn btn-secondary" onClick={handleExternalPushSync} disabled={Boolean(externalPushAction)}>{externalPushAction === "repairing" ? "Repairing…" : "Repair Reminder Sync"}</button>}</div>
                       {externalPushMessage && <p className="hint-text external-push-message">{externalPushMessage}</p>}
-                      {externalPushLastSync && <p className="hint-text">Last sync: {new Date(externalPushLastSync).toLocaleString()}</p>}
+                      <p className="hint-text">Last successful sync: {externalPushLastSync ? new Date(externalPushLastSync).toLocaleString() : "Not yet"}</p>
+                      <details className="reminder-technical-details"><summary>Technical details</summary><dl><div><dt>Provider connection</dt><dd>{externalPushDiagnostics.providerConnected ? "Connected" : "Not connected"}</dd></div><div><dt>Server enrollment</dt><dd>{externalPushDiagnostics.serverEnrolled ? "Confirmed" : "Not confirmed"}</dd></div><div><dt>Scheduling state</dt><dd>{externalPushDiagnostics.scheduling}</dd></div>{externalPushDiagnostics.lastError && <div><dt>Latest diagnostic</dt><dd>Available in this session</dd></div>}</dl></details>
                       <p className="hint-text">Closed-app delivery depends on your browser, operating system, permission, internet connection, and device notification settings. Reminder text may appear on your lock screen.</p>
-                      <p className="hint-text">On iPhone and iPad, add TaskCabinet to the Home Screen, open the installed app, and then enable Push Reminders.</p>
+                      {isAppleMobile && <p className="hint-text">On iPhone and iPad, add TaskCabinet to the Home Screen, open the installed app, and then enable Push Reminders.</p>}
                     </SettingsCard>
                     <SettingsCard title="Dashboard Reminder Range" description="Choose how far ahead the movable Reminders widget should look. This does not change browser-notification timing.">
                       <label className="settings-select-row">

@@ -4839,6 +4839,20 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .external-push-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
 .external-push-detail-grid > span { display: grid; gap: 3px; padding: 9px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-alt); }
 .external-push-detail-grid small { color: var(--muted-text); }
+.reminder-lead-copy { margin: 0; color: var(--text-color); font-weight: 700; }
+.reminder-permission-guidance { padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--warning-color) 58%, var(--border-color)); border-radius: 12px; background: color-mix(in srgb, var(--warning-color) 10%, var(--surface-alt)); }
+.reminder-permission-guidance p { margin: 5px 0 0; color: var(--muted-text); line-height: 1.45; }
+.reminder-technical-details { padding: 9px 11px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); }
+.reminder-technical-details summary { cursor: pointer; font-weight: 800; }
+.reminder-technical-details dl { display: grid; gap: 6px; margin: 10px 0 0; }
+.reminder-technical-details dl div { display: flex; justify-content: space-between; gap: 12px; }
+.reminder-technical-details dd { margin: 0; color: var(--muted-text); }
+.task-reminder-indicator { display: inline-grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border: 1px solid var(--border-color); border-radius: 999px; background: var(--surface-alt); font-size: .68rem; }
+.task-reminder-indicator.is-healthy { border-color: color-mix(in srgb, var(--success-color) 58%, var(--border-color)); }
+.task-reminder-indicator.is-pending { border-color: color-mix(in srgb, var(--warning-color) 58%, var(--border-color)); opacity: .82; }
+.task-reminder-indicator.is-failed { border-color: color-mix(in srgb, var(--danger-color) 62%, var(--border-color)); }
+.reminder-suggestion { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--primary-color) 35%, var(--border-color)); border-radius: 13px; background: color-mix(in srgb, var(--primary-color) 9%, var(--surface-color)); color: var(--text-color); }
+.reminder-suggestion button { width: 34px; height: 34px; flex: 0 0 34px; border: 0; border-radius: 9px; background: transparent; color: inherit; cursor: pointer; font-size: 1.1rem; }
 .task-card.is-overdue { border-color: color-mix(in srgb, var(--danger-color) 58%, var(--border-color)); box-shadow: inset 4px 0 0 var(--danger-color), var(--shadow-card); }
 .task-card.is-overdue:hover { border-color: var(--danger-color); }
 

@@ -81,7 +81,7 @@ TaskCabinet can use OneSignal Web Push for assignment reminders while the app is
 
 1. Create or select a Supabase project.
 2. Review and run `supabase/migrations/202607120001_create_push_reminder_registry.sql` in that project. Codex does not run it automatically.
-3. Set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` only in the Vercel server environment. `SUPABASE_SECRET_KEY` means the current server secret/service-role credential supplied by Supabase; never expose it through a `VITE_` variable.
+3. Set `SUPABASE_URL` to the base project URL in the exact form `https://PROJECT_ID.supabase.co`. Do not include `/rest/v1`; the Supabase client appends that path. Set `SUPABASE_SECRET_KEY` only in the Vercel server environment. It means the current server secret/service-role credential supplied by Supabase; never expose it through a `VITE_` variable.
 4. The migration enables RLS and revokes browser roles. Only Vercel Functions use the registry.
 
 ### Environment and cron

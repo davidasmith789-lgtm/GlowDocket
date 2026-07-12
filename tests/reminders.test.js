@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { createOneSignal, createReminderService, idempotencyKeyFor, occurrenceKeyFor, SCHEDULING_HORIZON_MS, signEnrollmentToken, validateReminder, verifyEnrollmentToken } from "../api/reminders/_service.js";
 import { buildDesiredReminders, createOpaqueDeviceId, getOccurrenceKey, getPushCleanupStorageKey, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "../src/externalReminderUtils.js";
 import { classifyDeadline, summarizeDeadlineConfidence } from "../src/deadlineConfidenceUtils.js";
+import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, friendlyReminderError, getAssignmentReminderIndicator, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "../src/reminderUxUtils.js";
+import { readFile } from "node:fs/promises";
 
 function createFakeRegistry() {
   const devices = new Map(); const records = new Map();
@@ -176,4 +178,64 @@ test("deadline confidence classifies and counts overdue, today, and tomorrow", (
   assert.equal(classifyDeadline(new Date(2026, 6, 13, 8, 0), localNow), "tomorrow");
   const tasks = [{ deadline: new Date(2026, 6, 11) }, { deadline: new Date(2026, 6, 12) }, { deadline: new Date(2026, 6, 13) }, { deadline: null }];
   assert.deepEqual(summarizeDeadlineConfidence(tasks, (task) => task.deadline, localNow), { overdue: 1, today: 1, tomorrow: 1, later: 0, "no-date": 1 });
+});
+
+test("permission granted without provider or enrollment is never Active", () => {
+  const base = { featureEnabled: true, remindersEnabled: true, supported: true, permission: "granted", rawStatus: "active" };
+  assert.equal(deriveReminderUserStatus({ ...base, providerConnected: false, serverEnrolled: true }), "needs_attention");
+  assert.equal(deriveReminderUserStatus({ ...base, providerConnected: true, serverEnrolled: false }), "needs_attention");
+  assert.equal(deriveReminderUserStatus({ ...base, providerConnected: true, serverEnrolled: true }), "active");
+});
+
+test("blocked, unsupported, connecting, and feature-disabled states derive clearly", () => {
+  const base = { featureEnabled: true, remindersEnabled: true, supported: true, providerConnected: false, serverEnrolled: false, rawStatus: "idle" };
+  assert.equal(deriveReminderUserStatus({ ...base, permission: "denied" }), "blocked");
+  assert.equal(deriveReminderUserStatus({ ...base, permission: "default", supported: false }), "unsupported");
+  assert.equal(deriveReminderUserStatus({ ...base, permission: "granted", rawStatus: "connecting" }), "connecting");
+  assert.equal(deriveReminderUserStatus({ ...base, featureEnabled: false, permission: "granted" }), "off");
+});
+
+test("repair and test actions follow health state", () => {
+  assert.equal(shouldShowRepairReminderSync("active", "active"), false);
+  assert.equal(shouldShowRepairReminderSync("needs_attention", "failed"), true);
+  assert.equal(shouldShowRepairReminderSync("needs_attention", "cleanup_pending"), true);
+  assert.equal(canSendReminderTest("active", false), true);
+  assert.equal(canSendReminderTest("active", true), false);
+  assert.equal(canSendReminderTest("needs_attention", false), false);
+});
+
+test("action guard prevents duplicate reminder requests", async () => {
+  const guard = createReminderActionGuard(); let calls = 0; let release;
+  const first = guard.run(async () => { calls += 1; await new Promise((resolve) => { release = resolve; }); return "done"; });
+  const duplicate = await guard.run(async () => { calls += 1; });
+  assert.deepEqual(duplicate, { skipped: true }); assert.equal(calls, 1);
+  release(); assert.equal(await first, "done");
+});
+
+test("friendly offline messaging hides raw fetch errors and success clears stale diagnostics", () => {
+  assert.equal(friendlyReminderError(new TypeError("Failed to fetch")), "TaskCabinet will retry when you’re back online.");
+  assert.equal(friendlyReminderError(new Error("provider exploded")), "Some reminders could not be updated.");
+  assert.deepEqual(clearReminderFailure({ lastError: "old failure", scheduling: "failed" }, { scheduling: "active" }), { lastError: "", scheduling: "active" });
+});
+
+test("assignment indicators omit dateless work and distinguish healthy, pending, and failed", () => {
+  assert.equal(getAssignmentReminderIndicator({ remindersEnabled: true, hasDeadline: false, taskState: "healthy", userStatus: "active" }), null);
+  assert.equal(getAssignmentReminderIndicator({ remindersEnabled: false, hasDeadline: true, taskState: "healthy", userStatus: "active" }), null);
+  assert.equal(getAssignmentReminderIndicator({ remindersEnabled: true, hasDeadline: true, taskState: "scheduled", userStatus: "active" }).tone, "healthy");
+  assert.equal(getAssignmentReminderIndicator({ remindersEnabled: true, hasDeadline: true, taskState: "pending", userStatus: "connecting" }).tone, "pending");
+  assert.equal(getAssignmentReminderIndicator({ remindersEnabled: true, hasDeadline: true, taskState: "failed", userStatus: "needs_attention" }).tone, "failed");
+});
+
+test("contextual reminder suggestion respects dismissal and dated assignments", () => {
+  const base = { hasProfile: true, remindersEnabled: false, dismissed: false, hasDatedAssignment: true };
+  assert.equal(shouldShowReminderSuggestion(base), true);
+  assert.equal(shouldShowReminderSuggestion({ ...base, dismissed: true }), false);
+  assert.equal(shouldShowReminderSuggestion({ ...base, remindersEnabled: true }), false);
+  assert.equal(shouldShowReminderSuggestion({ ...base, hasDatedAssignment: false }), false);
+});
+
+test("normal reminder UI avoids raw provider terminology", async () => {
+  const appSource = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const panel = appSource.slice(appSource.indexOf('<SettingsCard title="Due Reminders"'), appSource.indexOf('<SettingsCard title="Dashboard Reminder Range"'));
+  assert.doesNotMatch(panel, /OneSignal|Supabase|subscription ID|external scheduling/i);
 });
