@@ -4480,7 +4480,7 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .tutorial-mini-calendar span { position: relative; }
 .tutorial-mini-calendar > small { margin-top: 8px; font-size: .54rem; }
 .tutorial-calendar-legend { display: flex; align-items: center; justify-content: center; gap: 5px; }
-.tutorial-calendar-legend i { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+.tutorial-calendar-legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary-color); }
 .tutorial-mini-checklist { display: flex; flex-direction: column; gap: 10px; }
 .tutorial-mini-checklist span { display: flex; min-height: 27px; box-sizing: border-box; align-items: center; justify-content: space-between; padding: 6px 7px; border-radius: 7px; background: var(--surface-alt-color); font-size: .68rem; text-align: left; }
 .tutorial-mini-checklist span small { float: right; }
@@ -4500,9 +4500,9 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .tutorial-mini-widget > b { position: absolute; right: 7px; bottom: 5px; font-size: 1.1rem; }
 .tutorial-mini-widget { font-size: .72rem; line-height: 1.2; }
 .tutorial-mini-widget small { font-size: .58rem; line-height: 1.25; }
-.tutorial-mini-widget.widget-one { inset: 24px auto auto 22px; width: 52%; height: 124px; }
-.tutorial-mini-widget.widget-two { inset: 76px 22px auto auto; width: 39%; height: 122px; }
-.tutorial-mini-widget.widget-three { inset: auto auto 6px 90px; width: 34%; height: 68px; }
+.tutorial-mini-widget.widget-one { inset: 24px auto auto 22px; width: 50%; height: 148px; }
+.tutorial-mini-widget.widget-two { inset: 24px 22px auto auto; width: 40%; height: 92px; }
+.tutorial-mini-widget.widget-three { inset: auto 22px 6px auto; width: 40%; height: 72px; }
 .tutorial-mini-dashboard,
 .tutorial-mini-plan,
 .tutorial-mini-calendar,
