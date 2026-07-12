@@ -19,7 +19,6 @@ import {
   setWidgetCollapsedState,
 } from "./workspaceLayout.js";
 import { preparePastedAssignmentLines } from "./bulkImportUtils.js";
-import { extractSyllabusText, findLikelySyllabusAssignments } from "./syllabusImport.js";
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "./assignmentCountdown.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "./calendarWeekUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "./voiceTaskUtils.js";
@@ -32,7 +31,10 @@ import {
   rankRecommendedTasks,
   summarizeRecommendationWorkload,
 } 
-from "../api/recommendationUtils.js";
+from "./recommendationUtils.js";
+import {
+  getTutorialStorageKey,
+} from "./onboardingUtils.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -88,6 +90,13 @@ const DEFAULT_USER_SETTINGS = {
 const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
 const AUTH_USER_STORAGE_KEY = "taskacadia_authenticated_user";
 const LOGIN_COLORS_STORAGE_KEY = "taskacadia_login_colors";
+const TUTORIAL_SLIDES = [
+  { title: "Welcome to TaskCabinet", copy: "Your assignments, plans, and progress stay together in one calm workspace.", visual: "welcome" },
+  { title: "Capture work quickly", copy: "Add a title and due date, then include priority, time, files, links, or checklist steps when useful.", visual: "add" },
+  { title: "Know what to do next", copy: "Plan of Attack weighs deadlines, priority, progress, and time so the next step is always clear.", visual: "plan" },
+  { title: "See the whole week", copy: "Calendar and independent checklists keep deadlines, routines, and small details visible.", visual: "calendar" },
+  { title: "Make the workspace yours", copy: "Move, resize, minimize, and theme widgets to build a dashboard that fits how you study.", visual: "workspace" },
+];
 const TASK_CATEGORIES = ["School", "Work", "Personal"];
 const SCHOOL_LEVEL_COPY = {
   middle: {
@@ -1464,10 +1473,10 @@ function App() {
       const storedCourses = localStorage.getItem(courseStorageKey);
       return storedCourses
         ? JSON.parse(storedCourses)
-        : ["AP Stat", "British Literature", "Calculus H", "APES", "Other"];
+        : ["Other"];
     } catch (error) {
       console.error("Error reading courses from localStorage:", error);
-      return ["AP Stat", "British Literature", "Calculus H", "APES", "Other"];
+      return ["Other"];
     }
   });
   const [courseColors, setCourseColors] = useState(() => {
@@ -1614,6 +1623,21 @@ function App() {
   const [addAssignmentOpen, setAddAssignmentOpen] = useState(true);
   const [courseColorsOpen, setCourseColorsOpen] = useState(true);
   const [settingsSection, setSettingsSection] = useState("personalization");
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [tutorialPracticeOpen, setTutorialPracticeOpen] = useState(false);
+  const [tutorialPracticeDone, setTutorialPracticeDone] = useState([]);
+  const [tutorialPracticeNote, setTutorialPracticeNote] = useState("");
+  const [tutorialPracticeDate, setTutorialPracticeDate] = useState(17);
+  const [tutorialPracticeHomeStep, setTutorialPracticeHomeStep] = useState(0);
+  const [tutorialPracticeHiddenWidget, setTutorialPracticeHiddenWidget] = useState("");
+  const [tutorialPracticeWidgetMenu, setTutorialPracticeWidgetMenu] = useState("");
+  const [tutorialWidgetLayout, setTutorialWidgetLayout] = useState({
+    plan: { x: 25, y: 70, width: 330, height: 135 },
+    calendar: { x: 430, y: 110, width: 285, height: 135 },
+    checklists: { x: 205, y: 235, width: 280, height: 120 },
+  });
+  const tutorialRef = useRef(null);
   const [storageView, setStorageView] = useState(null);
   const [draggedSettingsSection, setDraggedSettingsSection] = useState(null);
   const [settingsDropTarget, setSettingsDropTarget] = useState(null);
@@ -2309,7 +2333,7 @@ function App() {
       setCourses(
         rawCourses
           ? JSON.parse(rawCourses)
-          : ["AP Stat", "British Literature", "Calculus H", "APES", "Other"],
+          : ["Other"],
       );
 
       const rawCourseColors = localStorage.getItem(courseColorsStorageKey);
@@ -2339,13 +2363,7 @@ function App() {
     } catch (error) {
       console.error("Failed to load user data from localStorage:", error);
       setTasks([]);
-      setCourses([
-        "AP Stat",
-        "British Literature",
-        "Calculus H",
-        "APES",
-        "Other",
-      ]);
+      setCourses(["Other"]);
       setCourseColors({});
       setUserSettings(DEFAULT_USER_SETTINGS);
       setChecklists([]);
@@ -2369,6 +2387,96 @@ function App() {
     workspaceStorageKey,
   ]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  /* eslint-disable react-hooks/set-state-in-effect -- Restore the explicit, profile-scoped first-use flag from browser storage. */
+  useEffect(() => {
+    if (!tutorialOpen) return undefined;
+    const previousFocus = document.activeElement;
+    const dialog = tutorialRef.current;
+    dialog?.focus();
+    const handleTutorialKeys = (event) => {
+      if (event.key === "Escape") {
+        localStorage.setItem(getTutorialStorageKey(currentUser), JSON.stringify({ complete: true }));
+        setTutorialOpen(false);
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const controls = [...dialog.querySelectorAll("button:not([disabled])")];
+      if (controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleTutorialKeys);
+    return () => {
+      document.removeEventListener("keydown", handleTutorialKeys);
+      previousFocus?.focus?.();
+    };
+  }, [currentUser, tutorialOpen]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    try {
+      const saved = localStorage.getItem(getTutorialStorageKey(currentUser));
+      if (saved && JSON.parse(saved).complete === false) {
+        setTutorialStep(0);
+        setTutorialOpen(true);
+      }
+    } catch { /* A damaged optional tutorial flag must never block the planner. */ }
+  }, [currentUser]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const finishTutorial = () => {
+    localStorage.setItem(getTutorialStorageKey(currentUser), JSON.stringify({ complete: true }));
+    setTutorialOpen(false);
+    setTutorialStep(0);
+    setTutorialPracticeOpen(false);
+  };
+
+  const openTutorialPractice = () => {
+    setTutorialPracticeDone([]);
+    setTutorialPracticeNote("");
+    setTutorialPracticeDate(17);
+    setTutorialPracticeHomeStep(tutorialStep);
+    setTutorialPracticeHiddenWidget("");
+    setTutorialPracticeWidgetMenu("");
+    setTutorialWidgetLayout({ plan: { x: 25, y: 70, width: 330, height: 135 }, calendar: { x: 430, y: 110, width: 285, height: 135 }, checklists: { x: 205, y: 235, width: 280, height: 120 } });
+    setTutorialPracticeOpen(true);
+  };
+
+  const startTutorialWidgetInteraction = (event, id, edges = null) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const canvas = event.currentTarget.closest(".practice-workspace");
+    if (!canvas) return;
+    const start = tutorialWidgetLayout[id];
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const move = (moveEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      setTutorialWidgetLayout((layout) => {
+        const current = layout[id];
+        if (!edges) {
+          return { ...layout, [id]: { ...current, x: Math.max(0, Math.min(canvas.clientWidth - current.width, start.x + dx)), y: Math.max(55, Math.min(canvas.clientHeight - current.height, start.y + dy)) } };
+        }
+        let { x, y, width, height } = start;
+        if (edges.right) width = Math.max(180, Math.min(canvas.clientWidth - x, start.width + dx));
+        if (edges.bottom) height = Math.max(100, Math.min(canvas.clientHeight - y, start.height + dy));
+        if (edges.left) { const nextX = Math.max(0, Math.min(start.x + start.width - 180, start.x + dx)); width = start.width + start.x - nextX; x = nextX; }
+        if (edges.top) { const nextY = Math.max(55, Math.min(start.y + start.height - 100, start.y + dy)); height = start.height + start.y - nextY; y = nextY; }
+        return { ...layout, [id]: { x, y, width, height } };
+      });
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
 
   // ---------------------------------------------------------------------------
   // EVENT HANDLERS: CREATE AND UPDATE DATA
@@ -2859,6 +2967,7 @@ function App() {
     setSyllabusFileName(file.name);
     setSyllabusImportStatus("reading");
     try {
+      const { extractSyllabusText, findLikelySyllabusAssignments } = await import("./syllabusImport.js");
       const extractedText = await extractSyllabusText(file);
       setSyllabusExtractedText(extractedText);
       const likelyAssignments = findLikelySyllabusAssignments(extractedText);
@@ -3712,7 +3821,10 @@ function App() {
           localStorage.setItem(`courses_${profileKey}`, JSON.stringify(["Other"]));
         }
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
+        localStorage.setItem(getTutorialStorageKey(profileKey), JSON.stringify({ complete: false }));
         setCurrentUser(profileKey);
+        setTutorialStep(0);
+        setTutorialOpen(true);
       }
 
       setSignInName("");
@@ -5568,7 +5680,7 @@ function App() {
     getWorkspaceWidgetTitle(item.type).toLowerCase().includes(widgetSearch.trim().toLowerCase()),
   );
 
-  const renderRecommendedWidget = () => recommendationItems.length === 0 ? <p className="recommended-plan-empty">You have no incomplete assignments. Nice work!</p> : (
+  const renderRecommendedWidget = () => recommendationItems.length === 0 ? <div className="empty-state-action"><p className="recommended-plan-empty">You have no incomplete assignments yet.</p><button type="button" className="btn btn-primary" onClick={() => setAddAssignmentOpen(true)}>Add your first assignment</button></div> : (
     <>
       <div className="recommended-plan-workload compact"><strong>{recommendationWorkloadLabel}</strong><span>Top-plan workload{recommendationWorkload.unknownCount > 0 ? ` + ${recommendationWorkload.unknownCount} unestimated` : ""}</span></div>
       <ol className="recommended-plan-list portable-recommendations">
@@ -7177,6 +7289,10 @@ function App() {
                 <div className="settings-content">
                   <div className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
+                  <div className="settings-onboarding-card">
+                    <div><p className="eyebrow">Getting started</p><h4>TaskCabinet Tutorial</h4><p className="hint-text">Replay the visual introduction or manage optional sample assignments.</p></div>
+                    <div className="settings-onboarding-actions"><button type="button" className="btn btn-primary" onClick={() => { setTutorialStep(0); setTutorialOpen(true); }}>Replay Tutorial</button></div>
+                  </div>
                   <div
                     className="settings-collapse-header double-click-collapse-header"
                     onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setAppearanceSettingsOpen((isOpen) => !isOpen))}
@@ -8672,6 +8788,54 @@ function App() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {tutorialOpen && (
+        <div className="tutorial-backdrop" role="presentation">
+          <section ref={tutorialRef} className="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy" tabIndex="-1">
+            {tutorialPracticeOpen ? (
+              <div className="tutorial-practice">
+                <header className="tutorial-practice-header">
+                  <div><p className="eyebrow">Practice mode</p><h2 id="tutorial-title">{TUTORIAL_SLIDES[tutorialStep].title}</h2><p id="tutorial-copy">Try this feature safely. Nothing here is saved to your real TaskCabinet.</p></div>
+                  <button type="button" className="btn btn-secondary" onClick={() => { if (tutorialStep !== tutorialPracticeHomeStep) setTutorialStep(tutorialPracticeHomeStep); else setTutorialPracticeOpen(false); }}>← {tutorialStep !== tutorialPracticeHomeStep ? "Back to First Practice Page" : "Back to Tutorial"}</button>
+                </header>
+                <main className="tutorial-practice-stage">
+                  {tutorialStep === 0 && <div className="practice-dashboard"><h3>Welcome back</h3><p>Everything you want to get done, organized.</p><div className="practice-stat-row"><button type="button" onClick={() => setTutorialPracticeDone((done) => done.includes("biology") ? done.filter((id) => id !== "biology") : [...done, "biology"])}><strong>{tutorialPracticeDone.includes("biology") ? "Done!" : "Biology review"}</strong><span>{tutorialPracticeDone.includes("biology") ? "Nice work" : "Due tomorrow · 30 min"}</span></button><button type="button" onClick={() => setTutorialStep(2)}><strong>Plan of Attack</strong><span>Open the recommendation practice</span></button></div></div>}
+                  {tutorialStep === 1 && <div className="practice-form"><h3>Add a practice assignment</h3><label>Assignment name<input value={tutorialPracticeNote} onChange={(event) => setTutorialPracticeNote(event.target.value)} placeholder="Try typing an assignment" /></label><div><label>Course<select><option>Biology</option><option>Work</option><option>Personal</option></select></label><label>Priority<select><option>High</option><option>Medium</option><option>Low</option></select></label></div><button type="button" className="btn btn-primary" disabled={!tutorialPracticeNote.trim()} onClick={() => setTutorialPracticeDone(["created"])}>{tutorialPracticeDone.includes("created") ? "Practice assignment added!" : "Add Assignment"}</button></div>}
+                  {tutorialStep === 2 && <div className="practice-plan"><h3>Recommended Plan of Attack</h3><p>Choose an assignment to mark it complete.</p>{[["biology","Review cell structure","Due tomorrow · High priority"],["english","Literature response","Due Friday · 45 minutes"],["math","Practice problems","Due next week · 20 minutes"]].map(([id,title,detail], index) => <button type="button" className={tutorialPracticeDone.includes(id) ? "done" : ""} key={id} onClick={() => setTutorialPracticeDone((done) => done.includes(id) ? done.filter((item) => item !== id) : [...done,id])}><b>{index + 1}</b><span><strong>{title}</strong><small>{tutorialPracticeDone.includes(id) ? "Completed" : detail}</small></span></button>)}</div>}
+                  {tutorialStep === 3 && <div className="practice-calendar"><section><h3>July 2026</h3><div>{Array.from({ length: 28 }, (_, index) => index + 1).map((day) => <button type="button" className={tutorialPracticeDate === day ? "selected" : ""} key={day} onClick={() => setTutorialPracticeDate(day)}>{day}</button>)}</div><p>Selected: July {tutorialPracticeDate}</p></section><section><h3>Study checklist</h3>{["Review notes","Practice problems","Pack materials"].map((item) => <label key={item}><input type="checkbox" checked={tutorialPracticeDone.includes(item)} onChange={() => setTutorialPracticeDone((done) => done.includes(item) ? done.filter((value) => value !== item) : [...done,item])} />{item}</label>)}</section></div>}
+                  {tutorialStep === 4 && <div className="practice-workspace"><p className="practice-widget-instruction">Open the <strong>Widgets</strong> tab in TaskCabinet to add widgets. Drag a six-dot handle to move a widget, or drag any edge or corner to resize it.</p>{[["plan","Plan of Attack","Biology review"],["calendar","Mini Calendar","3 deadlines"],["checklists","Checklists","1 of 3 complete"]].filter(([id]) => tutorialPracticeHiddenWidget !== id).map(([id,title,detail]) => <div key={id} style={{ left: tutorialWidgetLayout[id].x, top: tutorialWidgetLayout[id].y, width: tutorialWidgetLayout[id].width, height: tutorialWidgetLayout[id].height }}><header><button type="button" className="practice-widget-drag" aria-label={`Move ${title}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id)}>⠿</button><strong>{title}</strong><button type="button" className="practice-widget-menu-button" aria-label={`${title} options`} onClick={() => setTutorialPracticeWidgetMenu((open) => open === id ? "" : id)}>•••</button></header>{tutorialPracticeWidgetMenu === id && <button type="button" className="practice-widget-hide" onClick={() => { setTutorialPracticeHiddenWidget(id); setTutorialPracticeWidgetMenu(""); }}>Hide widget</button>}<span>{detail}</span>{[["top",{top:true}],["right",{right:true}],["bottom",{bottom:true}],["left",{left:true}],["top-left",{top:true,left:true}],["top-right",{top:true,right:true}],["bottom-right",{bottom:true,right:true}],["bottom-left",{bottom:true,left:true}]].map(([edge, edges]) => <button type="button" key={edge} className={`practice-widget-resize is-${edge}`} aria-label={`Resize ${title} from ${edge}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id, edges)} />)}</div>)}</div>}
+                </main>
+              </div>
+            ) : (<>
+            <button type="button" className="tutorial-skip" onClick={finishTutorial}>Skip tutorial</button>
+            <div className={`tutorial-visual tutorial-${TUTORIAL_SLIDES[tutorialStep].visual}`} aria-hidden="true">
+              {tutorialStep !== 0 && <div className="tutorial-browser-bar"><i /><i /><i /></div>}
+              <div className="tutorial-illustration">
+                {tutorialStep === 0 && <><div className="tutorial-mini-sidebar"><b>TC</b><span>Home</span><span>To Do</span><span>Calendar</span><span>Settings</span></div><div className="tutorial-mini-dashboard"><div className="tutorial-mini-heading"><span><strong>Welcome back</strong><small>Everything you want to get done, organized.</small></span><em>3 due soon</em></div><div className="tutorial-mini-grid"><i><strong>Plan of Attack</strong><small>Biology review</small><small>Literature response</small></i><i><strong>Today</strong><b>3</b><small>active tasks</small></i><i><strong>Progress</strong><b>72%</b><small>this week</small></i></div></div></>}
+                {tutorialStep === 1 && <div className="tutorial-mini-form"><div className="tutorial-mini-form-heading"><strong>Add Assignment</strong><small>Required fields are marked</small></div><label>Assignment name<span>Biology chapter review</span></label><div><label>Course<span>Biology</span></label><label>Due date<span>Tomorrow · 11:00 PM</span></label></div><div><label>Priority<span>High</span></label><label>Estimated time<span>30 minutes</span></label></div><div className="tutorial-mini-options"><small>＋ Files</small><small>＋ Links</small><small>＋ Checklist steps</small></div><button type="button">Add Assignment</button></div>}
+                {tutorialStep === 2 && <div className="tutorial-mini-plan"><div><span><strong>Recommended Plan of Attack</strong><small>Best next steps based on your workload</small></span><em>3 tasks · 1h 35m</em></div><ol><li><b>1</b><span><strong>Review cell structure</strong><small>Biology · Due tomorrow · 30 min</small><em><i>High priority</i><i>Due soon</i></em></span></li><li><b>2</b><span><strong>Literature response</strong><small>English · Due Friday · 45 min</small><em><i>2/3 steps done</i></em></span></li></ol></div>}
+                {tutorialStep === 3 && <><div className="tutorial-mini-calendar"><div className="tutorial-mini-calendar-heading"><span>‹</span><strong>July 2026</strong><span>›</span></div><div>{["S","M","T","W","T","F","S","6","7","8","9","10","11","12","13","14","15","16","17","18","19"].map((day, index) => <span className={`${index === 17 ? "selected" : ""}${[10,15,19].includes(index) ? " has-task" : ""}`} key={`${day}-${index}`}>{day}</span>)}</div><small className="tutorial-calendar-legend"><i />Biology</small></div><div className="tutorial-mini-checklist"><div><strong>Study checklist</strong><em>1 of 3</em></div><span className="done">✓ Review notes</span><span>○ Practice problems <small>Due today</small></span><span>○ Pack materials</span><i><b /></i><small>33% complete</small></div></>}
+                {tutorialStep === 4 && <><div className="tutorial-mini-toolbar"><span>Open the Widgets tab to add widgets</span></div><div className="tutorial-mini-widget widget-one"><span>⠿ <i>•••</i></span><strong>Plan of Attack</strong><small>1. Biology review · Due tomorrow</small><small>2. Literature response · Friday</small></div><div className="tutorial-mini-widget widget-two"><span>⠿ <i>•••</i></span><strong>Mini Calendar</strong><small>July · 3 deadlines</small><b>◱</b></div><div className="tutorial-mini-widget widget-three"><span>⠿ <i>•••</i></span><strong>Checklists</strong><small>Study plan · 33%</small></div></>}
+              </div>
+            </div>
+            <div className="tutorial-copy">
+              <p className="eyebrow">Quick tour · {tutorialStep + 1} of {TUTORIAL_SLIDES.length}</p>
+              <h2 id="tutorial-title">{TUTORIAL_SLIDES[tutorialStep].title}</h2>
+              <p id="tutorial-copy">{TUTORIAL_SLIDES[tutorialStep].copy}</p>
+            </div>
+            <div className="tutorial-progress" aria-label={`Tutorial step ${tutorialStep + 1} of ${TUTORIAL_SLIDES.length}`}>
+              {TUTORIAL_SLIDES.map((slide, index) => <span key={slide.visual} className={index === tutorialStep ? "active" : ""} />)}
+            </div>
+            {tutorialStep > 0 && <button type="button" className="tutorial-demo-link" onClick={openTutorialPractice}>Explore this feature</button>}
+            <div className="tutorial-actions">
+              <button type="button" className="btn btn-secondary" disabled={tutorialStep === 0} onClick={() => setTutorialStep((step) => step - 1)}>Back</button>
+              {tutorialStep < TUTORIAL_SLIDES.length - 1
+                ? <button type="button" className="btn btn-primary" onClick={() => setTutorialStep((step) => step + 1)}>Next</button>
+                : <button type="button" className="btn btn-primary" onClick={finishTutorial}>Finish</button>}
+            </div>
+            </>)}
+          </section>
         </div>
       )}
       <Analytics />

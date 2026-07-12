@@ -6,6 +6,7 @@ import { findLikelySyllabusAssignments, getSyllabusFileKind } from "../src/sylla
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "../src/assignmentCountdown.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calendarWeekUtils.js";
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
+import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
 import { DEFAULT_LAYOUT_VERSION, canHideWidget, createDefaultWorkspaceLayout, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
@@ -30,6 +31,30 @@ function findWidgetOverlaps(items) {
 
   return overlaps;
 }
+
+test("tutorial storage is isolated by profile", () => {
+  assert.equal(getTutorialStorageKey("Alex"), "taskcabinet_tutorial_Alex");
+  assert.notEqual(getTutorialStorageKey("Alex"), getTutorialStorageKey("Jordan"));
+});
+
+test("demo data is optional, dated, and deduplicated", () => {
+  const now = new Date(2026, 6, 11);
+  const demo = createDemoData(now);
+  const first = mergeDemoData([], ["Other"], now);
+  const second = mergeDemoData(first.tasks, first.courses, now);
+  assert.equal(first.tasks.length, 3);
+  assert.equal(second.tasks.length, 3);
+  assert.deepEqual(second.courses, ["Other", ...demo.courses]);
+  assert.equal(first.tasks[0].dueDay, 12);
+});
+
+test("demo cleanup removes only unchanged sample assignments", () => {
+  const demo = createDemoData(new Date(2026, 6, 11)).tasks;
+  const edited = { ...demo[1], title: "My edited assignment" };
+  const real = { id: "real-task", title: "Keep me" };
+  const remaining = removeUnchangedDemoData([demo[0], edited, real]);
+  assert.deepEqual(remaining.map((task) => task.id), [edited.id, real.id]);
+});
 
 test("date-only checklist deadlines use the end of the local day", () => {
   const deadline = getChecklistDeadline({ dueDate: "2026-07-06", dueTime: "" });
