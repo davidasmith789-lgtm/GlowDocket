@@ -56,8 +56,26 @@ function toRow(record) {
 export function createSupabaseRegistry(env = process.env) {
   const url = String(env.SUPABASE_URL || ""); const secret = String(env.SUPABASE_SECRET_KEY || "");
   if (!url || !secret) throw new ReminderError("registry_unavailable", "The reminder registry is not configured.", 503);
-  const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false } });
-  const checked = async (query) => { const { data, error } = await query; if (error) throw new ReminderError("registry_failure", "The reminder registry is unavailable.", 503); return data; };
+  const db = createClient(url, secret, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, } });
+  const checked = async (query) => {
+  const { data, error } = await query;
+    if (error) {
+      console.error("[push-reminders] Supabase error", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+
+      throw new ReminderError(
+        "registry_failure",
+        "The reminder registry is unavailable.",
+        503
+      );
+    }
+
+    return data;
+  };
   return {
     getDevice: async (id) => { const rows = await checked(db.from("push_profile_installations").select("profile_installation_id,onesignal_subscription_id").eq("profile_installation_id", id).limit(1)); return rows[0] ? { profileInstallationId: rows[0].profile_installation_id, subscriptionId: rows[0].onesignal_subscription_id } : null; },
     upsertDevice: (device) => checked(db.from("push_profile_installations").upsert({ profile_installation_id: device.profileInstallationId, onesignal_subscription_id: device.subscriptionId, updated_at: new Date().toISOString() }, { onConflict: "profile_installation_id" })),
