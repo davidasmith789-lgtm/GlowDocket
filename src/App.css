@@ -665,6 +665,12 @@ html[data-theme="dark"] .tab-row {
 .recommendations-feedback.success { color: var(--success-color); }
 .recommendations-feedback.error { color: var(--danger-color); }
 
+html[data-theme="dark"] .recommendations-page,
+html[data-theme="dark"] .recommendations-header h2,
+html[data-theme="dark"] .recommendations-form label {
+  color: #ffffff;
+}
+
 @media (max-width: 520px) {
   .recommendations-page { padding: 18px 14px; }
   .recommendations-form-footer { align-items: stretch; flex-direction: column; }
@@ -2669,6 +2675,15 @@ html[data-theme="dark"] .edit-notes-side {
 
 html[data-theme="dark"] .recommended-plan-count {
   color: #c7d2fe;
+}
+
+html[data-theme="dark"] .recommended-plan-card,
+html[data-theme="dark"] .recommended-plan-header h2,
+html[data-theme="dark"] .recommended-plan-title-row strong,
+html[data-theme="dark"] .recommended-plan-button,
+html[data-theme="dark"] .recommended-plan-workload strong,
+html[data-theme="dark"] .recommended-plan-reasons span {
+  color: #ffffff;
 }
 
 @media (max-width: 560px) {
