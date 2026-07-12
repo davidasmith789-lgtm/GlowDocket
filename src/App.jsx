@@ -112,7 +112,7 @@ const SCHOOL_LEVEL_COPY = {
     guideTitle: "One Step at a Time",
     guideCopy: "Choose one important homework item, break it into checklist steps, and finish the first small step before switching subjects.",
     guidePrompts: ["Start with what is due soonest", "Use checklist steps for big homework", "Ask for help before a deadline"],
-    emptyCopy: "No homework matches these filters. Nice work!",
+    emptyCopy: "Nothing here right now — nice work! Try changing a filter if you’re looking for something.",
   },
   high: {
     eyebrow: "Student Productivity Hub",
@@ -127,7 +127,7 @@ const SCHOOL_LEVEL_COPY = {
     guideTitle: "Balance the Week",
     guideCopy: "Balance urgent assignments with longer projects so deadlines, activities, and study time do not pile up at once.",
     guidePrompts: ["Protect time for long projects", "Start high-priority work early", "Check tomorrow before signing off"],
-    emptyCopy: "No assignments match these filters.",
+    emptyCopy: "Nothing here right now! Try changing a filter, or add something new when you’re ready.",
   },
   college: {
     eyebrow: "College Coursework Planner",
@@ -142,7 +142,7 @@ const SCHOOL_LEVEL_COPY = {
     guideTitle: "Plan Beyond the Next Deadline",
     guideCopy: "Track readings, assessments, and long-term projects together. Use syllabus import and estimates to reserve work blocks before deadlines become urgent.",
     guidePrompts: ["Import each course syllabus", "Schedule readings before class", "Break papers and projects into milestones"],
-    emptyCopy: "No coursework matches these filters.",
+    emptyCopy: "Nothing here right now! Try changing a filter, or add something new when you’re ready.",
   },
 };
 
@@ -5504,7 +5504,7 @@ function App() {
               <button type="button" className="btn btn-danger" disabled={selectedChecklistIds.length === 0} onClick={handleDeleteSelectedChecklists}>Delete selected</button>
             </div>
           )}
-          {orderedLists.length === 0 ? <p className="checklist-empty">No lists yet. Create one whenever something needs keeping track of.</p> : (
+          {orderedLists.length === 0 ? <p className="checklist-empty friendly-empty" role="status">No lists yet — when something pops into your head, you can start one right here.</p> : (
             <div className="checklist-gallery">
               {orderedLists.map((list) => (
                 <article
@@ -5552,7 +5552,7 @@ function App() {
           <input name="checklistItem" placeholder="Add a checklist item…" autoComplete="off" />
           <button type="submit" className="btn btn-primary">Add</button>
         </form>
-        {(selectedList.items || []).length === 0 ? <p className="checklist-empty">This list is empty.</p> : (
+        {(selectedList.items || []).length === 0 ? <p className="checklist-empty friendly-empty" role="status">This list is all clear. Add a step whenever you’re ready.</p> : (
           <ul className="standalone-checklist-items">
             {(selectedList.items || []).map((item) => (
               <li
@@ -5680,7 +5680,7 @@ function App() {
     getWorkspaceWidgetTitle(item.type).toLowerCase().includes(widgetSearch.trim().toLowerCase()),
   );
 
-  const renderRecommendedWidget = () => recommendationItems.length === 0 ? <div className="empty-state-action"><p className="recommended-plan-empty">You have no incomplete assignments yet.</p><button type="button" className="btn btn-primary" onClick={() => setAddAssignmentOpen(true)}>Add your first assignment</button></div> : (
+  const renderRecommendedWidget = () => recommendationItems.length === 0 ? <div className="empty-state-action friendly-empty" role="status"><p className="recommended-plan-empty">You’re all caught up! Add something whenever you’re ready, and we’ll help you decide what to tackle first.</p><button type="button" className="btn btn-primary" onClick={() => setAddAssignmentOpen(true)}>Add an assignment</button></div> : (
     <>
       <div className="recommended-plan-workload compact"><strong>{recommendationWorkloadLabel}</strong><span>Top-plan workload{recommendationWorkload.unknownCount > 0 ? ` + ${recommendationWorkload.unknownCount} unestimated` : ""}</span></div>
       <ol className="recommended-plan-list portable-recommendations">
@@ -5751,7 +5751,7 @@ function App() {
             </div>
           </article>
         ) : (
-          <p className="course-overview-empty">No active assignments for this {schoolLevelCopy.courseLabel.toLowerCase()}.</p>
+          <p className="course-overview-empty friendly-empty" role="status">You’re all clear in this {schoolLevelCopy.courseLabel.toLowerCase()} right now.</p>
         )}
       </section>
     );
@@ -5789,7 +5789,7 @@ function App() {
           <div><strong>{reminderWorkloadMinutes > 0 ? reminderWorkloadLabel : dashboardReminderTasks.length}</strong><span>{reminderWorkloadMinutes > 0 ? `Next ${rangeLabel}` : "Upcoming"}</span></div>
         </div>
         <label className="reminder-horizon-control"><span>Upcoming window</span><select value={dashboardReminderHours} onChange={(event) => handleAddFieldSettingChange("dashboardReminderHours", Number(event.target.value))}><option value={24}>Next 24 hours</option><option value={48}>Next 48 hours</option><option value={72}>Next 3 days</option><option value={168}>Next 7 days</option><option value={336}>Next 14 days</option><option value={720}>Next 30 days</option></select></label>
-        {overdueItems.length === 0 && upcomingItems.length === 0 ? <p className="reminder-widget-empty">Nothing is due inside this window.</p> : (
+        {overdueItems.length === 0 && upcomingItems.length === 0 ? <p className="reminder-widget-empty friendly-empty" role="status">Looks calm in here — nothing is due in this window.</p> : (
           <>
             {renderReminderGroup("Overdue", overdueItems)}
             {renderReminderGroup(`Due in the next ${rangeLabel}`, upcomingItems)}
@@ -5956,7 +5956,7 @@ function App() {
         {!onlyBucket && renderFilterToggle()}
         <div className="task-master-heading"><h3>{status === "todo" ? `${schoolLevelCopy.todoLabel} (${source.length})` : status === "inProgress" ? `In Progress (${source.length})` : `Completed ${schoolLevelCopy.taskPlural} (${source.length})`}</h3>{status === "completed" && <button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button>}</div>
         {!onlyBucket && renderFilterControls()}
-        {source.length === 0 ? <p className="placeholder-text">{schoolLevelCopy.emptyCopy}</p> : (status === "completed" || onlyBucket) ? <ul className="task-list">{source.map(renderCard)}</ul> : <div>{bucketsOrder.map((bucket) => grouped[bucket]?.length ? <section className="bucket-section" key={bucket}><h4 className="bucket-title">{bucket}</h4><ul className="task-list">{grouped[bucket].map(renderCard)}</ul></section> : null)}</div>}
+        {source.length === 0 ? <p className="placeholder-text friendly-empty" role="status">{schoolLevelCopy.emptyCopy}</p> : (status === "completed" || onlyBucket) ? <ul className="task-list">{source.map(renderCard)}</ul> : <div>{bucketsOrder.map((bucket) => grouped[bucket]?.length ? <section className="bucket-section" key={bucket}><h4 className="bucket-title">{bucket}</h4><ul className="task-list">{grouped[bucket].map(renderCard)}</ul></section> : null)}</div>}
       </div>
     );
   };
@@ -6322,7 +6322,7 @@ function App() {
 
               {recommendedTasks.length === 0 ? (
                 <p className="recommended-plan-empty">
-                  You have no incomplete assignments. Nice work!
+                  You’re all caught up — nice work! Add something new whenever you’re ready.
                 </p>
               ) : (
                 <ol className="recommended-plan-list">
@@ -6856,7 +6856,7 @@ function App() {
 
               {completedTasks.length === 0 ? (
                 <p className="placeholder-text">
-                  No completed assignments match your filters.
+                  Nothing here yet. Finished assignments will hang out here once you complete them.
                 </p>
               ) : (
                 <ul
@@ -7053,7 +7053,7 @@ function App() {
 
                   {selectedDateTasks.length === 0 ? (
                     <p className="placeholder-text">
-                      No assignments due on this day.
+                      This day is wide open — nothing is due.
                     </p>
                   ) : (
                     <ul
@@ -8053,7 +8053,7 @@ function App() {
                   </summary>
                   <div className="settings-storage-body">
                     {trashTasks.length === 0 ? (
-                      <p className="placeholder-text">Trash is empty.</p>
+                      <p className="placeholder-text friendly-empty" role="status">Trash is empty — nothing to clean up here.</p>
                     ) : (
                       <>
                         <button
@@ -8184,17 +8184,18 @@ function App() {
       */}
       {editingTask && (
         <div className="modal-backdrop" onClick={handleEditCancel}>
-          <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-assignment-title" onClick={(e) => e.stopPropagation()}>
             <div className="edit-modal-header">
               <div>
                 <p className="eyebrow modal-eyebrow">Edit Assignment</p>
-                <h2>✏️ {editingTask.title || "Untitled Assignment"}</h2>
+                <h2 id="edit-assignment-title">✏️ {editingTask.title || "Untitled Assignment"}</h2>
               </div>
 
               <button
                 type="button"
                 className="modal-close-button"
                 onClick={handleEditCancel}
+                aria-label="Close edit assignment"
               >
                 ×
               </button>
@@ -8688,13 +8689,13 @@ function App() {
       )}
       {copyingTask && (
         <div className="modal-backdrop" onClick={() => setCopyingTask(null)}>
-          <div className="edit-modal copy-dates-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="edit-modal copy-dates-modal" role="dialog" aria-modal="true" aria-labelledby="copy-assignment-title" onClick={(e) => e.stopPropagation()}>
             <div className="edit-modal-header">
               <div>
                 <p className="eyebrow modal-eyebrow">Copy Assignment</p>
-                <h2>Copy “{copyingTask.title}” to dates</h2>
+                <h2 id="copy-assignment-title">Copy “{copyingTask.title}” to dates</h2>
               </div>
-              <button type="button" className="modal-close-button" onClick={() => setCopyingTask(null)}>×</button>
+              <button type="button" className="modal-close-button" onClick={() => setCopyingTask(null)} aria-label="Close copy assignment">×</button>
             </div>
             <p className="hint-text">
               Dates are saved as month/day and repeat annually. Select as many

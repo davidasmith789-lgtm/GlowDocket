@@ -4578,6 +4578,44 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .onboarding-status { color: var(--success-color); font-weight: 700; }
 .empty-state-action { justify-content: center; text-align: center; padding: 18px; }
 .empty-state-action p { flex-basis: 100%; }
+.friendly-empty { animation: friendly-empty-in var(--motion-standard) var(--motion-ease-out) both; }
+
+/* Small surface transitions keep view changes feeling connected without slowing work. */
+:where(.task-card, .recommended-plan-item, .bucket-section, .settings-section,
+  .calendar-panel, .storage-empty-state, .empty-state-action, .friendly-empty) {
+  animation: surface-arrive 220ms var(--motion-ease-out) both;
+}
+
+:where(.modal-backdrop, .tutorial-backdrop) {
+  animation: backdrop-arrive var(--motion-standard) ease-out both;
+}
+
+:where(.edit-modal, .tutorial-dialog, .widget-menu-popover, .practice-widget-hide) {
+  animation: floating-surface-arrive 200ms var(--motion-ease-out) both;
+  transform-origin: top right;
+}
+
+:where(.task-card, .recommended-plan-card, .dashboard-calendar-card,
+  .workspace-widget, .settings-section) {
+  transition: border-color var(--motion-standard) ease,
+    box-shadow var(--motion-standard) ease,
+    transform var(--motion-standard) var(--motion-ease-out);
+}
+
+@keyframes surface-arrive {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes backdrop-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes floating-surface-arrive {
+  from { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 html[data-theme="dark"] .tutorial-dialog,
 html[data-theme="dark"] .settings-onboarding-card,
 html[data-theme="dark"] .settings-onboarding-card h4,
