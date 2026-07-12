@@ -4617,6 +4617,55 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
     transform var(--motion-standard) var(--motion-ease-out);
 }
 
+/* A little extra movement for everyday interactions. */
+:where(input, select, textarea) {
+  transition: border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-standard) ease,
+    transform var(--motion-standard) var(--motion-ease-out);
+}
+
+:where(input, select, textarea):focus {
+  transform: translateY(-1px);
+}
+
+:where(.react-calendar__tile, .calendar-view-toggle button,
+  .widget-library-card, .storage-choice-card, .course-overview-row) {
+  transition: background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-standard) ease,
+    transform var(--motion-fast) var(--motion-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(.task-card, .recommended-plan-item, .panel-card,
+    .widget-library-card, .storage-choice-card):hover {
+    box-shadow: 0 14px 32px color-mix(in srgb, var(--backdrop-color, #111827) 15%, transparent);
+  }
+
+  :where(.react-calendar__tile, .calendar-view-toggle button,
+    .widget-library-card, .storage-choice-card):not(:disabled):hover {
+    transform: translateY(-2px);
+  }
+}
+
+:where(.react-calendar__tile, .calendar-view-toggle button,
+  .widget-library-card, .storage-choice-card):not(:disabled):active {
+  transform: scale(.97);
+  transition-duration: 60ms;
+}
+
+:where(.recommendations-page, .calendar-panel, .settings-layout,
+  .widgets-tray, .workspace-organizer) {
+  animation: view-arrive 260ms var(--motion-ease-out) both;
+}
+
+:where(.subtask-progress-line, .recommended-plan-progress,
+  .in-progress-status-pill, .onboarding-status) {
+  animation: status-settle 280ms var(--motion-ease-out) both;
+}
+
 @keyframes surface-arrive {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -4630,6 +4679,17 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 @keyframes floating-surface-arrive {
   from { opacity: 0; transform: translateY(6px) scale(.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes view-arrive {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes status-settle {
+  0% { opacity: 0; transform: translateY(3px) scale(.97); }
+  70% { transform: translateY(0) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 html[data-theme="dark"] .tutorial-dialog,
 html[data-theme="dark"] .settings-onboarding-card,
