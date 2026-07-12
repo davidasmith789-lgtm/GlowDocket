@@ -18,4 +18,8 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    files: ['public/push/onesignal/OneSignalSDKWorker.js'],
+    languageOptions: { globals: globals.worker },
+  },
 ])

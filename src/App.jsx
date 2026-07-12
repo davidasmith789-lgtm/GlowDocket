@@ -35,6 +35,9 @@ from "./recommendationUtils.js";
 import {
   getTutorialStorageKey,
 } from "./onboardingUtils.js";
+import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
+import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
+import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -61,6 +64,7 @@ const DEFAULT_USER_SETTINGS = {
   autoCompleteChecklist: true,
   confirmBeforeTrash: false,
   notificationsEnabled: false,
+  externalPushEnabled: false,
   reminderMinutes: 60,
   dashboardReminderHours: 24,
   quickMatchCustomPresets: [],
@@ -1569,6 +1573,11 @@ function App() {
   // tasks is the app's central data array. The remaining values describe what
   // the user is currently viewing; they are interface state rather than data.
   const [tasks, setTasks] = useState([]);
+  const [externalPushStatus, setExternalPushStatus] = useState(EXTERNAL_PUSH_CLIENT_ENABLED ? "idle" : "client_disabled");
+  const [externalPushMessage, setExternalPushMessage] = useState("");
+  const [externalPushLastSync, setExternalPushLastSync] = useState("");
+  const [externalPushSubscriptionVersion, setExternalPushSubscriptionVersion] = useState(0);
+  const externalPushSyncTimerRef = useRef(null);
   const [currentTab, setCurrentTab] = useState("dashboard");
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [recommendationStatus, setRecommendationStatus] = useState("idle");
@@ -1861,9 +1870,81 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const handleSubscriptionChange = () => setExternalPushSubscriptionVersion((version) => version + 1);
+    const handleOnline = async () => {
+      if (!currentUser) return;
+      try { const result = await retryPendingExternalCleanup(currentUser); if (result.status === "cleaned") { setExternalPushStatus(userSettings.externalPushEnabled ? "sync_needed" : "idle"); setExternalPushMessage("Pending reminder cleanup finished."); } }
+      catch { setExternalPushStatus("cleanup_pending"); setExternalPushMessage("Reminder cleanup is still waiting for a connection."); }
+      setExternalPushSubscriptionVersion((version) => version + 1);
+    };
+    window.addEventListener("taskcabinet-push-subscription-change", handleSubscriptionChange);
+    window.addEventListener("online", handleOnline);
+    void handleOnline();
+    return () => { window.removeEventListener("taskcabinet-push-subscription-change", handleSubscriptionChange); window.removeEventListener("online", handleOnline); };
+  }, [currentUser, userSettings.externalPushEnabled]);
+
+  useEffect(() => {
+    if (currentUser) return;
+    const pushId = new URLSearchParams(window.location.search).get("push");
+    if (!pushId) return;
+    const account = Object.values(getStoredAccounts()).find((candidate) => {
+      try { return JSON.parse(localStorage.getItem(getPushDeviceStorageKey(candidate.profileKey)) || "null")?.profileInstallationId === pushId; } catch { return false; }
+    });
+    const timer = window.setTimeout(() => {
+      if (account) { setSignInName(account.username || ""); setAuthError("This reminder belongs to this local profile. Sign in to open the assignment."); }
+      else setAuthError("That reminder belongs to a local profile that is no longer available in this browser.");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const pushId = new URLSearchParams(window.location.search).get("push");
+    const taskId = new URLSearchParams(window.location.search).get("task");
+    if (!taskId) return;
+    const timer = window.setTimeout(() => {
+      let matchesProfile = true;
+      if (pushId) { try { matchesProfile = JSON.parse(localStorage.getItem(getPushDeviceStorageKey(currentUser)) || "null")?.profileInstallationId === pushId; } catch { matchesProfile = false; } }
+      if (!matchesProfile) { setExternalPushMessage("This reminder belongs to another local profile. Sign into that profile to open it."); return; }
+      const matchingTask = tasks.find((task) => String(task.id) === taskId && !task.isDeleted);
+      setCurrentTab(matchingTask && getTaskStatus(matchingTask) === "inProgress" ? "inProgress" : "todo");
+      if (matchingTask) setExpandedTaskId(matchingTask.id);
+      else setExternalPushMessage("That assignment is no longer available in this local profile.");
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [currentUser, tasks]);
+
+  useEffect(() => {
+    window.clearTimeout(externalPushSyncTimerRef.current);
+    if (!currentUser || !userSettings.externalPushEnabled) {
+      return undefined;
+    }
+    externalPushSyncTimerRef.current = window.setTimeout(async () => {
+      setExternalPushStatus("syncing");
+      try {
+        const reminders = buildDesiredReminders(tasks, {
+          leadMinutes: Number(userSettings.reminderMinutes || 60),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+          getDeadline: getEffectiveDeadline,
+        });
+        const result = await reconcileExternalReminders(currentUser, reminders);
+        setExternalPushStatus(result.status);
+        if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
+        setExternalPushMessage(result.status === "active" ? `${reminders.length} reminder${reminders.length === 1 ? "" : "s"} synced.` : "External reminders need attention.");
+      } catch (error) {
+        setExternalPushStatus(error.code === "external_push_disabled" ? "server_disabled" : "failed");
+        setExternalPushMessage(error.message || "External reminders could not sync. Open-app reminders are still working.");
+      }
+    }, 800);
+    return () => window.clearTimeout(externalPushSyncTimerRef.current);
+  }, [currentUser, tasks, userSettings.externalPushEnabled, userSettings.reminderMinutes, externalPushSubscriptionVersion]);
+
+  useEffect(() => {
     if (
       !currentUser ||
       !userSettings.notificationsEnabled ||
+      !shouldUseOpenAppFallback(externalPushStatus) ||
       !("Notification" in window) ||
       Notification.permission !== "granted"
     ) {
@@ -1915,7 +1996,7 @@ function App() {
     checkReminders();
     const intervalId = window.setInterval(checkReminders, 60000);
     return () => window.clearInterval(intervalId);
-  }, [currentUser, tasks, userSettings.notificationsEnabled, userSettings.reminderMinutes]);
+  }, [currentUser, tasks, userSettings.notificationsEnabled, userSettings.reminderMinutes, externalPushStatus]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setChecklistNow(new Date()), 60000);
@@ -1996,19 +2077,60 @@ function App() {
     setInstallPrompt(null);
   };
 
-  const handleNotificationSettingChange = async (isEnabled) => {
-    if (!("Notification" in window)) {
-      alert("This browser does not support notifications.");
+  const getDesiredExternalReminders = () => buildDesiredReminders(tasks, {
+    leadMinutes: Number(userSettings.reminderMinutes || 60),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    getDeadline: getEffectiveDeadline,
+  });
+  const getExternalReminderForTask = (task) => buildDesiredReminders([task], {
+    leadMinutes: Number(userSettings.reminderMinutes || 60),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    getDeadline: getEffectiveDeadline,
+  })[0] || null;
+
+  const handleExternalPushSettingChange = async (isEnabled) => {
+    setExternalPushMessage("");
+    if (!isEnabled) {
+      setExternalPushStatus("syncing");
+      const cleanup = await cancelAllExternalReminders(currentUser);
+      handleAddFieldSettingChange("externalPushEnabled", false);
+      setExternalPushStatus(cleanup.confirmed === false ? "cleanup_pending" : "idle");
+      setExternalPushMessage(cleanup.confirmed === false ? "External reminders are off here, but cleanup is still pending and will retry when you reconnect." : "External reminders were turned off and scheduled reminders were cleared.");
       return;
     }
-    if (isEnabled) {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        alert("Notifications were not enabled. You can change browser permissions later.");
-        return;
-      }
+    setExternalPushStatus("connecting");
+    try {
+      const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders(), { requestPermission: true });
+      if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
+      setExternalPushStatus(result.status);
+      if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
+      if (result.status !== "active") { setExternalPushMessage("Your browser did not finish enabling external reminders."); return; }
+      handleAddFieldSettingChange("externalPushEnabled", true);
+      setExternalPushMessage("External reminders are connected to this browser.");
+    } catch (error) {
+      if ("Notification" in window && Notification.permission === "granted") handleAddFieldSettingChange("notificationsEnabled", true);
+      setExternalPushStatus(error.code === "external_push_disabled" ? "server_disabled" : "failed");
+      setExternalPushMessage(error.message || "External reminders could not connect.");
     }
-    handleAddFieldSettingChange("notificationsEnabled", isEnabled);
+  };
+
+  const handleExternalPushSync = async () => {
+    setExternalPushStatus("syncing");
+    try {
+      const result = await reconcileExternalReminders(currentUser, getDesiredExternalReminders());
+      setExternalPushStatus(result.status);
+      if (result.syncedAt) setExternalPushLastSync(result.syncedAt);
+      setExternalPushMessage(result.status === "active" ? "Reminders are up to date." : "External reminders still need attention.");
+    } catch (error) { setExternalPushStatus("failed"); setExternalPushMessage(error.message || "Reminders could not sync."); }
+  };
+
+  const handleExternalPushTest = async () => {
+    setExternalPushStatus("connecting");
+    try {
+      const result = await sendExternalReminderTest(currentUser);
+      setExternalPushStatus(result.status);
+      setExternalPushMessage(result.status === "active" ? "Test sent — it should arrive shortly." : "The test could not be sent yet.");
+    } catch (error) { setExternalPushStatus("failed"); setExternalPushMessage(error.message || "The test reminder could not be sent."); }
   };
 
   const handleAddFieldSettingChange = (field, isEnabled) => {
@@ -2694,6 +2816,11 @@ function App() {
       return updated;
     });
 
+    if (userSettings.externalPushEnabled) {
+      const reminder = getExternalReminderForTask(newTask);
+      if (reminder) void scheduleExternalReminder(currentUser, reminder).catch(() => {});
+    }
+
     // Return the form to friendly defaults after a successful submission.
     setTaskName("");
     setCategory(userSettings.defaultCategory || "School");
@@ -3262,6 +3389,7 @@ function App() {
       saveTasksForCurrentUser(updated);
       return updated;
     });
+    if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) void cancelExternalReminder(currentUser, reminder.occurrenceKey).catch(() => {}); }
   };
 
   // Starting an assignment moves it from To Do into the new In Progress tab.
@@ -3438,6 +3566,7 @@ function App() {
 
   // Deleting moves an assignment to recoverable Trash instead of erasing it.
   const handleDelete = (id) => {
+    const taskBeingDeleted = tasks.find((task) => task.id === id);
     if (userSettings.confirmBeforeTrash) {
       const taskToDelete = tasks.find((task) => task.id === id);
       const confirmed = window.confirm(
@@ -3456,6 +3585,7 @@ function App() {
       saveTasksForCurrentUser(updated);
       return updated;
     });
+    if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) void cancelExternalReminder(currentUser, reminder.occurrenceKey).catch(() => {}); }
   };
 
   const handleRestoreDeleted = (id) => {
@@ -3676,6 +3806,7 @@ function App() {
   // Validate the title, update the matching task, save, and close the modal.
   const handleEditSave = async () => {
     if (!editingTask) return;
+    const taskBeforeEdit = tasks.find((task) => task.id === editingTaskId);
 
     if (editLinkName.trim() || editLinkUrl.trim()) {
       setEditLinkMessage(
@@ -3774,6 +3905,12 @@ function App() {
       saveTasksForCurrentUser(updated);
       return updated;
     });
+
+    if (userSettings.externalPushEnabled) {
+      const reminder = getExternalReminderForTask(updatedTask);
+      if (reminder) void replaceExternalReminder(currentUser, reminder).catch(() => {});
+      else { const oldReminder = taskBeforeEdit ? getExternalReminderForTask(taskBeforeEdit) : null; if (oldReminder) void cancelExternalReminder(currentUser, oldReminder.occurrenceKey).catch(() => {}); }
+    }
 
     setEditingTaskId(null);
     setEditingTask(null);
@@ -3885,7 +4022,8 @@ function App() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    if (currentUser && userSettings.externalPushEnabled) await cancelAllExternalReminders(currentUser);
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     setCurrentUser("");
     setCurrentTab("dashboard");
@@ -5642,6 +5780,7 @@ function App() {
         calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
         showNeighboringMonth={userSettings.showNeighboringMonth !== false}
         onClickDay={handleDashboardCalendarClick}
+        tileClassName={({ date, view }) => view === "month" && activeDashboardTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
         tileContent={({ date, view }) => {
           if (view !== "month" || userSettings.showCalendarTaskDots === false) return null;
           const dots = getCourseDotsForDate(date);
@@ -5657,13 +5796,10 @@ function App() {
     </section>
   );
 
-  const overdueTasksCount = activeDashboardTasks.filter(
-    (task) => getTaskDueBucket(task) === "Overdue 🚨",
-  ).length;
-
-  const dueTodayCount = activeDashboardTasks.filter(
-    (task) => getTaskDueBucket(task) === "Due Today ⏰",
-  ).length;
+  const deadlineConfidenceCounts = summarizeDeadlineConfidence(activeDashboardTasks, (task) => getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm));
+  const overdueTasksCount = deadlineConfidenceCounts.overdue;
+  const dueTodayCount = deadlineConfidenceCounts.today;
+  const dueTomorrowCount = deadlineConfidenceCounts.tomorrow;
 
   const totalEstimatedMinutes = activeDashboardTasks
     .reduce((total, task) => total + (Number(task.estimatedMinutes) || 0), 0);
@@ -5684,6 +5820,7 @@ function App() {
     upcoming: overviewCourseTasks.filter((task) => ["todo", "inProgress"].includes(getTaskStatus(task))).length,
     overdue: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Overdue")).length,
     dueToday: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today")).length,
+    dueTomorrow: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Tomorrow")).length,
     noDate: overviewCourseTasks.filter((task) => getTaskDueBucket(task) === "No Due Date").length,
   };
   const dashboardReminderHours = [24, 48, 72, 168, 336, 720].includes(Number(userSettings.dashboardReminderHours))
@@ -5734,7 +5871,7 @@ function App() {
       <div className="recommended-plan-workload compact"><strong>{recommendationWorkloadLabel}</strong><span>Top-plan workload{recommendationWorkload.unknownCount > 0 ? ` + ${recommendationWorkload.unknownCount} unestimated` : ""}</span></div>
       <ol className="recommended-plan-list portable-recommendations">
         {recommendationItems.map((item, index) => (
-          <li key={item.task.id} className="recommended-plan-item">
+          <li key={item.task.id} className={`recommended-plan-item${getTaskDueBucket(item.task).startsWith("Overdue") ? " is-overdue" : ""}`}>
             <button type="button" className="recommended-plan-button" onClick={() => handleRecommendedTaskClick(item.task.id)}>
               <span className="recommended-plan-rank">{index + 1}</span>
               <div className="recommended-plan-content">
@@ -5785,6 +5922,7 @@ function App() {
         <div className="course-overview-breakdown">
           <div><strong>{courseOverviewSummary.inProgress}</strong><span>In progress</span></div>
           <div className={courseOverviewSummary.dueToday > 0 ? "has-warning" : ""}><strong>{courseOverviewSummary.dueToday}</strong><span>Due today</span></div>
+          <div><strong>{courseOverviewSummary.dueTomorrow}</strong><span>Due tomorrow</span></div>
           <div className={courseOverviewSummary.overdue > 0 ? "has-danger" : ""}><strong>{courseOverviewSummary.overdue}</strong><span>Overdue</span></div>
           <div><strong>{overviewCourseEstimatedMinutes > 0 ? overviewCourseWorkloadLabel : courseOverviewSummary.noDate}</strong><span>{overviewCourseEstimatedMinutes > 0 ? "Estimated" : "No date"}</span></div>
         </div>
@@ -5812,8 +5950,6 @@ function App() {
     const rangeLabel = dashboardReminderHours < 72
       ? `${dashboardReminderHours} hours`
       : `${dashboardReminderHours / 24} days`;
-    const reminderWorkloadMinutes = dashboardReminderTasks.reduce((total, { task }) => total + (Number(task.estimatedMinutes) || 0), 0);
-    const reminderWorkloadLabel = `${Math.floor(reminderWorkloadMinutes / 60)}h ${reminderWorkloadMinutes % 60}m`;
     const renderReminderGroup = (title, items) => items.length > 0 && (
       <div className="reminder-widget-group">
         <h4>{title}</h4>
@@ -5834,8 +5970,8 @@ function App() {
       <section className="dashboard-reminders-widget">
         <div className="reminder-widget-summary">
           <div className={dueTodayCount > 0 ? "has-warning" : ""}><strong>{dueTodayCount}</strong><span>Due today</span></div>
+          <div><strong>{dueTomorrowCount}</strong><span>Due tomorrow</span></div>
           <div className={dashboardOverdueTasks.length > 0 ? "has-danger" : ""}><strong>{dashboardOverdueTasks.length}</strong><span>Overdue</span></div>
-          <div><strong>{reminderWorkloadMinutes > 0 ? reminderWorkloadLabel : dashboardReminderTasks.length}</strong><span>{reminderWorkloadMinutes > 0 ? `Next ${rangeLabel}` : "Upcoming"}</span></div>
         </div>
         <label className="reminder-horizon-control"><span>Upcoming window</span><select value={dashboardReminderHours} onChange={(event) => handleAddFieldSettingChange("dashboardReminderHours", Number(event.target.value))}><option value={24}>Next 24 hours</option><option value={48}>Next 48 hours</option><option value={72}>Next 3 days</option><option value={168}>Next 7 days</option><option value={336}>Next 14 days</option><option value={720}>Next 30 days</option></select></label>
         {overdueItems.length === 0 && upcomingItems.length === 0 ? <p className="reminder-widget-empty friendly-empty" role="status">Looks calm in here — nothing is due in this window.</p> : (
@@ -5958,7 +6094,7 @@ function App() {
   <li
     key={task.id}
     id={`${status}-task-${task.id}`}
-    className={`task-card${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded" : ""}`}
+    className={`task-card${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" ? " task-card-high" : ""}${getTaskDueBucket(task).startsWith("Overdue") ? " is-overdue" : ""}${expandedTaskId === task.id ? " expanded" : ""}`}
     onClick={() => toggleTaskExpansion(task.id)}
   >
     <div>
@@ -6381,7 +6517,7 @@ function App() {
                     const taskStatus = getTaskStatus(task);
 
                     return (
-                      <li key={task.id} className="recommended-plan-item">
+                      <li key={task.id} className={`recommended-plan-item${getTaskDueBucket(task).startsWith("Overdue") ? " is-overdue" : ""}`}>
                         <button
                           type="button"
                           className="recommended-plan-button"
@@ -7035,7 +7171,7 @@ function App() {
                         const dots = getCourseDotsForDate(date);
                         const cycleDay = getCycleDayForDate(date, userSettings);
                         return (
-                          <button type="button" key={date.toISOString()} className={`${isSameCalendarDay(date, selectedDate) ? "selected" : ""}${isSameCalendarDay(date, new Date()) ? " today" : ""}`} onClick={() => handleCalendarDateChange(date)}>
+                          <button type="button" key={date.toISOString()} className={`${isSameCalendarDay(date, selectedDate) ? "selected" : ""}${isSameCalendarDay(date, new Date()) ? " today" : ""}${dayTasks.some((task) => getTaskDueBucket(task).startsWith("Overdue")) ? " calendar-overdue-day" : ""}`} onClick={() => handleCalendarDateChange(date)}>
                             <span className="weekly-day-name">{date.toLocaleDateString(undefined, { weekday: "short" })}</span>
                             <strong>{date.getDate()}</strong>
                             <small>{date.toLocaleDateString(undefined, { month: "short" })}</small>
@@ -7054,6 +7190,7 @@ function App() {
                     value={selectedDate}
                     calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
                     showNeighboringMonth={userSettings.showNeighboringMonth !== false}
+                    tileClassName={({ date, view }) => view === "month" && calendarTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
                     tileContent={({ date, view }) => {
                       if (view !== "month") return null;
                       const dots = getCourseDotsForDate(date);
@@ -7727,34 +7864,6 @@ function App() {
                   )}
                 </section>
 
-                <section className="settings-section" hidden>
-                  <h4>Due Reminders</h4>
-                  <p className="hint-text">
-                    Browser reminders are checked while TaskCabinet is open.
-                  </p>
-                  <label className="settings-toggle">
-                    <span>Notifications</span>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(userSettings.notificationsEnabled)}
-                      onChange={(e) => handleNotificationSettingChange(e.target.checked)}
-                    />
-                  </label>
-                  <label className="settings-select-row">
-                    <span>Remind me</span>
-                    <select
-                      value={userSettings.reminderMinutes || 60}
-                      onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}
-                    >
-                      <option value={15}>15 minutes before</option>
-                      <option value={30}>30 minutes before</option>
-                      <option value={60}>1 hour before</option>
-                      <option value={180}>3 hours before</option>
-                      <option value={1440}>1 day before</option>
-                    </select>
-                  </label>
-                </section>
-
                 <section className="settings-section school-cycle-settings" hidden>
                   <h4>School-Day Cycle</h4>
                   <p className="hint-text">
@@ -7893,14 +8002,16 @@ function App() {
                         <p className="hint-text">Use your browser’s “Install app” or “Add to Home Screen” menu.</p>
                       )}
                     </SettingsCard>
-                    <SettingsCard title="Due Reminders" description="Browser reminders are checked while TaskCabinet is open.">
-                      <label className="settings-toggle settings-toggle-copy">
-                        <span><strong>Notifications</strong><small>Alert me when an incomplete assignment approaches its deadline.</small></span>
-                        <input type="checkbox" checked={Boolean(userSettings.notificationsEnabled)} onChange={(e) => handleNotificationSettingChange(e.target.checked)} />
-                      </label>
+                    <SettingsCard title="Due Reminders" description="Choose when TaskCabinet should give you a heads-up.">
+                      <div className={`external-push-status is-${externalPushStatus}`} role="status">
+                        <strong>{({ active: "Push reminders active", syncing: "Syncing reminders…", connecting: "Connecting this browser…", permission_needed: "Permission not requested", permission_blocked: "Notifications blocked", unsupported: "Push is not supported here", client_disabled: "External push is turned off in this build", server_disabled: "External push is paused", failed: "Scheduling failed", sync_needed: "Synchronization needed", cleanup_pending: "Cleanup still pending", connected: "Browser connected", idle: "Push reminders are off", not_configured: "External push is not configured", subscription_pending: "Waiting for OneSignal subscription" })[externalPushStatus] || "Push reminders are off"}</strong>
+                        <small>{externalPushStatus === "active" ? "These can arrive while TaskCabinet is closed." : "Open-app reminders stay available as a fallback."}</small>
+                      </div>
+                      <div className="external-push-detail-grid"><span><strong>Browser permission</strong><small>{"Notification" in window ? Notification.permission === "default" ? "Not requested" : Notification.permission : "Unsupported"}</small></span><span><strong>OneSignal subscription</strong><small>{["active", "syncing", "connected"].includes(externalPushStatus) ? "Connected" : "Not connected"}</small></span><span><strong>External scheduling</strong><small>{externalPushStatus === "active" ? "Up to date" : externalPushStatus === "sync_needed" ? "Needs sync" : "Not active"}</small></span></div>
+                      <button type="button" className={`btn ${userSettings.externalPushEnabled ? "btn-danger" : "btn-primary"}`} disabled={!EXTERNAL_PUSH_CLIENT_ENABLED || ["connecting", "syncing"].includes(externalPushStatus)} onClick={() => handleExternalPushSettingChange(!userSettings.externalPushEnabled)}>{userSettings.externalPushEnabled ? "Disable Push Reminders" : "Enable Push Reminders"}</button>
                       <label className="settings-select-row">
-                        <span>Reminder window</span>
-                        <select value={userSettings.reminderMinutes || 60} disabled={!userSettings.notificationsEnabled} onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}>
+                        <span>Remind me</span>
+                        <select value={userSettings.reminderMinutes || 60} onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}>
                           <option value={15}>15 minutes before</option>
                           <option value={30}>30 minutes before</option>
                           <option value={60}>1 hour before</option>
@@ -7908,6 +8019,11 @@ function App() {
                           <option value={1440}>1 day before</option>
                         </select>
                       </label>
+                      {userSettings.externalPushEnabled && <div className="external-push-actions"><button type="button" className="btn btn-secondary" onClick={handleExternalPushTest} disabled={["connecting", "syncing"].includes(externalPushStatus)}>Send test reminder</button><button type="button" className="btn btn-secondary" onClick={handleExternalPushSync} disabled={["connecting", "syncing"].includes(externalPushStatus)}>Sync now</button></div>}
+                      {externalPushMessage && <p className="hint-text external-push-message">{externalPushMessage}</p>}
+                      {externalPushLastSync && <p className="hint-text">Last sync: {new Date(externalPushLastSync).toLocaleString()}</p>}
+                      <p className="hint-text">Closed-app delivery depends on your browser, operating system, permission, internet connection, and device notification settings. Reminder text may appear on your lock screen.</p>
+                      <p className="hint-text">On iPhone and iPad, add TaskCabinet to the Home Screen, open the installed app, and then enable Push Reminders.</p>
                     </SettingsCard>
                     <SettingsCard title="Dashboard Reminder Range" description="Choose how far ahead the movable Reminders widget should look. This does not change browser-notification timing.">
                       <label className="settings-select-row">
