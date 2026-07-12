@@ -501,6 +501,22 @@ function SettingsCard({ title, description, className = "", children }) {
   );
 }
 
+function PersonalizationTip({ title, children, forceOpen = false }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const expanded = forceOpen || isOpen;
+  const contentId = `personalization-tip-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+
+  return (
+    <article className="personalization-tip-card">
+      <div className="personalization-tip-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Double-click to enlarge or minimize">
+        <strong>{title}</strong>
+        <button type="button" className="settings-collapse-button settings-collapse-button-small" onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))} onDoubleClick={stopControlDoubleClick} aria-expanded={expanded} aria-controls={contentId} aria-label={`${expanded ? "Minimize" : "Enlarge"} ${title}`}>{expanded ? "−" : "+"}</button>
+      </div>
+      {expanded && <p id={contentId}>{children}</p>}
+    </article>
+  );
+}
+
 function getTaskCategory(task) {
   return task?.category || "School";
 }
@@ -975,21 +991,33 @@ function repairLoadedWorkspace(layout) {
 }
 
 const PERSONALIZATION_TIPS = [
-  ["Move widgets", "Drag the dotted grip to place a widget anywhere on the canvas. Moved widgets come to the front; drag over a navigation tab to relocate them."],
-  ["Pull a widget from underneath", "If widgets overlap, open the top widget's three-dot menu and choose Select widget underneath. The lower widget comes forward so you can move it without relocating the top one first."],
-  ["Find a newly added widget", "If you add a widget but do not see it, it may be underneath another widget. Open the covering widget's three-dot menu and choose Select widget underneath."],
-  ["Lock a finished layout", "Open Widgets and choose Lock Layout to hide move and resize controls while keeping every widget interactive."],
-  ["Add features anywhere", "Search the Workspace Organizer and add any available widget to the current tab. Existing copies stay synchronized."],
-  ["Resize anything", "Desktop widgets use a corner handle. Mobile widgets use tap controls sized for thumbs."],
-  ["Copy across tabs", "Open a widget's three-dot menu and choose a destination under Copy to. Its content stays synchronized."],
-  ["Minimize sections", "Use the + or - button in a widget header. Double-click still works as a shortcut."],
-  ["Hide and restore", "Choose Hide widget, then use the Widgets button beside navigation to restore it later."],
-  ["Reset layouts", "The Widgets tray can reset the current tab or every desktop and mobile layout without deleting data."],
-  ["Fonts and text", "Choose an app-wide font and a text scale from 70% to 150% in Appearance."],
-  ["Task action buttons", "Choose wrapped, compact, or vertical task actions in Appearance to match your screen and working style."],
-  ["Colors", "Full Color Studio controls the app and checklist palette. Individual lists can still use their own custom color."],
-  ["Checklist deadlines", "Add dates to list items. Enable optional times in Checklist settings; date-only items are due at 11:59 PM."],
-  ["Troubleshooting", "If a layout feels cramped after a major text-size change, resize the widget or reset that tab's layout."],
+  ["Move a widget", "Grab the six-dot handle and drag. The widget you move comes to the front, and you can drag it over a navigation tab to send it there."],
+  ["Resize a widget", "On desktop, drag any edge or corner. On mobile, tap the resize controls below the widget so everything stays easy to reach."],
+  ["Widget hiding underneath another", "Open the top widget’s three-dot menu and choose Select widget underneath. The hidden one will come forward so you can grab it."],
+  ["New widget not showing", "It is probably underneath another widget. Use Select widget underneath from the covering widget’s three-dot menu."],
+  ["Add a widget", "Open Widgets beside the navigation, search for what you want, then choose Add to tab. Adding a copy never creates duplicate assignment data."],
+  ["Copy a widget to another tab", "Open the widget’s three-dot menu and pick a tab under Copy to. Both copies show the same saved information."],
+  ["Hide or bring back a widget", "Choose Hide widget from its three-dot menu. To bring it back, open Widgets and choose Restore."],
+  ["Lock your layout", "When everything is where you want it, open Widgets and choose Lock Layout. Buttons still work, but widgets will not move by accident."],
+  ["Reset a layout", "Reset this tab puts only the current tab back to its starting layout. Reset all layouts resets desktop and mobile layouts, but never deletes assignments or checklists."],
+  ["Minimize or enlarge", "Use the + or − button, or double-click the header. This works on widgets, Settings cards, and optional assignment sections."],
+  ["Change the app theme", "Pick a built-in or saved theme in Appearance. A theme changes the full color set, not your assignments or course colors."],
+  ["Save your own theme", "Set up your colors in Full Color Studio, choose Make into theme, and give it a name. You can reuse it without rebuilding every color."],
+  ["Full Color Studio", "Each group controls one part of TaskCabinet. Changes show right away, so you can try colors before saving a custom theme."],
+  ["Text and background contrast", "If text gets hard to read after a color change, adjust Main text, Muted text, or the matching surface color in Full Color Studio."],
+  ["Course colors", "Course colors label assignments and calendar dots. They stay separate from the main app theme so each course remains easy to spot."],
+  ["Checklist colors", "The checklist palette supplies quick color choices. You can still give one list its own custom color without changing the others."],
+  ["Text size", "Text size grows the words and the nearby controls together. If a widget feels crowded afterward, resize that widget to give it more room."],
+  ["App font", "App font changes the writing style across TaskCabinet. Highly Readable is the clearest option; Typewriter Mono gives everything equal-width letters."],
+  ["Interface spacing", "Compact fits more on screen, Comfortable is the everyday default, and Spacious adds extra breathing room around controls."],
+  ["Task action layout", "Comfortable wrap keeps actions in rows, Compact buttons saves space, and Vertical actions stacks them for easier tapping."],
+  ["Reduce motion", "Turn this on if you prefer a steadier screen. TaskCabinet will remove the extra movement while keeping every feature working."],
+  ["Calendar display", "Use Calendar settings to choose week or month view, the first day of the week, and whether school-cycle details appear."],
+  ["School-day cycle", "Choose an anchor date and name your cycle days. Weekends are skipped automatically when TaskCabinet works out the next cycle day."],
+  ["Checklist deadlines", "A checklist item with only a date is due at 11:59 PM. Turn on checklist times when a step needs a specific hour."],
+  ["Add Assignment fields", "Hide optional fields you rarely use. This only cleans up the form; it does not remove information from assignments you already made."],
+  ["New Assignment defaults", "Defaults prefill new assignments and return after a successful add. You can still change any field before saving."],
+  ["Dark and light themes", "Theme mode controls whether TaskCabinet uses a light or dark base. Custom themes remember which base they were made for."],
 ];
 
 function WorkspaceWidget({
@@ -1622,6 +1650,8 @@ function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addAssignmentOpen, setAddAssignmentOpen] = useState(true);
   const [courseColorsOpen, setCourseColorsOpen] = useState(true);
+  const [completionCelebration, setCompletionCelebration] = useState(null);
+  const completionCelebrationSequenceRef = useRef(0);
   const [settingsSection, setSettingsSection] = useState("personalization");
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -1642,7 +1672,7 @@ function App() {
   const [draggedSettingsSection, setDraggedSettingsSection] = useState(null);
   const [settingsDropTarget, setSettingsDropTarget] = useState(null);
   const [appearanceSettingsOpen, setAppearanceSettingsOpen] = useState(true);
-  const [personalizationTipsOpen, setPersonalizationTipsOpen] = useState(true);
+  const [personalizationTipsOpen, setPersonalizationTipsOpen] = useState(false);
   const [colorStudioOpen, setColorStudioOpen] = useState(false);
   const [colorGroupsOpen, setColorGroupsOpen] = useState({});
   const [colorTextDrafts, setColorTextDrafts] = useState({});
@@ -3221,6 +3251,11 @@ function App() {
 
   // Completing a repeating task also appends its next incomplete occurrence.
   const handleComplete = (id) => {
+    const completedTask = tasks.find((task) => task.id === id);
+    if (completedTask) {
+      completionCelebrationSequenceRef.current += 1;
+      setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title });
+    }
     setTasks((prev) => {
       const updated = completeTaskList(prev, id);
 
@@ -3264,6 +3299,17 @@ function App() {
    * checked after this click, the task automatically moves to Completed.
    */
   const handleSubtaskToggle = (taskId, subtaskId) => {
+    const currentTask = tasks.find((task) => task.id === taskId);
+    const willCompleteTask = Boolean(
+      currentTask &&
+      userSettings.autoCompleteChecklist &&
+      getSafeSubtasks(currentTask).length > 0 &&
+      getSafeSubtasks(currentTask).map((subtask) => subtask.id === subtaskId ? { ...subtask, isDone: !subtask.isDone } : subtask).every((subtask) => subtask.isDone),
+    );
+    if (willCompleteTask) {
+      completionCelebrationSequenceRef.current += 1;
+      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title });
+    }
     setTasks((prev) => {
       let shouldCompleteTask = false;
 
@@ -7469,7 +7515,7 @@ function App() {
                       <p className="hint-text">Learn how to reshape TaskCabinet around the way you work.</p>
                       <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search layout, colors, fonts, checklists…" aria-label="Search personalization help" />
                       <div className="personalization-tip-grid">
-                        {PERSONALIZATION_TIPS.filter(([title, copy]) => `${title} ${copy}`.toLowerCase().includes(helpSearch.trim().toLowerCase())).map(([title, copy]) => <article key={title}><strong>{title}</strong><p>{copy}</p></article>)}
+                        {PERSONALIZATION_TIPS.filter(([title, copy]) => `${title} ${copy}`.toLowerCase().includes(helpSearch.trim().toLowerCase())).map(([title, copy]) => <PersonalizationTip key={title} title={title} forceOpen={Boolean(helpSearch.trim())}>{copy}</PersonalizationTip>)}
                       </div>
                     </div>
                   )}
@@ -8384,12 +8430,13 @@ function App() {
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div className="optional-assignment-header">
+                <div className="optional-assignment-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setEditOptionalSections((sections) => ({ ...sections, files: !sections.files })))} title="Double-click to open or minimize Files">
                   <label>Files ({getSafeAttachments(editingTask).length + pendingEditFiles.length})</label>
                   <button
                     type="button"
                     className="optional-assignment-toggle"
-                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, files: !sections.files }))}
+                    onClick={(event) => toggleFromCollapseButton(event, () => setEditOptionalSections((sections) => ({ ...sections, files: !sections.files })))}
+                    onDoubleClick={stopControlDoubleClick}
                     aria-expanded={editOptionalSections.files}
                     aria-label={`${editOptionalSections.files ? "Minimize" : "Open"} Files`}
                   >
@@ -8437,12 +8484,13 @@ function App() {
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div className="optional-assignment-header">
+                <div className="optional-assignment-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setEditOptionalSections((sections) => ({ ...sections, links: !sections.links })))} title="Double-click to open or minimize Assignment Links">
                   <label>Assignment Links ({getSafeLinks(editingTask).length})</label>
                   <button
                     type="button"
                     className="optional-assignment-toggle"
-                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, links: !sections.links }))}
+                    onClick={(event) => toggleFromCollapseButton(event, () => setEditOptionalSections((sections) => ({ ...sections, links: !sections.links })))}
+                    onDoubleClick={stopControlDoubleClick}
                     aria-expanded={editOptionalSections.links}
                     aria-label={`${editOptionalSections.links ? "Minimize" : "Open"} Assignment Links`}
                   >
@@ -8521,12 +8569,13 @@ function App() {
               </div>
 
               <div className="edit-field edit-field-full edit-subtask-section">
-                <div className="optional-assignment-header">
+                <div className="optional-assignment-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setEditOptionalSections((sections) => ({ ...sections, checklist: !sections.checklist })))} title="Double-click to open or minimize Checklist Steps">
                   <label>Checklist Steps ({getSafeSubtasks(editingTask).length})</label>
                   <button
                     type="button"
                     className="optional-assignment-toggle"
-                    onClick={() => setEditOptionalSections((sections) => ({ ...sections, checklist: !sections.checklist }))}
+                    onClick={(event) => toggleFromCollapseButton(event, () => setEditOptionalSections((sections) => ({ ...sections, checklist: !sections.checklist })))}
+                    onDoubleClick={stopControlDoubleClick}
                     aria-expanded={editOptionalSections.checklist}
                     aria-label={`${editOptionalSections.checklist ? "Minimize" : "Open"} Checklist Steps`}
                   >
@@ -8840,6 +8889,17 @@ function App() {
             </div>
             </>)}
           </section>
+        </div>
+      )}
+      {completionCelebration && (
+        <div
+          key={completionCelebration.id}
+          className="completion-celebration"
+          role="status"
+          onAnimationEnd={() => setCompletionCelebration(null)}
+        >
+          <span aria-hidden="true">✓</span>
+          <div><strong>Nice work!</strong><small>{completionCelebration.title} is complete.</small></div>
         </div>
       )}
       <Analytics />
