@@ -113,6 +113,8 @@ Setup:
 3. Set `VITE_SUPABASE_URL` and the public anon/publishable key in local development and Vercel, then rebuild the frontend.
 4. Keep `SUPABASE_SECRET_KEY` server-only for the reminder registry. Cloud account sync does not use it in React.
 
+If preferred-name notification wording is enabled, review and run `supabase/migrations/202607130002_add_push_reminder_preferred_name.sql`. It adds only the optional, 60-character greeting name to reminder records. The value is used for server-generated wording and is never assigned as a OneSignal identity.
+
 The synchronized snapshot contains assignments, attachment metadata, courses and colors, checklists, workspace layouts, account preferences, theme, and display name. Attachment blobs remain in the existing `taskacadia_attachments` IndexedDB database, so a file added on one device reports that it is unavailable when opened on another device. Notification permission, OneSignal subscriptions, device enrollment/cleanup records, notification history, local password verifiers, sync metadata, and temporary UI state are never uploaded.
 
 Sync is local-first: local writes happen immediately, cloud writes are debounced, revision-checked, and retried after reconnecting. Conflicting meaningful versions are backed up locally and require an explicit Keep cloud data or Use this device's data choice.

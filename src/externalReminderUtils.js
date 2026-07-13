@@ -19,7 +19,7 @@ export function getPushCleanupStorageKey(profile) { return `taskacadia_push_clea
 export function getOccurrenceKey(taskId, deadline) { return `${taskId}:${new Date(deadline).toISOString()}`; }
 
 export function makeReminderRevision(reminder) {
-  const value = [reminder.taskId, reminder.title, reminder.course, reminder.deadline, reminder.timeZone, reminder.leadMinutes].join("\u001f");
+  const value = [reminder.taskId, reminder.title, reminder.course, reminder.preferredName, reminder.deadline, reminder.timeZone, reminder.leadMinutes].join("\u001f");
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
     hash ^= value.charCodeAt(index);
@@ -28,14 +28,14 @@ export function makeReminderRevision(reminder) {
   return (hash >>> 0).toString(36);
 }
 
-export function buildDesiredReminders(tasks, { leadMinutes, timeZone, getDeadline, now = Date.now() }) {
+export function buildDesiredReminders(tasks, { leadMinutes, timeZone, getDeadline, preferredName = "", now = Date.now() }) {
   return tasks.flatMap((task) => {
     if (task?.isArchived || task?.isDeleted || task?.isCompleted || task?.status === "completed") return [];
     const deadline = getDeadline(task);
     if (!(deadline instanceof Date) || !Number.isFinite(deadline.getTime())) return [];
     const scheduledFor = deadline.getTime() - Number(leadMinutes) * 60000;
     if (deadline.getTime() <= now || scheduledFor < now - 60000) return [];
-    const reminder = { taskId: String(task.id), occurrenceKey: getOccurrenceKey(String(task.id), deadline), title: String(task.title || "Assignment").slice(0, 160), course: String(task.course || "").slice(0, 100), deadline: deadline.toISOString(), timeZone, leadMinutes: Number(leadMinutes) };
+    const reminder = { taskId: String(task.id), occurrenceKey: getOccurrenceKey(String(task.id), deadline), title: String(task.title || "Assignment").slice(0, 160), course: String(task.course || "").slice(0, 100), preferredName: String(preferredName || "").trim().slice(0, 60), deadline: deadline.toISOString(), timeZone, leadMinutes: Number(leadMinutes) };
     return [{ ...reminder, revision: makeReminderRevision(reminder) }];
   });
 }

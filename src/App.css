@@ -2683,6 +2683,11 @@ html[data-theme="dark"] .edit-notes-side {
   overflow-wrap: anywhere;
 }
 
+html[data-theme="light"] .recommended-plan-title-row strong,
+html[data-theme="light"] .recommended-plan-button {
+  color: #111827;
+}
+
 .recommended-plan-course {
   flex: 0 0 auto;
   padding: 4px 8px;

@@ -375,7 +375,7 @@ const COLOR_CSS_VARIABLES = {
 };
 
 const SETTINGS_SECTIONS = [
-  { id: "account", icon: "👤", label: "Account", description: "Display name, email, and password." },
+  { id: "account", icon: "👤", label: "Account", description: "Preferred name, email, and password." },
   { id: "personalization", icon: "🎨", label: "Personalization", description: "Theme, layout, type, and every color." },
   { id: "assignments", icon: "📝", label: "Assignment Options", description: "Fields, defaults, and workflow behavior." },
   { id: "checklists", icon: "☑️", label: "Checklists", description: "Standalone list deadlines and appearance." },
@@ -1056,6 +1056,7 @@ const PERSONALIZATION_TIPS = [
   ["Accounts and profiles", "With account sync configured, your assignments and personalization can follow your email account. Push permission, reminder connection, and attachment files still belong to each browser."],
   ["Forgot your password", "On the welcome page, choose Sign In and then Forgot password? Enter your account email, open the recovery link, and choose a new password. Your planner data is not reset."],
   ["Password eye buttons", "Each password box has its own eye button. Showing one password never reveals the confirmation box, so you can check either entry safely."],
+  ["Preferred name", "Add the name you like to be called under Account. TaskCabinet can use it in friendly greetings and reminders, but never as your sign-in or OneSignal identity."],
   ["Welcome page", "The public welcome page explains TaskCabinet before you sign in. Get Started and I Already Have an Account both move you straight to the account panel."],
   ["Keep local data safe", "TaskCabinet saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
 ];
@@ -1927,8 +1928,9 @@ function App() {
 
   useEffect(() => {
     if (accountMode !== "local" || !currentUser) return;
-    setDisplayName(currentUser);
-    setAccountDisplayNameDraft(currentUser);
+    const preferredName = localStorage.getItem(`taskacadia_preferred_name_${currentUser}`)?.trim() || currentUser;
+    setDisplayName(preferredName);
+    setAccountDisplayNameDraft(preferredName);
   }, [accountMode, currentUser]);
 
   useEffect(() => {
@@ -2197,6 +2199,7 @@ function App() {
           leadMinutes: Number(userSettings.reminderMinutes || 60),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
           getDeadline: getEffectiveDeadline,
+          preferredName: displayName,
         });
         const result = await reconcileExternalReminders(currentUser, reminders);
         setExternalPushStatus(result.status);
@@ -2212,7 +2215,7 @@ function App() {
       }
     }, 800);
     return () => window.clearTimeout(externalPushSyncTimerRef.current);
-  }, [currentUser, tasks, userSettings.externalPushEnabled, userSettings.reminderMinutes, externalPushSubscriptionVersion]);
+  }, [currentUser, displayName, tasks, userSettings.externalPushEnabled, userSettings.reminderMinutes, externalPushSubscriptionVersion]);
 
   useEffect(() => {
     if (
@@ -2255,9 +2258,9 @@ function App() {
         try {
           if (navigator.serviceWorker?.controller) {
             const registration = await navigator.serviceWorker.ready;
-            await registration.showNotification(`TaskCabinet: ${task.title}`, options);
+            await registration.showNotification(displayName ? `${displayName}, ${task.title}` : `TaskCabinet: ${task.title}`, options);
           } else {
-            new Notification(`TaskCabinet: ${task.title}`, options);
+            new Notification(displayName ? `${displayName}, ${task.title}` : `TaskCabinet: ${task.title}`, options);
           }
           notified[`${task.id}-${deadline.getTime()}`] = new Date().toISOString();
         } catch (error) {
@@ -2270,7 +2273,7 @@ function App() {
     checkReminders();
     const intervalId = window.setInterval(checkReminders, 60000);
     return () => window.clearInterval(intervalId);
-  }, [currentUser, tasks, userSettings.notificationsEnabled, userSettings.reminderMinutes, externalPushStatus]);
+  }, [currentUser, displayName, tasks, userSettings.notificationsEnabled, userSettings.reminderMinutes, externalPushStatus]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setChecklistNow(new Date()), 60000);
@@ -2327,9 +2330,9 @@ function App() {
           try {
             if (navigator.serviceWorker?.controller) {
               const registration = await navigator.serviceWorker.ready;
-              await registration.showNotification(`TaskCabinet: ${item.text}`, options);
+              await registration.showNotification(displayName ? `${displayName}, ${item.text}` : `TaskCabinet: ${item.text}`, options);
             } else {
-              new Notification(`TaskCabinet: ${item.text}`, options);
+              new Notification(displayName ? `${displayName}, ${item.text}` : `TaskCabinet: ${item.text}`, options);
             }
             notified[id] = new Date().toISOString();
           } catch (error) {
@@ -2342,7 +2345,7 @@ function App() {
     checkChecklistReminders();
     const intervalId = window.setInterval(checkChecklistReminders, 60000);
     return () => window.clearInterval(intervalId);
-  }, [checklists, currentUser, userSettings.notificationsEnabled, userSettings.reminderMinutes]);
+  }, [checklists, currentUser, displayName, userSettings.notificationsEnabled, userSettings.reminderMinutes]);
 
   const handleInstallApp = async () => {
     if (!installPrompt) return;
@@ -2355,11 +2358,13 @@ function App() {
     leadMinutes: Number(userSettings.reminderMinutes || 60),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     getDeadline: getEffectiveDeadline,
+    preferredName: displayName,
   });
   const getExternalReminderForTask = (task) => buildDesiredReminders([task], {
     leadMinutes: Number(userSettings.reminderMinutes || 60),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     getDeadline: getEffectiveDeadline,
+    preferredName: displayName,
   })[0] || null;
 
   const runImmediateReminderMutation = (taskId, operation) => {
@@ -2412,7 +2417,7 @@ function App() {
 
   const handleExternalPushTest = async () => {
     if (externalPushActionGuardRef.current.isBusy()) return; setExternalPushAction("testing"); setTestReminderSent(false);
-    await externalPushActionGuardRef.current.run(async () => { try { const result = await sendExternalReminderTest(currentUser); setExternalPushStatus(result.status); setExternalPushDiagnostics((details) => clearReminderFailure(details, { providerConnected: true, serverEnrolled: true })); setExternalPushMessage(result.status === "active" ? "Test sent" : "Some reminders could not be updated."); if (result.status === "active") { setTestReminderSent(true); window.setTimeout(() => { setTestReminderSent(false); setExternalPushMessage((message) => message === "Test sent" ? "Reminders are up to date." : message); }, 3000); } } catch (error) { setExternalPushStatus("failed"); setExternalPushDiagnostics((details) => ({ ...details, lastError: String(error?.message || error) })); setExternalPushMessage(friendlyReminderError(error, !navigator.onLine)); } });
+    await externalPushActionGuardRef.current.run(async () => { try { const result = await sendExternalReminderTest(currentUser, displayName); setExternalPushStatus(result.status); setExternalPushDiagnostics((details) => clearReminderFailure(details, { providerConnected: true, serverEnrolled: true })); setExternalPushMessage(result.status === "active" ? "Test sent" : "Some reminders could not be updated."); if (result.status === "active") { setTestReminderSent(true); window.setTimeout(() => { setTestReminderSent(false); setExternalPushMessage((message) => message === "Test sent" ? "Reminders are up to date." : message); }, 3000); } } catch (error) { setExternalPushStatus("failed"); setExternalPushDiagnostics((details) => ({ ...details, lastError: String(error?.message || error) })); setExternalPushMessage(friendlyReminderError(error, !navigator.onLine)); } });
     setExternalPushAction("");
   };
 
@@ -4285,6 +4290,7 @@ function App() {
           const { data, error } = await client.auth.signUp({ email: trimmedName, password: authPassword, options: { data: { display_name: displayName.trim() } } });
           if (error) throw error;
           if (data.user) {
+            localStorage.setItem(getTutorialStorageKey(data.user.id), JSON.stringify({ complete: false }));
             const legacyProfileKey = findLegacyProfileKey(displayName.trim());
             const legacy = readLegacySnapshot(localStorage, legacyProfileKey, DEFAULT_USER_SETTINGS);
             if (legacy && hasMeaningfulState(legacy) && !loadLocalSnapshot(localStorage, data.user.id)) {
@@ -4501,16 +4507,21 @@ function App() {
   const handleAccountDisplayNameUpdate = async (event) => {
     event.preventDefault();
     const nextName = accountDisplayNameDraft.trim();
-    if (!nextName) { setAccountUpdateStatus({ type: "error", message: "Enter a display name." }); return; }
+    if (!nextName) { setAccountUpdateStatus({ type: "error", message: "Enter a preferred name." }); return; }
+    if (nextName.length > 60) { setAccountUpdateStatus({ type: "error", message: "Keep your preferred name to 60 characters or fewer." }); return; }
     setAccountUpdateBusy("display-name");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
-      const { error } = await getSupabaseBrowserClient().auth.updateUser({ data: { display_name: nextName } });
-      if (error) throw error;
+      if (CLOUD_SYNC_CONFIGURED && accountMode === "cloud") {
+        const { error } = await getSupabaseBrowserClient().auth.updateUser({ data: { display_name: nextName } });
+        if (error) throw error;
+      } else {
+        localStorage.setItem(`taskacadia_preferred_name_${currentUser}`, nextName);
+      }
       setDisplayName(nextName);
-      setAccountUpdateStatus({ type: "success", message: "Display name updated." });
+      setAccountUpdateStatus({ type: "success", message: "Preferred name updated. Friendly greetings and newly synced reminders will use it." });
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "Display name could not be updated." });
+      setAccountUpdateStatus({ type: "error", message: error.message || "Preferred name could not be updated." });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -6863,7 +6874,7 @@ function App() {
               value={signInName}
               onChange={(e) => setSignInName(e.target.value)}
             />
-            {CLOUD_SYNC_CONFIGURED && authMode === "signup" && <><label htmlFor="auth-display-name">Display name</label><input id="auth-display-name" autoComplete="nickname" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></>}
+            {CLOUD_SYNC_CONFIGURED && authMode === "signup" && <><label htmlFor="auth-display-name">Preferred name</label><input id="auth-display-name" autoComplete="nickname" maxLength={60} value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></>}
             <label htmlFor="auth-password">Password</label>
             <div className="password-input-row">
               <input
@@ -8651,11 +8662,11 @@ function App() {
 
                 {settingsSection === "account" && (
                   CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
-                    <SettingsCard title="Display Name" description="This friendly name appears around TaskCabinet. It is not used as your database ownership key.">
+                    <SettingsCard title="Preferred Name" description="What should TaskCabinet call you? This can appear in friendly greetings and reminders, but it is never your sign-in or external identity.">
                       <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
-                        <label htmlFor="account-display-name">Display name</label>
-                        <input id="account-display-name" value={accountDisplayNameDraft} maxLength={80} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
-                        <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Display Name"}</button>
+                        <label htmlFor="account-display-name">Preferred name</label>
+                        <input id="account-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
+                        <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button>
                       </form>
                     </SettingsCard>
                     <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. Supabase may ask you to confirm both addresses.`}>
@@ -8677,8 +8688,9 @@ function App() {
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
                   </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing local profile into a secure Supabase account without removing its assignments or personalization." className="settings-section-wide">
                     <form className="account-settings-form account-password-form" onSubmit={handleLocalAccountUpgrade}>
-                      <label htmlFor="upgrade-display-name">Display name</label>
-                      <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={80} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
+                      <label htmlFor="upgrade-display-name">Preferred name</label>
+                      <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
+                      <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()} onClick={handleAccountDisplayNameUpdate}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name on This Browser"}</button>
                       <label htmlFor="upgrade-email">Email</label>
                       <input id="upgrade-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} />
                       <label htmlFor="upgrade-password">New account password</label>
@@ -8688,7 +8700,7 @@ function App() {
                       <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim() || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "upgrade" ? "Creating secure account…" : "Add Email & Enable Sync"}</button>
                     </form>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
-                  </SettingsCard> : <SettingsCard title="Local Account" description="Email and cross-device account controls become available when Supabase account sync is configured." className="settings-section-wide"><p className="hint-text">Restart Vite after adding the public Supabase variables. Your existing assignments and password verifier remain unchanged.</p></SettingsCard>
+                  </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what TaskCabinet calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Local Account" description="Email and cross-device account controls become available when Supabase account sync is configured." className="settings-section-wide"><p className="hint-text">Restart Vite after adding the public Supabase variables. Your existing assignments and password verifier remain unchanged.</p></SettingsCard></>
                 )}
 
                 {settingsSection === "checklists" && (

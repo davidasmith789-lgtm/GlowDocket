@@ -149,9 +149,10 @@ test("reconciliation isolates profiles and removes completed or deleted occurren
 test("client builder handles repeating occurrences, lead changes, and local exclusions", () => {
   const future = new Date(now + 3 * 60 * 60 * 1000);
   const tasks = [{ id: "repeat-occurrence", title: "Practice", repeat: "WEEKLY" }, { id: "done", title: "Done", isCompleted: true }, { id: "trash", title: "Trash", isDeleted: true }, { id: "none", title: "No date" }];
-  const result = buildDesiredReminders(tasks, { leadMinutes: 60, timeZone: "UTC", now, getDeadline: (task) => task.id === "repeat-occurrence" ? future : null });
+  const result = buildDesiredReminders(tasks, { leadMinutes: 60, timeZone: "UTC", preferredName: "Dave", now, getDeadline: (task) => task.id === "repeat-occurrence" ? future : null });
   assert.deepEqual(result.map((item) => item.taskId), ["repeat-occurrence"]);
   assert.equal(result[0].occurrenceKey, occurrenceKeyFor("repeat-occurrence", future));
+  assert.equal(result[0].preferredName, "Dave");
   const changed = buildDesiredReminders(tasks, { leadMinutes: 30, timeZone: "UTC", now, getDeadline: (task) => task.id === "repeat-occurrence" ? future : null });
   assert.notEqual(result[0].revision, changed[0].revision);
 });
@@ -163,6 +164,17 @@ test("OneSignal targets only the subscription and treats an empty message ID as 
   await assert.rejects(() => oneSignal.schedule(record, idempotencyKeyFor(profileInstallationId, reminder.occurrenceKey, reminder.revision)), /did not create/);
   assert.deepEqual(captured.include_subscription_ids, [subscriptionId]);
   assert.equal("username" in captured, false); assert.equal("notes" in captured, false);
+});
+
+test("preferred names personalize server wording without becoming an external identity", async () => {
+  let captured;
+  const oneSignal = createOneSignal({ ONESIGNAL_APP_ID: "app-id", ONESIGNAL_API_KEY: "server-secret", PUSH_ALLOWED_ORIGIN: "https://taskcabinet.example" }, async (_url, options) => { captured = JSON.parse(options.body); return { ok: true, json: async () => ({ id: "message-1" }) }; });
+  const personalized = { ...reminder, preferredName: "Dave" };
+  const record = { profileInstallationId, subscriptionId, ...validateReminder(personalized, now) };
+  await oneSignal.schedule(record, idempotencyKeyFor(profileInstallationId, personalized.occurrenceKey, personalized.revision));
+  assert.equal(captured.headings.en, "A heads-up for Dave");
+  assert.equal("external_id" in captured, false);
+  assert.throws(() => validateReminder({ ...personalized, preferredName: "x".repeat(61) }, now), /invalid/);
 });
 
 test("open-app fallback covers unsupported, denied, offline, and API failure states", () => {
