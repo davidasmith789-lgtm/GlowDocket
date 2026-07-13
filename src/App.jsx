@@ -40,7 +40,7 @@ import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalRe
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, replaceCloudSnapshot, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, replaceCloudSnapshot, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -1534,12 +1534,17 @@ function App() {
   const cloudSaveQueuedRef = useRef(false);
   const cloudConflictResolutionRef = useRef(false);
   const latestCloudStateRef = useRef(null);
-  const cloudLastSavedStateRef = useRef(null);
+  const cloudLastSavedFingerprintRef = useRef("");
 
-  const waitForCloudRequest = (request, message) => Promise.race([
-    request,
-    new Promise((_, reject) => window.setTimeout(() => reject(new Error(message)), 15000)),
-  ]);
+  const waitForCloudRequest = async (request, message) => {
+    let timeoutId;
+    try {
+      return await Promise.race([
+        request,
+        new Promise((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error(message)), 15000); }),
+      ]);
+    } finally { window.clearTimeout(timeoutId); }
+  };
 
   // A username becomes part of each key. This keeps one user's data separate
   // from another user's data while still using the same browser localStorage.
@@ -1934,7 +1939,7 @@ function App() {
         saveLocalSnapshot(localStorage, currentUser, selected, revision, false);
         cloudRevisionRef.current = revision;
         cloudHydratedUserRef.current = currentUser;
-        cloudLastSavedStateRef.current = selected;
+        cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(selected);
         setTasks(selected.tasks);
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
@@ -1960,7 +1965,7 @@ function App() {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
     const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
-    if (sameState(snapshot, cloudLastSavedStateRef.current)) {
+    if (getCloudStateFingerprint(snapshot) === cloudLastSavedFingerprintRef.current) {
       saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, false);
       setSyncStatus("saved");
       return undefined;
@@ -1972,6 +1977,7 @@ function App() {
     const flush = async () => {
       if (cloudSavingRef.current) { cloudSaveQueuedRef.current = true; return; }
       cloudSavingRef.current = true;
+      let savedSuccessfully = false;
       try {
         const stateToSave = latestCloudStateRef.current;
         const result = await waitForCloudRequest(
@@ -1980,10 +1986,11 @@ function App() {
         );
         if (cloudHydratedUserRef.current !== currentUser) return;
         cloudRevisionRef.current = Number(result.revision);
-        cloudLastSavedStateRef.current = stateToSave;
+        cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(stateToSave);
         saveLocalSnapshot(localStorage, currentUser, stateToSave, result.revision, false);
         setSyncStatus("saved");
         setSyncError("");
+        savedSuccessfully = true;
       } catch (error) {
         if (error.code === "revision_conflict") {
           cloudSaveQueuedRef.current = false;
@@ -1993,12 +2000,13 @@ function App() {
           setSyncConflictOpen(true);
           setSyncStatus("conflict");
         } else {
+          cloudSaveQueuedRef.current = false;
           setSyncError(error.message || "Cloud save failed.");
           setSyncStatus(navigator.onLine ? "failed" : "offline");
         }
       } finally {
         cloudSavingRef.current = false;
-        if (cloudSaveQueuedRef.current) { cloudSaveQueuedRef.current = false; void flush(); }
+        if (savedSuccessfully && cloudSaveQueuedRef.current) { cloudSaveQueuedRef.current = false; void flush(); }
       }
     };
     cloudSaveTimerRef.current = window.setTimeout(flush, 750);
@@ -4337,7 +4345,7 @@ function App() {
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     cloudHydratedUserRef.current = "";
     cloudRevisionRef.current = 0;
-    cloudLastSavedStateRef.current = null;
+    cloudLastSavedFingerprintRef.current = "";
     setSyncConflict(null);
     setSyncConflictOpen(false);
     setCurrentUser("");
@@ -4350,7 +4358,7 @@ function App() {
     applyCloudStateToLocal(localStorage, currentUser, state, deviceSettings);
     saveLocalSnapshot(localStorage, currentUser, state, revision, false);
     cloudRevisionRef.current = revision;
-    cloudLastSavedStateRef.current = state;
+    cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(state);
     setTasks(state.tasks);
     setCourses(state.courses);
     setCourseColors(state.courseColors);
@@ -4394,7 +4402,7 @@ function App() {
         "Cloud saving took too long. Your changes are still safe on this device.",
       );
       cloudRevisionRef.current = Number(result.revision);
-      cloudLastSavedStateRef.current = localChoice;
+      cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(localChoice);
       saveLocalSnapshot(localStorage, currentUser, localChoice, result.revision, false);
       setSyncStatus("saved");
     } catch (error) {

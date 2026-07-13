@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, collectSyncableState, hasMeaningfulState, loadLocalSnapshot, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -41,4 +41,12 @@ test("meaningful-state detection protects assignments and custom courses", () =>
   assert.equal(hasMeaningfulState(state()), false);
   assert.equal(hasMeaningfulState(state({ tasks: [{ id: "task" }] })), true);
   assert.equal(hasMeaningfulState(state({ courses: ["Other", "Biology"] })), true);
+});
+
+test("saved fingerprints cannot be changed through a shared object reference", () => {
+  const task = { id: "task", title: "Original" };
+  const snapshot = state({ tasks: [task] });
+  const savedFingerprint = getCloudStateFingerprint(snapshot);
+  task.title = "Changed later";
+  assert.notEqual(getCloudStateFingerprint(snapshot), savedFingerprint);
 });

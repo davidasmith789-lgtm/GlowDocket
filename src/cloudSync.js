@@ -95,6 +95,10 @@ export async function replaceCloudSnapshot(client, userId, state, expectedRevisi
   return data;
 }
 
+export function getCloudStateFingerprint(state) {
+  return JSON.stringify(Object.fromEntries(ACCOUNT_FIELDS.map((key) => [key, state?.[key]])));
+}
+
 export function sameState(left, right) {
-  return ACCOUNT_FIELDS.every((key) => JSON.stringify(left?.[key]) === JSON.stringify(right?.[key]));
+  return getCloudStateFingerprint(left) === getCloudStateFingerprint(right);
 }
