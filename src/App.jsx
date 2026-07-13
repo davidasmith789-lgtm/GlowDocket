@@ -1532,6 +1532,7 @@ function App() {
   const cloudSaveTimerRef = useRef(null);
   const cloudSavingRef = useRef(false);
   const cloudSaveQueuedRef = useRef(false);
+  const cloudConflictResolutionRef = useRef(false);
   const latestCloudStateRef = useRef(null);
   const cloudLastSavedStateRef = useRef(null);
 
@@ -1956,7 +1957,7 @@ function App() {
   }, [currentUser, accountMode]);
 
   useEffect(() => {
-    if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict) return undefined;
+    if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
     const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
     if (sameState(snapshot, cloudLastSavedStateRef.current)) {
@@ -1985,6 +1986,7 @@ function App() {
         setSyncError("");
       } catch (error) {
         if (error.code === "revision_conflict") {
+          cloudSaveQueuedRef.current = false;
           const newest = await loadCloudSnapshot(getSupabaseBrowserClient(), currentUser).catch(() => null);
           saveLocalBackup(localStorage, currentUser, latestCloudStateRef.current);
           setSyncConflict({ local: latestCloudStateRef.current, cloud: newest?.state, cloudRevision: newest?.revision || cloudRevisionRef.current });
@@ -4370,15 +4372,46 @@ function App() {
     setSyncStatus("saved");
   };
 
-  const handleUseDeviceConflict = () => {
+  const handleUseDeviceConflict = async () => {
     if (!syncConflict?.local) return;
+    const localChoice = syncConflict.local;
+    const expectedRevision = syncConflict.cloudRevision;
     saveLocalBackup(localStorage, currentUser, syncConflict.cloud);
-    cloudRevisionRef.current = syncConflict.cloudRevision;
-    saveLocalSnapshot(localStorage, currentUser, syncConflict.local, syncConflict.cloudRevision, true);
+    window.clearTimeout(cloudSaveTimerRef.current);
+    cloudSaveQueuedRef.current = false;
+    cloudConflictResolutionRef.current = true;
+    cloudSavingRef.current = true;
+    latestCloudStateRef.current = localChoice;
+    cloudRevisionRef.current = expectedRevision;
+    saveLocalSnapshot(localStorage, currentUser, localChoice, expectedRevision, true);
     setSyncConflict(null);
     setSyncConflictOpen(false);
     setSyncStatus("saving");
-    setSyncRetryNonce((value) => value + 1);
+    setSyncError("");
+    try {
+      const result = await waitForCloudRequest(
+        replaceCloudSnapshot(getSupabaseBrowserClient(), currentUser, localChoice, expectedRevision),
+        "Cloud saving took too long. Your changes are still safe on this device.",
+      );
+      cloudRevisionRef.current = Number(result.revision);
+      cloudLastSavedStateRef.current = localChoice;
+      saveLocalSnapshot(localStorage, currentUser, localChoice, result.revision, false);
+      setSyncStatus("saved");
+    } catch (error) {
+      if (error.code === "revision_conflict") {
+        const newest = await loadCloudSnapshot(getSupabaseBrowserClient(), currentUser).catch(() => null);
+        setSyncConflict({ local: localChoice, cloud: newest?.state, cloudRevision: newest?.revision || expectedRevision });
+        setSyncConflictOpen(true);
+        setSyncStatus("conflict");
+      } else {
+        setSyncError(error.message || "Cloud save failed.");
+        setSyncStatus(navigator.onLine ? "failed" : "offline");
+      }
+    } finally {
+      cloudSavingRef.current = false;
+      cloudSaveQueuedRef.current = false;
+      cloudConflictResolutionRef.current = false;
+    }
   };
 
   const handleAccountDisplayNameUpdate = async (event) => {
