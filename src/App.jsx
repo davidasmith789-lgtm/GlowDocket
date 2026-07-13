@@ -526,6 +526,10 @@ function PersonalizationTip({ title, children, forceOpen = false }) {
   );
 }
 
+function PasswordEyeIcon({ hidden }) {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.75" />{hidden ? <path d="m4 4 16 16" /> : null}</svg>;
+}
+
 function getTaskCategory(task) {
   return task?.category || "School";
 }
@@ -1488,7 +1492,6 @@ function App() {
   // Only an authenticated account may restore a profile. Older passwordless
   // currentUser values are deliberately ignored until that profile is claimed.
   const [currentUser, setCurrentUser] = useState(() => {
-    if (CLOUD_SYNC_CONFIGURED) return "";
     try {
       const authenticatedUser = localStorage.getItem(AUTH_USER_STORAGE_KEY) || "";
       const account = getStoredAccounts()[authenticatedUser.toLowerCase()];
@@ -1497,6 +1500,10 @@ function App() {
       console.error("Error reading currentUser from localStorage:", error);
       return "";
     }
+  });
+  const [accountMode, setAccountMode] = useState(() => {
+    try { return localStorage.getItem(AUTH_USER_STORAGE_KEY) ? "local" : "signed-out"; }
+    catch { return "signed-out"; }
   });
   const [signInName, setSignInName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -1850,31 +1857,42 @@ function App() {
     client.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       const user = data.session?.user;
-      setCurrentUser(user?.id || "");
-      setDisplayName(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "");
-      setAccountEmail(user?.email || "");
-      setAccountEmailDraft(user?.email || "");
-      setAccountDisplayNameDraft(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "");
+      if (user) {
+        setCurrentUser(user.id);
+        setAccountMode("cloud");
+        setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
+        setAccountEmail(user.email || "");
+        setAccountEmailDraft(user.email || "");
+        setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
+      }
       setAuthInitializing(false);
-      if (!user) setSyncStatus("signed-out");
+      if (!user) setSyncStatus("local-only");
     }).catch(() => {
       if (mounted) { setAuthInitializing(false); setSyncStatus("local-only"); }
     });
     const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
       const user = session?.user;
-      setCurrentUser(user?.id || "");
-      setDisplayName(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "");
-      setAccountEmail(user?.email || "");
-      setAccountEmailDraft(user?.email || "");
-      setAccountDisplayNameDraft(user?.user_metadata?.display_name || user?.email?.split("@")[0] || "");
-      if (!user) setSyncStatus("signed-out");
+      if (user) {
+        setCurrentUser(user.id);
+        setAccountMode("cloud");
+        setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
+        setAccountEmail(user.email || "");
+        setAccountEmailDraft(user.email || "");
+        setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
+      }
     });
     return () => { mounted = false; listener.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
-    if (!CLOUD_SYNC_CONFIGURED || !currentUser) return undefined;
+    if (accountMode !== "local" || !currentUser) return;
+    setDisplayName(currentUser);
+    setAccountDisplayNameDraft(currentUser);
+  }, [accountMode, currentUser]);
+
+  useEffect(() => {
+    if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser) return undefined;
     const client = getSupabaseBrowserClient();
     let cancelled = false;
     setSyncStatus("cloud-loading");
@@ -1928,10 +1946,10 @@ function App() {
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [currentUser]);
+  }, [currentUser, accountMode]);
 
   useEffect(() => {
-    if (!CLOUD_SYNC_CONFIGURED || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict) return undefined;
+    if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict) return undefined;
     const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
     saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, true);
@@ -1967,16 +1985,16 @@ function App() {
     };
     cloudSaveTimerRef.current = window.setTimeout(flush, 750);
     return () => window.clearTimeout(cloudSaveTimerRef.current);
-  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, syncConflict, syncRetryNonce]);
+  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
-    const handleOnline = () => { if (currentUser && ["offline", "failed"].includes(syncStatus)) { setSyncStatus("saving"); setSyncRetryNonce((value) => value + 1); } };
-    const handleOffline = () => { if (currentUser) setSyncStatus("offline"); };
+    const handleOnline = () => { if (accountMode === "cloud" && currentUser && ["offline", "failed"].includes(syncStatus)) { setSyncStatus("saving"); setSyncRetryNonce((value) => value + 1); } };
+    const handleOffline = () => { if (accountMode === "cloud" && currentUser) setSyncStatus("offline"); };
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
-  }, [currentUser, syncStatus]);
+  }, [currentUser, accountMode, syncStatus]);
 
   // Build the one-line details shown beneath task names in several tabs.
   const formatTaskDetails = (task) => {
@@ -4206,6 +4224,7 @@ function App() {
           const { data, error } = await client.auth.signInWithPassword({ email: trimmedName, password: authPassword });
           if (error) throw error;
           setCurrentUser(data.user.id);
+          setAccountMode("cloud");
           setDisplayName(data.user.user_metadata?.display_name || data.user.email?.split("@")[0] || "");
         } else {
           if (!displayName.trim()) { setAuthError("Enter a display name."); return; }
@@ -4226,6 +4245,7 @@ function App() {
             return;
           }
           setCurrentUser(data.user.id);
+          setAccountMode("cloud");
           setTutorialStep(0);
           setTutorialOpen(true);
         }
@@ -4253,6 +4273,7 @@ function App() {
         }
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
         setCurrentUser(existingAccount.profileKey);
+        setAccountMode("local");
       } else {
         if (existingAccount) {
           setAuthError("That username already has a local account.");
@@ -4275,6 +4296,7 @@ function App() {
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
         localStorage.setItem(getTutorialStorageKey(profileKey), JSON.stringify({ complete: false }));
         setCurrentUser(profileKey);
+        setAccountMode("local");
         setTutorialStep(0);
         setTutorialOpen(true);
       }
@@ -4300,6 +4322,7 @@ function App() {
     setSyncConflict(null);
     setSyncConflictOpen(false);
     setCurrentUser("");
+    setAccountMode("signed-out");
     setCurrentTab("dashboard");
   };
 
@@ -4353,6 +4376,41 @@ function App() {
       setAccountUpdateStatus({ type: "success", message: "Display name updated." });
     } catch (error) {
       setAccountUpdateStatus({ type: "error", message: error.message || "Display name could not be updated." });
+    } finally { setAccountUpdateBusy(""); }
+  };
+
+  const handleLocalAccountUpgrade = async (event) => {
+    event.preventDefault();
+    const email = accountEmailDraft.trim().toLowerCase();
+    const nextName = accountDisplayNameDraft.trim();
+    if (!nextName) { setAccountUpdateStatus({ type: "error", message: "Enter a display name." }); return; }
+    if (!email) { setAccountUpdateStatus({ type: "error", message: "Enter an email address." }); return; }
+    if (accountPasswordDraft.length < 8) { setAccountUpdateStatus({ type: "error", message: "Choose a password with at least 8 characters." }); return; }
+    if (accountPasswordDraft !== accountPasswordConfirm) { setAccountUpdateStatus({ type: "error", message: "The password confirmation does not match." }); return; }
+    setAccountUpdateBusy("upgrade");
+    setAccountUpdateStatus({ type: "", message: "" });
+    try {
+      const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName: nextName });
+      const { data, error } = await getSupabaseBrowserClient().auth.signUp({ email, password: accountPasswordDraft, options: { data: { display_name: nextName } } });
+      if (error) throw error;
+      if (!data.user) throw new Error("Supabase did not create the account.");
+      applyCloudStateToLocal(localStorage, data.user.id, snapshot, { externalPushEnabled: false, notificationsEnabled: false });
+      saveLocalSnapshot(localStorage, data.user.id, snapshot, 0, true);
+      setAccountPasswordDraft("");
+      setAccountPasswordConfirm("");
+      setShowAccountPassword(false);
+      if (data.session) {
+        localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+        setDisplayName(nextName);
+        setAccountEmail(data.user.email || email);
+        setCurrentUser(data.user.id);
+        setAccountMode("cloud");
+        setAccountUpdateStatus({ type: "success", message: "Email added. Your account can now sync across devices." });
+      } else {
+        setAccountUpdateStatus({ type: "success", message: "Your local data is safely prepared. Confirm the email, then sign in with it to finish enabling cross-device sync." });
+      }
+    } catch (error) {
+      setAccountUpdateStatus({ type: "error", message: error.message || "This account could not be upgraded." });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -6649,12 +6707,12 @@ function App() {
               />
               <button
                 type="button"
-                className="password-visibility-button"
+                className="password-visibility-button is-icon-only"
                 onClick={() => setShowAuthPassword((isVisible) => !isVisible)}
                 aria-pressed={showAuthPassword}
                 aria-label={showAuthPassword ? "Hide password" : "Show password"}
               >
-                {showAuthPassword ? "Hide" : "Show"}
+                <PasswordEyeIcon hidden={!showAuthPassword} />
               </button>
             </div>
             {authMode === "signup" && (
@@ -6799,9 +6857,10 @@ function App() {
           {currentUser && (
             <div className="account-action-group">
               <span>{displayName || "TaskCabinet user"}</span>
-              {CLOUD_SYNC_CONFIGURED && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Conflict needs review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status">{{ saved: "Saved", saving: "Saving…", offline: "Offline — changes will sync", failed: "Sync failed", "cloud-loading": "Loading cloud data…" }[syncStatus] || "Preparing sync…"}</span>)}
-              {CLOUD_SYNC_CONFIGURED && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={() => setSyncRetryNonce((value) => value + 1)}>Retry</button>}
-              {CLOUD_SYNC_CONFIGURED && syncStatus === "failed" && syncError && <span className="cloud-sync-error" title={syncError}>Your local changes are safe.</span>}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Conflict needs review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status">{{ saved: "Saved", saving: "Saving…", offline: "Offline — changes will sync", failed: "Sync failed", "cloud-loading": "Loading cloud data…" }[syncStatus] || "Preparing sync…"}</span>)}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "local" && <span className="cloud-sync-status">Local profile</span>}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={() => setSyncRetryNonce((value) => value + 1)}>Retry</button>}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && syncError && <span className="cloud-sync-error" title={syncError}>Your local changes are safe.</span>}
               <button className="btn btn-danger sign-out-button" onClick={handleSignOut}>Sign Out</button>
             </div>
           )}
@@ -8419,7 +8478,7 @@ function App() {
                 </section>
 
                 {settingsSection === "account" && (
-                  CLOUD_SYNC_CONFIGURED ? <>
+                  CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
                     <SettingsCard title="Display Name" description="This friendly name appears around TaskCabinet. It is not used as your database ownership key.">
                       <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
                         <label htmlFor="account-display-name">Display name</label>
@@ -8444,7 +8503,20 @@ function App() {
                       </form>
                     </SettingsCard>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
-                  </> : <SettingsCard title="Local Account" description="Email and cross-device account controls become available when Supabase account sync is configured." className="settings-section-wide"><p className="hint-text">This local profile stays on this browser. Your existing assignments and password verifier are unchanged.</p></SettingsCard>
+                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing local profile into a secure Supabase account without removing its assignments or personalization." className="settings-section-wide">
+                    <form className="account-settings-form account-password-form" onSubmit={handleLocalAccountUpgrade}>
+                      <label htmlFor="upgrade-display-name">Display name</label>
+                      <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={80} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
+                      <label htmlFor="upgrade-email">Email</label>
+                      <input id="upgrade-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} />
+                      <label htmlFor="upgrade-password">New account password</label>
+                      <div className="password-input-row"><input id="upgrade-password" type={showAccountPassword ? "text" : "password"} value={accountPasswordDraft} minLength={8} autoComplete="new-password" onChange={(event) => setAccountPasswordDraft(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPassword} aria-label={showAccountPassword ? "Hide account passwords" : "Show account passwords"} onClick={() => setShowAccountPassword((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPassword} /></button></div>
+                      <label htmlFor="upgrade-password-confirm">Confirm new account password</label>
+                      <input id="upgrade-password-confirm" type={showAccountPassword ? "text" : "password"} value={accountPasswordConfirm} minLength={8} autoComplete="new-password" onChange={(event) => setAccountPasswordConfirm(event.target.value)} />
+                      <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim() || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "upgrade" ? "Creating secure account…" : "Add Email & Enable Sync"}</button>
+                    </form>
+                    {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
+                  </SettingsCard> : <SettingsCard title="Local Account" description="Email and cross-device account controls become available when Supabase account sync is configured." className="settings-section-wide"><p className="hint-text">Restart Vite after adding the public Supabase variables. Your existing assignments and password verifier remain unchanged.</p></SettingsCard>
                 )}
 
                 {settingsSection === "checklists" && (
