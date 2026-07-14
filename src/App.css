@@ -1163,6 +1163,7 @@ button:disabled {
   .mobile-app-add-screen .card,
   .mobile-app-add-screen .card-container { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
   .mobile-app-card.mobile-app-add-screen { padding: 0; overflow: visible; border: 0; background: transparent; box-shadow: none; }
+  .mobile-add-fullscreen .mobile-app-add-screen { margin-top: 14px; }
   .mobile-app-add-screen .assignment-entry-form { gap: 14px; }
   .mobile-app-add-screen .voice-assignment-panel,
   .mobile-app-add-screen .bulk-import-panel,

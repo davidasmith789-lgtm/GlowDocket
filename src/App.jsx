@@ -2884,6 +2884,14 @@ function App() {
   }, [currentTab, isMobileUi]);
 
   useEffect(() => {
+    if (!isMobileUi || currentTab !== "mobile-add") return;
+    const frameId = window.requestAnimationFrame(() => {
+      document.querySelector(".mobile-add-fullscreen")?.scrollTo({ top: 0, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [currentTab, isMobileUi]);
+
+  useEffect(() => {
     const handleMobileHistory = () => {
       setMobileSettingsOpen(false);
       setMobileSummaryCategory("");
