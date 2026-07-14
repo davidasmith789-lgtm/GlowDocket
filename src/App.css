@@ -4086,6 +4086,14 @@ a,
 }
 
 .voice-assignment-panel small { grid-column: 1 / -1; }
+.voice-assignment-panel.is-coming-soon {
+  filter: grayscale(0.7);
+  opacity: 0.68;
+}
+.voice-assignment-panel.is-coming-soon .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
 .voice-inline-error { border-color: var(--danger-color); color: var(--danger-color); }
 
 .btn-voice-undo,

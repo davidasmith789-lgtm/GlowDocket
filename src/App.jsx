@@ -6023,28 +6023,30 @@ function App() {
           </div>
         )}
       </section>
-      {voiceRecordingSupported && (
-        <section className="voice-assignment-panel" aria-label="Create assignments with voice">
+      <section
+        className="voice-assignment-panel is-coming-soon"
+        aria-label="Voice assignments are in the works"
+        data-browser-supported={voiceRecordingSupported}
+        data-voice-status={voiceStatus}
+        data-recording-seconds={voiceElapsed}
+      >
           <div>
             {isMobileUi && <span className="mobile-add-option-number">Option 1</span>}
             <strong>Voice Add</strong>
-            <p>Try: “Add biology worksheet due July 10 at 3 PM, high priority, 45 minutes.” Say “then add” before another assignment.</p>
+            <p>In the works! Voice assignment creation is temporarily unavailable.</p>
           </div>
           <button
             type="button"
-            className={`btn ${voiceStatus === "recording" ? "btn-danger" : "btn-secondary"}`}
+            className="btn btn-secondary"
             onClick={voiceStatus === "recording" ? handleVoiceStop : handleVoiceStart}
-            disabled={voiceStatus === "processing"}
+            disabled
+            aria-disabled="true"
+            title="Voice Add is in the works"
           >
-            {voiceStatus === "recording"
-              ? `Stop Recording (${voiceElapsed}s)`
-              : voiceStatus === "processing"
-                ? "Interpreting Assignments…"
-                : "🎙️ Start Recording"}
+            In the works!
           </button>
-          <small>Speak one or more assignments. Maximum 90 seconds.</small>
-        </section>
-      )}
+          <small>This option will be available in a future update.</small>
+      </section>
 
       {voiceError && <div className="voice-inline-error" role="alert">{voiceError}</div>}
 
