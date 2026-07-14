@@ -7268,9 +7268,9 @@ function App() {
               <>
                 {renderMobilePageTitle("Today", `Ready when you are, ${displayName || "student"}.`, dueTodayCount > 0 ? `${dueTodayCount} assignment${dueTodayCount === 1 ? "" : "s"} due today.` : "Nothing is due today.")}
                 <section className="mobile-app-stat-strip" aria-label="Assignment summary">
-                  <button type="button" onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button>
-                  <button type="button" className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button>
-                  <button type="button" className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button>
+                  <button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button>
+                  <button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button>
+                  <button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button>
                 </section>
                 <section className="mobile-app-card mobile-app-plan-card">
                   <div className="mobile-app-section-heading"><div><span>Best next steps</span><h3>{schoolLevelCopy.planTitle}</h3></div><button type="button" onClick={() => openMobileTab("todo")}>View tasks</button></div>
@@ -9340,7 +9340,7 @@ function App() {
             <nav className="mobile-app-bottom-nav" aria-label="Mobile navigation">
               <button type="button" className={currentTab === "dashboard" ? "active" : ""} onClick={() => openMobileTab("dashboard")}><span aria-hidden="true">⌂</span><small>Home</small></button>
               <button type="button" className={mobileTaskTabActive ? "active" : ""} onClick={() => openMobileTab("todo")}><span aria-hidden="true">☑</span><small>Tasks</small></button>
-              <button type="button" className={`mobile-app-add-nav${currentTab === "mobile-add" ? " active" : ""}`} onClick={() => openMobileAdd(currentTab)}><span aria-hidden="true">+</span><small>+ Add</small></button>
+              <button type="button" className={`mobile-app-add-nav${currentTab === "mobile-add" ? " active" : ""}`} onClick={() => openMobileAdd(currentTab)}><span aria-hidden="true">+</span><small>Add</small></button>
               <button type="button" className={currentTab === "calendar" ? "active" : ""} onClick={() => openMobileTab("calendar")}><span aria-hidden="true">□</span><small>Calendar</small></button>
               <button type="button" className={mobileMoreActive || mobileMoreOpen ? "active" : ""} onClick={() => setMobileMoreOpen(true)}><span aria-hidden="true">•••</span><small>More</small></button>
             </nav>

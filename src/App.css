@@ -941,6 +941,7 @@ button:disabled {
    -------------------------------------------------------------------------- */
 @media (max-width: 767px) {
   .App.mobile-app-ui {
+    --primary: var(--primary-color);
     min-height: 100dvh;
     background: linear-gradient(
       135deg,
@@ -1092,6 +1093,7 @@ button:disabled {
   .mobile-app-stat-strip span { color: var(--muted-text); font-size: 0.76rem; font-weight: 750; }
   .mobile-app-stat-strip .has-warning strong { color: #d97706; }
   .mobile-app-stat-strip .has-danger strong { color: #dc2626; }
+  .mobile-app-stat-strip button:disabled { cursor: default; opacity: 0.5; box-shadow: none; }
 
   .mobile-app-card {
     min-width: 0;
@@ -1153,7 +1155,8 @@ button:disabled {
   }
 
   .mobile-app-segmented button span { display: inline-grid; min-width: 20px; min-height: 20px; margin-left: 2px; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--border-color) 55%, transparent); font-size: 0.7rem; }
-  .mobile-app-segmented button.active { color: var(--button-primary-color); background: var(--primary); box-shadow: 0 5px 14px color-mix(in srgb, var(--primary) 25%, transparent); }
+  .mobile-app-segmented button.active { color: var(--button-primary-color) !important; background: var(--primary-color) !important; box-shadow: 0 5px 14px color-mix(in srgb, var(--primary-color) 25%, transparent); }
+  .mobile-app-segmented button.active span { color: var(--button-primary-color) !important; background: color-mix(in srgb, var(--button-primary-color) 18%, transparent); }
 
   .mobile-app-add-screen .card,
   .mobile-app-add-screen .card-container { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
@@ -1204,7 +1207,7 @@ button:disabled {
   .mobile-app-bottom-nav button > small { font-size: 0.66rem; font-weight: 800; }
   .mobile-app-bottom-nav button.active { color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); }
   .mobile-app-bottom-nav .mobile-app-add-nav { transform: translateY(-12px); }
-  .mobile-app-bottom-nav .mobile-app-add-nav > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 17px; color: var(--button-primary-color); background: linear-gradient(145deg, var(--primary), color-mix(in srgb, var(--primary) 68%, #111827)); box-shadow: 0 9px 20px color-mix(in srgb, var(--primary) 32%, transparent); font-size: 1.8rem; font-weight: 700; }
+  .mobile-app-bottom-nav .mobile-app-add-nav > span { display: grid !important; width: 48px; height: 48px; place-items: center; border-radius: 17px; color: var(--button-primary-color) !important; background: var(--primary-color) !important; box-shadow: 0 9px 20px color-mix(in srgb, var(--primary-color) 32%, transparent); font-size: 2rem; font-weight: 900; line-height: 1; opacity: 1 !important; visibility: visible !important; }
   .mobile-app-bottom-nav .mobile-app-add-nav > small { position: relative; z-index: 2; color: var(--primary); }
 
   .mobile-app-sheet-backdrop {
@@ -1327,8 +1330,13 @@ button:disabled {
     height: 100dvh;
     padding: env(safe-area-inset-top) 14px calc(24px + env(safe-area-inset-bottom));
     overflow-x: hidden;
-    overflow-y: auto;
+    display: block;
+    min-height: 0;
+    overflow-y: scroll;
     overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    background-color: var(--page-bg);
     background: linear-gradient(135deg, color-mix(in srgb, var(--page-bg) 84%, var(--primary) 16%), var(--page-bg) 52%, color-mix(in srgb, var(--page-bg) 88%, var(--surface-alt) 12%));
   }
 
@@ -1344,7 +1352,8 @@ button:disabled {
     overflow-y: auto;
     overscroll-behavior: contain;
     color: var(--text-color);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--page-bg) 84%, var(--primary) 16%), var(--page-bg) 52%, color-mix(in srgb, var(--page-bg) 88%, var(--surface-alt) 12%));
+    background-color: var(--page-bg);
+    background-image: linear-gradient(135deg, color-mix(in srgb, var(--page-bg) 84%, var(--primary-color) 16%), var(--page-bg) 52%, color-mix(in srgb, var(--page-bg) 88%, var(--surface-alt) 12%));
   }
 
   .mobile-fullscreen-panel > main { padding: 14px 0; }
@@ -4718,6 +4727,9 @@ html[data-theme="dark"] {
   .calendar-view-toggle { align-self: flex-start; }
   .weekly-calendar-navigation { grid-template-columns: 1fr 1fr; }
   .weekly-calendar-navigation > strong { grid-column: 1 / -1; grid-row: 1; }
+  .weekly-calendar-navigation > button:nth-of-type(1) { grid-column: 1; grid-row: 2; }
+  .weekly-calendar-navigation > button:nth-of-type(3) { grid-column: 2; grid-row: 2; }
+  .weekly-calendar-navigation > button:nth-of-type(2) { grid-column: 1 / -1; grid-row: 3; width: 100%; }
 }
 
 @media (max-width: 767px) {
