@@ -1200,7 +1200,7 @@ button:disabled {
     left: 0;
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    align-items: end;
+    align-items: center;
     min-height: calc(72px + env(safe-area-inset-bottom));
     padding: 8px 7px calc(7px + env(safe-area-inset-bottom));
     border-top: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
@@ -1221,12 +1221,13 @@ button:disabled {
     border-radius: 14px;
     color: var(--muted-text);
     background: transparent;
+    transform: translateY(-2px);
   }
 
   .mobile-app-bottom-nav button > span { font-size: 1.25rem; font-weight: 800; line-height: 1; }
   .mobile-app-bottom-nav button > small { font-size: 0.66rem; font-weight: 800; }
   .mobile-app-bottom-nav button.active { color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, transparent); }
-  .mobile-app-bottom-nav .mobile-app-add-nav { transform: translateY(-7px); }
+  .mobile-app-bottom-nav .mobile-app-add-nav { transform: translateY(-4px); }
   .mobile-app-bottom-nav .mobile-app-add-nav > span { display: grid !important; width: 48px; height: 48px; place-items: center; border-radius: 17px; color: var(--button-primary-color) !important; background: var(--primary-color) !important; box-shadow: 0 9px 20px color-mix(in srgb, var(--primary-color) 32%, transparent); font-size: 2rem; font-weight: 900; line-height: 1; opacity: 1 !important; visibility: visible !important; }
   .mobile-app-bottom-nav .mobile-app-add-nav > small { position: relative; z-index: 2; color: var(--primary); }
 
