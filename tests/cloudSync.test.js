@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, readLegacySnapshot, resolveProfileDisplayName, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -44,6 +44,19 @@ test("meaningful-state detection protects assignments and custom courses", () =>
   assert.equal(hasMeaningfulState(state()), false);
   assert.equal(hasMeaningfulState(state({ tasks: [{ id: "task" }] })), true);
   assert.equal(hasMeaningfulState(state({ courses: ["Other", "Biology"] })), true);
+});
+
+test("cloud account ids are never used as preferred names", () => {
+  const storage = memoryStorage();
+  const userId = "bbdf6a28-6727-42d2-aafd-8df1048ae28e";
+  assert.equal(readLegacySnapshot(storage, userId, {}).displayName, "");
+  assert.equal(resolveProfileDisplayName(userId, userId, "David"), "David");
+});
+
+test("legacy local profiles keep their preferred names", () => {
+  const storage = memoryStorage();
+  storage.setItem("taskacadia_preferred_name_student-profile", "Sam");
+  assert.equal(readLegacySnapshot(storage, "student-profile", {}).displayName, "Sam");
 });
 
 test("saved fingerprints cannot be changed through a shared object reference", () => {

@@ -40,7 +40,7 @@ import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalRe
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, replaceCloudSnapshot, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -1910,6 +1910,7 @@ function App() {
     ...customColorThemes,
   ];
   const activeColorThemeId = userSettings.activeColorThemeId || theme;
+  const safeDisplayName = resolveProfileDisplayName(displayName, currentUser, accountEmail.split("@")[0]) || "TaskCabinet user";
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
@@ -2017,7 +2018,7 @@ function App() {
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
         workspaceLayoutRef.current = repairedWorkspace;
         setWorkspaceLayout(repairedWorkspace);
-        setDisplayName((existingName) => selected.displayName || existingName);
+        setDisplayName((existingName) => resolveProfileDisplayName(selected.displayName, currentUser, existingName));
         setSyncStatus("saved");
       } catch (error) {
         if (cancelled) return;
@@ -4516,7 +4517,7 @@ function App() {
     const repaired = repairLoadedWorkspace(state.workspaceLayout);
     workspaceLayoutRef.current = repaired;
     setWorkspaceLayout(repaired);
-    setDisplayName(state.displayName || displayName);
+    setDisplayName(resolveProfileDisplayName(state.displayName, currentUser, displayName));
   };
 
   const handleKeepCloudConflict = () => {
@@ -7148,7 +7149,7 @@ function App() {
               <div><strong>TaskCabinet</strong></div>
             </button>
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
-              {(displayName || currentUser || "T").trim().charAt(0).toUpperCase()}
+              {safeDisplayName.charAt(0).toUpperCase()}
             </button>
           </header>
         )}
@@ -9381,7 +9382,7 @@ function App() {
                     <button type="button" onClick={() => openMobileTab("recommendations")}><strong>Send feedback</strong><span>Recommend an improvement</span></button>
                     <button type="button" onClick={() => openMobileTab("settings")}><strong>Settings</strong><span>Appearance, reminders, and account</span></button>
                   </div>
-                  <div className="mobile-app-account-row"><div><strong>{displayName || currentUser}</strong><span>{accountMode === "cloud" ? "Cloud account" : "Local profile"}</span></div><button type="button" className="btn btn-danger" onClick={handleSignOut}>Sign out</button></div>
+                  <div className="mobile-app-account-row"><div><strong>{safeDisplayName}</strong><span>{accountMode === "cloud" ? "Cloud account" : "Local profile"}</span></div><button type="button" className="btn btn-danger" onClick={handleSignOut}>Sign out</button></div>
                 </section>
               </div>
             )}

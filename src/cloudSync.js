@@ -3,9 +3,23 @@ const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnable
 const ACCOUNT_FIELDS = ["tasks", "courses", "courseColors", "userSettings", "checklists", "workspaceLayout", "displayName"];
 
 const parse = (value, fallback) => { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } };
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const getCloudCacheKey = (userId) => `taskcabinet_cloud_cache_${userId}`;
 export const getCloudMetaKey = (userId) => `taskcabinet_cloud_meta_${userId}`;
 export const getCloudBackupKey = (userId) => `taskcabinet_cloud_backup_${userId}_${Date.now()}`;
+
+export function isOpaqueProfileId(value) {
+  return UUID_PATTERN.test(String(value || "").trim());
+}
+
+export function resolveProfileDisplayName(candidate, profileId = "", fallback = "") {
+  const id = String(profileId || "").trim();
+  for (const value of [candidate, fallback]) {
+    const name = String(value || "").trim();
+    if (name && name !== id && !isOpaqueProfileId(name)) return name;
+  }
+  return id && !isOpaqueProfileId(id) ? id : "";
+}
 
 export function sanitizeSettings(settings = {}) {
   return Object.fromEntries(Object.entries(settings).filter(([key]) => !DEVICE_SETTING_KEYS.has(key)));
@@ -52,6 +66,7 @@ export function saveLocalBackup(storage, userId, state) {
 
 export function readLegacySnapshot(storage, profileKey, defaults) {
   if (!profileKey) return null;
+  const preferredName = storage.getItem(`taskacadia_preferred_name_${profileKey}`);
   return collectSyncableState({
     tasks: parse(storage.getItem(`tasks_${profileKey}`), []),
     courses: parse(storage.getItem(`courses_${profileKey}`), ["Other"]),
@@ -59,7 +74,7 @@ export function readLegacySnapshot(storage, profileKey, defaults) {
     userSettings: { ...defaults, ...parse(storage.getItem(`settings_${profileKey}`), {}) },
     checklists: parse(storage.getItem(`checklists_${profileKey}`), []),
     workspaceLayout: parse(storage.getItem(`workspaceLayout_${profileKey}`), {}),
-    displayName: profileKey,
+    displayName: resolveProfileDisplayName(preferredName, profileKey, profileKey),
   });
 }
 
