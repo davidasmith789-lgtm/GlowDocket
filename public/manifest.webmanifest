@@ -1,7 +1,7 @@
 {
-  "name": "TaskCabinet Assignment Planner",
-  "short_name": "TaskCabinet",
-  "description": "Plan assignments, courses, deadlines, and study steps.",
+  "name": "GlowDocket",
+  "short_name": "GlowDocket",
+  "description": "Organize assignments, courses, deadlines, checklists, and study plans.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f7fb",

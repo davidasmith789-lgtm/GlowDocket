@@ -1,6 +1,6 @@
-# TaskCabinet
+# GlowDocket
 
-TaskCabinet is a browser-local assignment planner built for students. It combines assignment tracking, due-date planning, course organization, independent checklists, calendar views, recommendations, workspace widgets, personalization, archive/trash recovery, and optional browser notifications in one React application.
+GlowDocket is a browser-local assignment planner built for students. It combines assignment tracking, due-date planning, course organization, independent checklists, calendar views, recommendations, workspace widgets, personalization, archive/trash recovery, and optional browser notifications in one React application.
 
 User-facing errors should explain what happened, whether work remains safe on the device, and what the user can do next. Provider names, request details, identifiers, and raw service errors belong only in developer logs or protected diagnostics—not ordinary interface copy.
 
@@ -34,7 +34,7 @@ npm run build
 
 ## Browser-local data
 
-TaskCabinet stores product data in the current browser. Signing in selects a local profile; it does not create a cloud account. Important per-profile data includes:
+GlowDocket stores product data in the current browser. Signing in selects a local profile; it does not create a cloud account. Important per-profile data includes:
 
 - assignments and their archive/trash state;
 - courses and course colors;
@@ -42,7 +42,7 @@ TaskCabinet stores product data in the current browser. Signing in selects a loc
 - standalone checklists;
 - desktop and mobile widget layouts.
 
-Attachments are stored in IndexedDB. Compatibility-sensitive keys still use the historical `taskacadia_` prefix and should not be renamed without a data migration. Clearing site data removes locally stored TaskCabinet information.
+Attachments are stored in IndexedDB. Compatibility-sensitive keys still use the historical `taskacadia_` prefix and should not be renamed without a data migration. Clearing site data removes locally stored GlowDocket information.
 
 ## Major product areas
 
@@ -52,12 +52,12 @@ Attachments are stored in IndexedDB. Compatibility-sensitive keys still use the 
 - **Checklists:** independent colored lists with optional deadlines and reminders.
 - **Settings:** assignment defaults, field visibility, calendar behavior, notifications, school cycles, appearance, custom themes, archive, trash, and workspace guidance.
 
-Assignments moved to Trash remain recoverable for 30 days. TaskCabinet permanently removes expired Trash assignments the next time the app is open (and checks hourly while it remains open), including attachment blobs that are no longer referenced by another assignment. The deletion then follows the normal local/cloud sync path.
+Assignments moved to Trash remain recoverable for 30 days. GlowDocket permanently removes expired Trash assignments the next time the app is open (and checks hourly while it remains open), including attachment blobs that are no longer referenced by another assignment. The deletion then follows the normal local/cloud sync path.
 - **Imports:** pasted assignment lists and local PDF, DOCX, TXT, Markdown, or CSV syllabus extraction.
 
 ## Voice assignments
 
-Voice assignment creation appears only in browsers that expose `SpeechRecognition` or `webkitSpeechRecognition`. Recognition happens through the browser and feeds the same local assignment-creation path as manual entry. The manual Add Assignment form remains available in every supported browser.
+Voice assignment creation is currently disabled and marked **In the works**. The manual, paste, bulk-import, and syllabus assignment paths remain available.
 
 ## Deployment
 
@@ -69,25 +69,25 @@ npm run build
 
 Vercel can deploy the generated application from the connected repository. The service worker is registered only in production builds.
 
-## Installing TaskCabinet
+## Installing GlowDocket
 
-- **Desktop Chrome or Edge:** use the address-bar install icon or the browser menu and choose **Install TaskCabinet** / **Install app**.
+- **Desktop Chrome or Edge:** use the address-bar install icon or the browser menu and choose **Install GlowDocket** / **Install app**.
 - **Android:** open the browser's three-dot menu and choose **Install app** or **Add to Home screen**.
-- **iPhone or iPad:** open TaskCabinet in Safari, tap **Share**, choose **Add to Home Screen**, and launch it from the new Home Screen icon. Open the installed version before enabling push reminders.
+- **iPhone or iPad:** open GlowDocket in Safari, tap **Share**, choose **Add to Home Screen**, and launch it from the new Home Screen icon. Open the installed version before enabling push reminders.
 
 Installation wording and availability vary by browser. A normal browser tab continues to work if installation is unavailable.
 
 ## Optional external reminders
 
-TaskCabinet can use OneSignal Web Push for assignment reminders while the app is closed. Full assignments remain in the browser. Supabase stores only an opaque profile-installation ID, task/occurrence identifiers, OneSignal subscription and message IDs, title, course, deadline, timezone, lead time, revision, and scheduling/cleanup state. Notification text may appear on a device lock screen.
+GlowDocket can use OneSignal Web Push for assignment reminders while the app is closed. Full assignments remain in the browser. Supabase stores only an opaque profile-installation ID, task/occurrence identifiers, OneSignal subscription and message IDs, title, course, deadline, timezone, lead time, revision, and scheduling/cleanup state. Notification text may appear on a device lock screen.
 
 ### OneSignal setup
 
 1. Create a OneSignal Web app for the exact production origin. HTTPS and an exact origin match are required.
 2. Set the worker path to `/push/onesignal/OneSignalSDKWorker.js` and its scope to `/push/onesignal/`.
-3. Keep TaskCabinet's `/sw.js` worker enabled; the narrower OneSignal scope prevents a registration conflict.
+3. Keep GlowDocket's `/sw.js` worker enabled; the narrower OneSignal scope prevents a registration conflict.
 4. Put the public App ID in `VITE_ONESIGNAL_APP_ID`. Put the server API key only in `ONESIGNAL_API_KEY`.
-5. On iPhone/iPad, install TaskCabinet to the Home Screen and open the installed app before enabling Push Reminders.
+5. On iPhone/iPad, install GlowDocket to the Home Screen and open the installed app before enabling Push Reminders.
 
 ### Supabase registry
 
@@ -116,7 +116,7 @@ Never log or expose the OneSignal API key, push signing secret, Supabase secret,
 
 ## Optional cross-device account sync
 
-TaskCabinet uses Supabase Auth and one RLS-protected JSON snapshot per Auth user when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured. Without both public variables, the existing browser-local account system remains available. Never put a service-role or secret key in a `VITE_` variable.
+GlowDocket uses Supabase Auth and one RLS-protected JSON snapshot per Auth user when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured. Without both public variables, the existing browser-local account system remains available. Never put a service-role or secret key in a `VITE_` variable.
 
 Setup:
 
@@ -131,7 +131,7 @@ The synchronized snapshot contains assignments, attachment metadata, courses and
 
 Sync is local-first: local writes happen immediately, cloud writes are debounced, revision-checked, and retried after reconnecting. Conflicting meaningful versions are backed up locally and require an explicit Keep cloud data or Use this device's data choice.
 
-Signed-out visitors see the public TaskCabinet welcome page with Sign In and Create Account embedded on the same page. Supabase account users can choose **Forgot password?** to request a recovery email. The recovery link returns to the configured TaskCabinet origin, opens the new-password form, and keeps the recovered session signed in after a successful update. Supabase Auth sends and validates these emails; SMTP secrets and service credentials must never be placed in React code or a `VITE_` variable. Local-only browser profiles do not have email recovery until they add an email and enable account sync from Account Settings.
+Signed-out visitors see the public GlowDocket welcome page with Sign In and Create Account embedded on the same page. Supabase account users can choose **Forgot password?** to request a recovery email. The recovery link returns to the configured GlowDocket origin, opens the new-password form, and keeps the recovered session signed in after a successful update. Supabase Auth sends and validates these emails; SMTP secrets and service credentials must never be placed in React code or a `VITE_` variable. Local-only browser profiles do not have email recovery until they add an email and enable account sync from Account Settings.
 
 Cloud users can manage verification, display name, email, password, global sign-out, and permanent deletion under **Settings > Account**. `/api/account/delete` validates the signed-in user's access token, then uses the server-only `SUPABASE_SECRET_KEY` to delete that exact Auth user. The `taskcabinet_cloud_state` foreign key uses `on delete cascade`, so deleting the Auth user also permanently removes the user's cloud planner snapshot. The current browser's account-scoped planner cache and attachment blobs are removed only after the server confirms deletion. Offline copies on other devices cannot be remotely erased from browser storage; those devices lose cloud access as their sessions expire and should have their site data cleared if they will never reconnect.
 

@@ -32,7 +32,7 @@ export function collectSyncableState({ tasks = [], courses = ["Other"], courseCo
 export function validateCloudState(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Cloud state is not an object.");
   const version = Number(value.schemaVersion || 1);
-  if (version > CLOUD_STATE_SCHEMA_VERSION) throw new Error("Cloud state was created by a newer TaskCabinet version.");
+  if (version > CLOUD_STATE_SCHEMA_VERSION) throw new Error("Cloud state was created by a newer GlowDocket version.");
   if (!Array.isArray(value.tasks) || !Array.isArray(value.courses) || !Array.isArray(value.checklists)) throw new Error("Cloud state contains invalid lists.");
   if (!value.courseColors || typeof value.courseColors !== "object" || !value.userSettings || typeof value.userSettings !== "object" || !value.workspaceLayout || typeof value.workspaceLayout !== "object") throw new Error("Cloud state contains invalid settings.");
   return collectSyncableState(value);
@@ -136,7 +136,7 @@ export function createPortableExport(state, exportedAt = new Date().toISOString(
 }
 
 export function parsePortableExport(value) {
-  if (!value || value.format !== "taskcabinet-export" || Number(value.version) !== 1) throw new Error("This is not a supported TaskCabinet export file.");
+  if (!value || value.format !== "taskcabinet-export" || Number(value.version) !== 1) throw new Error("This is not a supported GlowDocket export file.");
   return validateCloudState(value.data);
 }
 

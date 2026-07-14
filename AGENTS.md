@@ -1,7 +1,7 @@
-# TaskCabinet Project Instructions
+# GlowDocket Project Instructions
 
 ## Project Overview
-TaskCabinet is a React + Vite assignment planner for students. It helps users organize school assignments by course, due date, priority, estimated time, repeat frequency, notes, and completion status.
+GlowDocket is a React + Vite assignment planner for students. It helps users organize school assignments by course, due date, priority, estimated time, repeat frequency, notes, and completion status.
 
 ## Current Tech Stack
 - React
@@ -18,7 +18,7 @@ TaskCabinet is a React + Vite assignment planner for students. It helps users or
 - `package.json` contains dependencies and scripts.
 
 ## Current Features
-TaskCabinet currently includes:
+GlowDocket currently includes:
 - Add assignments
 - Complete assignments
 - Undo completed assignments
@@ -55,7 +55,7 @@ TaskCabinet currently includes:
 - Keep the app beginner-friendly and easy to maintain.
 
 ## Style Goals
-TaskCabinet should feel like a clean, modern student productivity dashboard.
+GlowDocket should feel like a clean, modern student productivity dashboard.
 
 The design should be:
 - Professional

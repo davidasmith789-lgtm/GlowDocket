@@ -159,7 +159,7 @@ test("client builder handles repeating occurrences, lead changes, and local excl
 
 test("OneSignal targets only the subscription and treats an empty message ID as failure", async () => {
   let captured;
-  const oneSignal = createOneSignal({ ONESIGNAL_APP_ID: "app-id", ONESIGNAL_API_KEY: "server-secret", PUSH_ALLOWED_ORIGIN: "https://taskcabinet.example" }, async (_url, options) => { captured = JSON.parse(options.body); return { ok: true, json: async () => ({ id: "" }) }; });
+  const oneSignal = createOneSignal({ ONESIGNAL_APP_ID: "app-id", ONESIGNAL_API_KEY: "server-secret", PUSH_ALLOWED_ORIGIN: "https://glowdocket.example" }, async (_url, options) => { captured = JSON.parse(options.body); return { ok: true, json: async () => ({ id: "" }) }; });
   const record = { profileInstallationId, subscriptionId, ...validateReminder(reminder, now) };
   await assert.rejects(() => oneSignal.schedule(record, idempotencyKeyFor(profileInstallationId, reminder.occurrenceKey, reminder.revision)), /did not create/);
   assert.deepEqual(captured.include_subscription_ids, [subscriptionId]);
@@ -168,7 +168,7 @@ test("OneSignal targets only the subscription and treats an empty message ID as 
 
 test("preferred names personalize server wording without becoming an external identity", async () => {
   let captured;
-  const oneSignal = createOneSignal({ ONESIGNAL_APP_ID: "app-id", ONESIGNAL_API_KEY: "server-secret", PUSH_ALLOWED_ORIGIN: "https://taskcabinet.example" }, async (_url, options) => { captured = JSON.parse(options.body); return { ok: true, json: async () => ({ id: "message-1" }) }; });
+  const oneSignal = createOneSignal({ ONESIGNAL_APP_ID: "app-id", ONESIGNAL_API_KEY: "server-secret", PUSH_ALLOWED_ORIGIN: "https://glowdocket.example" }, async (_url, options) => { captured = JSON.parse(options.body); return { ok: true, json: async () => ({ id: "message-1" }) }; });
   const personalized = { ...reminder, preferredName: "Dave" };
   const record = { profileInstallationId, subscriptionId, ...validateReminder(personalized, now) };
   await oneSignal.schedule(record, idempotencyKeyFor(profileInstallationId, personalized.occurrenceKey, personalized.revision));
@@ -225,7 +225,7 @@ test("action guard prevents duplicate reminder requests", async () => {
 });
 
 test("friendly offline messaging hides raw fetch errors and success clears stale diagnostics", () => {
-  assert.equal(friendlyReminderError(new TypeError("Failed to fetch")), "You’re offline. TaskCabinet will finish setting up reminders when you reconnect.");
+  assert.equal(friendlyReminderError(new TypeError("Failed to fetch")), "You’re offline. GlowDocket will finish setting up reminders when you reconnect.");
   assert.equal(friendlyReminderError(new Error("provider exploded")), "We couldn’t finish setting up reminders right now. Your assignments are safe. Try again in a moment.");
   assert.deepEqual(clearReminderFailure({ lastError: "old failure", scheduling: "failed" }, { scheduling: "active" }), { lastError: "", scheduling: "active" });
 });

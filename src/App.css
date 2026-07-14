@@ -1,5 +1,5 @@
 /*
-  TASKCABINET STYLESHEET GUIDE
+  GLOWDOCKET STYLESHEET GUIDE
 
   CSS controls how the JSX in App.jsx looks. A selector such as .task-card
   targets an element whose JSX contains className="task-card". Properties inside
@@ -14,7 +14,7 @@
   - Rules later in the file can refine earlier rules with the same selector.
 
   The first section contains the original shared foundations. The later
-  "TaskCabinet Layout Upgrade" section adds the current dashboard design. Both
+  "GlowDocket Layout Upgrade" section adds the current dashboard design. Both
   layers remain because a few original variables and behaviors are still used.
 */
 
@@ -308,7 +308,7 @@ html { scrollbar-gutter: stable; }
    -------------------------------------------------------------------------- */
 
 /* react-calendar supplies its own class names; these rules make the third-party
-   calendar match TaskCabinet in both light and dark themes. */
+   calendar match GlowDocket in both light and dark themes. */
 .react-calendar {
   width: 100%;
   max-width: 500px;
@@ -389,7 +389,7 @@ html[data-theme="light"] .react-calendar {
   color: #111827;
 }
 /* ============================================================================
-   CURRENT TASKCABINET DASHBOARD DESIGN
+   CURRENT GLOWDOCKET DASHBOARD DESIGN
    ============================================================================
 
    This layer introduces the modern page background, cards, shadows, responsive

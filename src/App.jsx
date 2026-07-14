@@ -44,7 +44,7 @@ import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, crea
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 /*
- * TASKCABINET APPLICATION MAP
+ * GLOWDOCKET APPLICATION MAP
  *
  * This file owns the browser-local application shell and the UI workflows that
  * still share state: accounts, assignments, courses, settings, widgets,
@@ -101,7 +101,7 @@ const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
 const AUTH_USER_STORAGE_KEY = "taskacadia_authenticated_user";
 const LOGIN_COLORS_STORAGE_KEY = "taskacadia_login_colors";
 const TUTORIAL_SLIDES = [
-  { title: "Welcome to TaskCabinet", copy: "Your assignments, plans, and progress stay together in one calm workspace.", visual: "welcome" },
+  { title: "Welcome to GlowDocket", copy: "Your assignments, plans, and progress stay together in one calm workspace.", visual: "welcome" },
   { title: "Capture work quickly", copy: "Add a title and due date, then include priority, time, files, links, or checklist steps when useful.", visual: "add" },
   { title: "Know what to do next", copy: "Plan of Attack weighs deadlines, priority, progress, and time so the next step is always clear.", visual: "plan" },
   { title: "See the whole week", copy: "Calendar and independent checklists keep deadlines, routines, and small details visible.", visual: "calendar" },
@@ -682,7 +682,7 @@ async function deleteAttachmentFile(id) {
 }
 
 /**
- * TASKCABINET APPLICATION GUIDE
+ * GLOWDOCKET APPLICATION GUIDE
  *
  * This file contains the app's data, behavior, and visible React interface.
  * how to read it is from top to bottom:
@@ -778,7 +778,7 @@ function getEffectiveDeadline(task) {
 /**
  * Convert a stored month/day into a friendly urgency group.
  *
- * TaskCabinet currently stores month and day, but not a year. For that reason,
+ * GlowDocket currently stores month and day, but not a year. For that reason,
  * this helper compares every task with the current calendar year. The exact
  * returned strings are also used by filtering, sorting, counts, and headings,
  * so update those related features together if these labels ever change.
@@ -1050,49 +1050,49 @@ const PERSONALIZATION_TIPS = [
   ["Minimize or enlarge", "Use the + or − button. With a mouse, you can also double-click the header. This works on widgets, Settings cards, and optional assignment sections."],
   ["Change the app theme", "Pick a built-in or saved theme in Appearance. A theme changes the full color set, not your assignments or course colors."],
   ["Save your own theme", "Set up your colors in Full Color Studio, choose Make into theme, and give it a name. You can reuse it without rebuilding every color."],
-  ["Full Color Studio", "Each group controls one part of TaskCabinet. Changes show right away, so you can try colors before saving a custom theme."],
+  ["Full Color Studio", "Each group controls one part of GlowDocket. Changes show right away, so you can try colors before saving a custom theme."],
   ["Text and background contrast", "If text gets hard to read after a color change, adjust Main text, Muted text, or the matching surface color in Full Color Studio."],
   ["Course colors", "Course colors label assignments and calendar dots. They stay separate from the main app theme so each course remains easy to spot."],
   ["Checklist colors", "The checklist palette supplies quick color choices. You can still give one list its own custom color without changing the others."],
   ["Text size", "Text size grows the words and the nearby controls together. If a widget feels crowded afterward, resize that widget to give it more room."],
-  ["App font", "App font changes the writing style across TaskCabinet. Highly Readable is the clearest option; Typewriter Mono gives everything equal-width letters."],
+  ["App font", "App font changes the writing style across GlowDocket. Highly Readable is the clearest option; Typewriter Mono gives everything equal-width letters."],
   ["Interface spacing", "Compact fits more on screen, Comfortable is the everyday default, and Spacious adds extra breathing room around controls."],
   ["Task action layout", "Comfortable wrap keeps actions in rows, Compact buttons saves space, and Vertical actions stacks them for easier tapping."],
-  ["Reduce motion", "Turn this on if you prefer a steadier screen. TaskCabinet will remove the extra movement while keeping every feature working."],
+  ["Reduce motion", "Turn this on if you prefer a steadier screen. GlowDocket will remove the extra movement while keeping every feature working."],
   ["Calendar display", "Use Calendar settings to choose week or month view, the first day of the week, and whether school-cycle details appear."],
-  ["School-day cycle", "Choose an anchor date and name your cycle days. Weekends are skipped automatically when TaskCabinet works out the next cycle day."],
+  ["School-day cycle", "Choose an anchor date and name your cycle days. Weekends are skipped automatically when GlowDocket works out the next cycle day."],
   ["Checklist deadlines", "A checklist item with only a date is due at 11:59 PM. Turn on checklist times when a step needs a specific hour."],
   ["Add Assignment fields", "Hide optional fields you rarely use. This only cleans up the form; it does not remove information from assignments you already made."],
   ["New Assignment defaults", "Defaults prefill new assignments and return after a successful add. You can still change any field before saving."],
-  ["Dark and light themes", "Theme mode controls whether TaskCabinet uses a light or dark base. Custom themes remember which base they were made for."],
-  ["Turn on push reminders", "Open Reminders & App in Settings and choose Enable Push Reminders. TaskCabinet waits for you to press that button before asking for notification permission."],
-  ["Choose when reminders arrive", "The Remind me setting uses one timing choice for every assignment. The sentence below it shows exactly how early TaskCabinet will try to remind you."],
+  ["Dark and light themes", "Theme mode controls whether GlowDocket uses a light or dark base. Custom themes remember which base they were made for."],
+  ["Turn on push reminders", "Open Reminders & App in Settings and choose Enable Push Reminders. GlowDocket waits for you to press that button before asking for notification permission."],
+  ["Choose when reminders arrive", "The Remind me setting uses one timing choice for every assignment. The sentence below it shows exactly how early GlowDocket will try to remind you."],
   ["Reminder bell icons", "A small bell on an assignment means its reminder is healthy, still syncing, or needs attention. Tap or focus it to hear the exact status; a mouse can also hover."],
   ["Repair reminder sync", "If Push Reminders says Needs attention, choose Repair Reminder Sync. Healthy reminders hide that button because there is nothing you need to fix."],
-  ["Notifications are blocked", "TaskCabinet cannot reopen a permission prompt after the browser blocks it. Allow notifications from your browser’s site settings, then return and repair the sync."],
+  ["Notifications are blocked", "GlowDocket cannot reopen a permission prompt after the browser blocks it. Allow notifications from your browser’s site settings, then return and repair the sync."],
   ["Test your reminders", "Send Test Reminder becomes available once Push Reminders is fully active. It checks this browser without changing any assignment deadline."],
-  ["Reminders while the app is closed", "Push reminders can arrive while TaskCabinet is closed when your browser, device, internet, and notification settings allow it. Open-app reminders stay available as a fallback."],
-  ["Push reminders on iPhone or iPad", "Add TaskCabinet to the Home Screen, open the installed app, and enable Push Reminders from there. Regular browser tabs on Apple mobile devices cannot always receive web push."],
-  ["Deadline is too close for a reminder", "If the chosen reminder time has already passed, TaskCabinet skips the late alert instead of surprising you after the useful moment."],
-  ["Overdue assignments", "Overdue work gets stronger red highlighting in assignments, reminders, recommendations, course summaries, and calendars. TaskCabinet never changes the deadline for you."],
+  ["Reminders while the app is closed", "Push reminders can arrive while GlowDocket is closed when your browser, device, internet, and notification settings allow it. Open-app reminders stay available as a fallback."],
+  ["Push reminders on iPhone or iPad", "Add GlowDocket to the Home Screen, open the installed app, and enable Push Reminders from there. Regular browser tabs on Apple mobile devices cannot always receive web push."],
+  ["Deadline is too close for a reminder", "If the chosen reminder time has already passed, GlowDocket skips the late alert instead of surprising you after the useful moment."],
+  ["Overdue assignments", "Overdue work gets stronger red highlighting in assignments, reminders, recommendations, course summaries, and calendars. GlowDocket never changes the deadline for you."],
   ["Recommended Plan of Attack", "This plan weighs due dates, priority, estimated time, and progress. Open an item to work with the real assignment; the plan never creates a duplicate."],
-  ["What Should I Do?", "Enter how much time you have and TaskCabinet will look for work that fits. If nothing fits perfectly, it favors the most urgent useful choice."],
+  ["What Should I Do?", "Enter how much time you have and GlowDocket will look for work that fits. If nothing fits perfectly, it favors the most urgent useful choice."],
   ["To Do and In Progress", "Use Start when you begin something so it moves to In Progress. Move it back to To Do if you started by accident; your notes and checklist steps stay with it."],
   ["Repeating assignments", "Completing a repeating assignment creates its next occurrence. Each occurrence keeps its own deadline and reminder instead of reusing the finished one."],
   ["Assignment checklist steps", "Use optional checklist steps to break a large assignment into smaller pieces. If automatic completion is on, checking the final step completes the assignment."],
   ["Files stay on this browser", "Assignment files are stored in this browser, not uploaded with your reminder. Clearing site data can remove them, so keep another copy of anything important."],
   ["Assignment links", "Give each link a useful name and web address. Leave the link field after typing so it is added to the list before you save the assignment."],
   ["Import a syllabus", "Paste a list or choose a PDF, DOCX, TXT, Markdown, or CSV file. Review the preview before importing so dates and course headings look right."],
-  ["Voice assignments", "On supported browsers, voice creation uses the browser’s speech recognition. You can review what was understood before relying on the new assignment."],
+  ["Voice assignments", "Voice assignment creation is in the works and currently unavailable. Add assignments manually or use the paste and syllabus tools for now."],
   ["Archive and Trash", "Archive keeps finished assignments out of the way. Trash is recoverable until you permanently delete it, so moving something there is not immediately final."],
   ["Calendar assignment details", "Choose a date to see everything due that day. Course-colored dots help you scan the month without changing the colors of the assignments themselves."],
   ["Dashboard reminder range", "The reminder widget’s upcoming range only changes what appears on the dashboard. It does not change when push notifications are sent."],
   ["Accounts and profiles", "With account sync configured, your assignments and personalization can follow your email account. Push permission, reminder connection, and attachment files still belong to each browser."],
   ["Forgot your password", "On the welcome page, choose Sign In and then Forgot password? Enter your account email, open the recovery link, and choose a new password. Your planner data is not reset."],
   ["Password eye buttons", "Each password box has its own eye button. Showing one password never reveals the confirmation box, so you can check either entry safely."],
-  ["Preferred name", "Add the name you like to be called under Account. TaskCabinet can use it in friendly greetings and reminders, but never as your sign-in identity."],
-  ["Welcome page", "The public welcome page explains TaskCabinet before you sign in. Get Started and I Already Have an Account both move you straight to the account panel."],
-  ["Keep local data safe", "TaskCabinet saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
+  ["Preferred name", "Add the name you like to be called under Account. GlowDocket can use it in friendly greetings and reminders, but never as your sign-in identity."],
+  ["Welcome page", "The public welcome page explains GlowDocket before you sign in. Get Started and I Already Have an Account both move you straight to the account panel."],
+  ["Keep local data safe", "GlowDocket saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
 ];
 
 function WorkspaceWidget({
@@ -1919,7 +1919,7 @@ function App() {
     ...customColorThemes,
   ];
   const activeColorThemeId = userSettings.activeColorThemeId || theme;
-  const safeDisplayName = resolveProfileDisplayName(displayName, currentUser, accountEmail.split("@")[0]) || "TaskCabinet user";
+  const safeDisplayName = resolveProfileDisplayName(displayName, currentUser, accountEmail.split("@")[0]) || "GlowDocket user";
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
@@ -1929,7 +1929,7 @@ function App() {
       if (!mounted) return;
       setAuthInitializing(false);
       setSyncStatus("local-only");
-      setAuthError("TaskCabinet couldn’t reach the sign-in service. Check your connection and try again.");
+      setAuthError("GlowDocket couldn’t reach the sign-in service. Check your connection and try again.");
     }, 15000);
     client.auth.getSession().then(({ data }) => {
       if (!mounted) return;
@@ -2213,7 +2213,7 @@ function App() {
     const handleOnline = async () => {
       if (!currentUser) return;
       try { const result = await retryPendingExternalCleanup(currentUser); if (result.status === "cleaned") { setExternalPushStatus(userSettings.externalPushEnabled ? "sync_needed" : "idle"); setExternalPushDiagnostics((details) => clearReminderFailure(details, { scheduling: "sync_needed" })); setExternalPushMessage("Pending reminder cleanup finished."); } }
-      catch (error) { setExternalPushStatus("cleanup_pending"); setExternalPushDiagnostics((details) => ({ ...details, scheduling: "cleanup_pending", lastError: String(error?.message || error) })); setExternalPushMessage("TaskCabinet will retry when you’re back online."); }
+      catch (error) { setExternalPushStatus("cleanup_pending"); setExternalPushDiagnostics((details) => ({ ...details, scheduling: "cleanup_pending", lastError: String(error?.message || error) })); setExternalPushMessage("GlowDocket will retry when you’re back online."); }
       setExternalPushSubscriptionVersion((version) => version + 1);
     };
     window.addEventListener("taskcabinet-push-subscription-change", handleSubscriptionChange);
@@ -2227,7 +2227,7 @@ function App() {
     const pushId = new URLSearchParams(window.location.search).get("push");
     if (!pushId) return;
     if (CLOUD_SYNC_CONFIGURED) {
-      const timer = window.setTimeout(() => setAuthError("Sign in to the same TaskCabinet account to open this reminder."), 0);
+      const timer = window.setTimeout(() => setAuthError("Sign in to the same GlowDocket account to open this reminder."), 0);
       return () => window.clearTimeout(timer);
     }
     const account = Object.values(getStoredAccounts()).find((candidate) => {
@@ -2329,9 +2329,9 @@ function App() {
         try {
           if (navigator.serviceWorker?.controller) {
             const registration = await navigator.serviceWorker.ready;
-            await registration.showNotification(displayName ? `${displayName}, ${task.title}` : `TaskCabinet: ${task.title}`, options);
+            await registration.showNotification(displayName ? `${displayName}, ${task.title}` : `GlowDocket: ${task.title}`, options);
           } else {
-            new Notification(displayName ? `${displayName}, ${task.title}` : `TaskCabinet: ${task.title}`, options);
+            new Notification(displayName ? `${displayName}, ${task.title}` : `GlowDocket: ${task.title}`, options);
           }
           notified[`${task.id}-${deadline.getTime()}`] = new Date().toISOString();
         } catch (error) {
@@ -2423,9 +2423,9 @@ function App() {
           try {
             if (navigator.serviceWorker?.controller) {
               const registration = await navigator.serviceWorker.ready;
-              await registration.showNotification(displayName ? `${displayName}, ${item.text}` : `TaskCabinet: ${item.text}`, options);
+              await registration.showNotification(displayName ? `${displayName}, ${item.text}` : `GlowDocket: ${item.text}`, options);
             } else {
-              new Notification(displayName ? `${displayName}, ${item.text}` : `TaskCabinet: ${item.text}`, options);
+              new Notification(displayName ? `${displayName}, ${item.text}` : `GlowDocket: ${item.text}`, options);
             }
             notified[id] = new Date().toISOString();
           } catch (error) {
@@ -2482,7 +2482,7 @@ function App() {
         if (!isEnabled) {
           setExternalPushStatus("syncing"); const cleanup = await cancelAllExternalReminders(currentUser); handleAddFieldSettingChange("externalPushEnabled", false);
           setExternalPushStatus(cleanup.confirmed === false ? "cleanup_pending" : "idle");
-          setExternalPushMessage(cleanup.confirmed === false ? "TaskCabinet will retry when you’re back online." : "Push reminders were turned off and cleared.");
+          setExternalPushMessage(cleanup.confirmed === false ? "GlowDocket will retry when you’re back online." : "Push reminders were turned off and cleared.");
           if (cleanup.confirmed !== false) setExternalPushDiagnostics({ providerConnected: false, serverEnrolled: false, scheduling: "idle", lastError: "" });
           return;
         }
@@ -3500,7 +3500,7 @@ function App() {
         dueMonthNumber >= 1 && dueMonthNumber <= 12 &&
         dueDayNumber >= 1 && dueDayNumber <= 31;
       if (dueYear && dueYear !== currentYear) {
-        const warning = `${title} was added without its ${dueYear} due date because TaskCabinet currently stores month and day only.`;
+        const warning = `${title} was added without its ${dueYear} due date because GlowDocket currently stores month and day only.`;
         if (source === "voice") setVoiceError(warning);
         else setBulkImportMessage(warning);
       }
@@ -3664,7 +3664,7 @@ function App() {
         .map((warning) => String(warning)),
     );
     if (!item.dueMonth || !item.dueDay) warnings.add("Missing due date. Add month and day before importing if this should appear on the calendar.");
-    if (Number(item.dueYear) && Number(item.dueYear) !== currentYear) warnings.add(`${item.dueYear} date will be skipped until TaskCabinet supports full-year dates.`);
+    if (Number(item.dueYear) && Number(item.dueYear) !== currentYear) warnings.add(`${item.dueYear} date will be skipped until GlowDocket supports full-year dates.`);
     if (!item.course || item.course === "Other") warnings.add("Course is unclear. Choose a course if this belongs somewhere specific.");
     if (!item.estimatedMinutes) warnings.add("No estimate yet. Recommendations work better with minutes.");
     return [...warnings];
@@ -4661,13 +4661,13 @@ function App() {
     const email = signInName.trim().toLowerCase();
     setAuthError("");
     setAuthNotice("");
-    if (!email || !email.includes("@")) { setAuthError("Enter the email you use for TaskCabinet."); return; }
+    if (!email || !email.includes("@")) { setAuthError("Enter the email you use for GlowDocket."); return; }
     if (!navigator.onLine) { setAuthError("You appear to be offline. Reconnect, then send the recovery email again."); return; }
     setAuthBusy(true);
     try {
       const { error } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
       if (error) throw error;
-      setAuthNotice("If that email has a TaskCabinet account, a password reset link is on its way. You can safely try again if it does not arrive.");
+      setAuthNotice("If that email has a GlowDocket account, a password reset link is on its way. You can safely try again if it does not arrive.");
     } catch (error) {
       console.error("Recovery email failed:", error);
       setAuthError(friendlyAccountError(error, { offline: !navigator.onLine, action: "recovery" }));
@@ -4829,7 +4829,7 @@ function App() {
         options: { emailRedirectTo: `${window.location.origin}/` },
       });
       if (error) throw error;
-      setAccountUpdateStatus({ type: "success", message: "Verification email sent. Open the link in that email, then return to TaskCabinet." });
+      setAccountUpdateStatus({ type: "success", message: "Verification email sent. Open the link in that email, then return to GlowDocket." });
     } catch (error) {
       console.error("Verification email failed:", error);
       setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine }) });
@@ -4855,7 +4855,7 @@ function App() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmation = window.prompt("This permanently deletes your TaskCabinet cloud account and all cloud-synced assignments, checklists, courses, settings, and workspace layouts. It also erases this account's cached planner data from this browser. This cannot be undone.\n\nType DELETE to continue.");
+    const confirmation = window.prompt("This permanently deletes your GlowDocket cloud account and all cloud-synced assignments, checklists, courses, settings, and workspace layouts. It also erases this account's cached planner data from this browser. This cannot be undone.\n\nType DELETE to continue.");
     if (confirmation !== "DELETE") {
       if (confirmation !== null) setAccountUpdateStatus({ type: "error", message: "Account deletion cancelled. Type DELETE exactly to confirm." });
       return;
@@ -4873,7 +4873,7 @@ function App() {
       if (!token) throw new Error("Your session expired. Sign in again before deleting your account.");
       const response = await fetch("/api/account/delete", { method: "POST", headers: { authorization: `Bearer ${token}` } });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "TaskCabinet could not delete the account.");
+      if (!response.ok) throw new Error(payload.error || "GlowDocket could not delete the account.");
       const deletedTaskAttachments = tasks.flatMap((task) => getSafeAttachments(task).map((attachment) => attachment.id));
       await Promise.allSettled(deletedTaskAttachments.map((id) => deleteAttachmentFile(id)));
       removeCloudAccountLocalData(localStorage, currentUser);
@@ -4902,7 +4902,7 @@ function App() {
   const exportFileDate = () => new Date().toISOString().slice(0, 10);
 
   const handleExportJson = () => {
-    downloadTextFile(`taskcabinet-backup-${exportFileDate()}.json`, JSON.stringify(createPortableExport(getCurrentPortableState()), null, 2), "application/json");
+    downloadTextFile(`glowdocket-backup-${exportFileDate()}.json`, JSON.stringify(createPortableExport(getCurrentPortableState()), null, 2), "application/json");
     setRecoveryStatus({ type: "success", message: "Complete JSON backup downloaded. Keep it somewhere safe; this file can restore your planner." });
   };
 
@@ -4910,8 +4910,8 @@ function App() {
     const columns = ["title", "course", "dueYear", "dueMonth", "dueDay", "dueTime", "priority", "estimatedMinutes", "status", "notes", "isArchived", "isDeleted"];
     const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
     const rows = tasks.map((task) => columns.map((column) => escape(column === "status" ? getTaskStatus(task) : task[column])).join(","));
-    downloadTextFile(`taskcabinet-assignments-${exportFileDate()}.csv`, [columns.join(","), ...rows].join("\r\n"), "text/csv;charset=utf-8");
-    setRecoveryStatus({ type: "success", message: "Assignment CSV downloaded for spreadsheets. Use the JSON backup—not CSV—to restore TaskCabinet." });
+    downloadTextFile(`glowdocket-assignments-${exportFileDate()}.csv`, [columns.join(","), ...rows].join("\r\n"), "text/csv;charset=utf-8");
+    setRecoveryStatus({ type: "success", message: "Assignment CSV downloaded for spreadsheets. Use the JSON backup—not CSV—to restore GlowDocket." });
   };
 
   const applyRecoveryState = (state) => {
@@ -4933,11 +4933,11 @@ function App() {
     if (!file) return;
     try {
       const state = parsePortableExport(JSON.parse(await file.text()));
-      if (!window.confirm(`Restore the TaskCabinet backup from this file? Your current planner will be backed up in this browser first, then replaced. The imported version contains ${state.tasks.length} assignment${state.tasks.length === 1 ? "" : "s"}.`)) return;
+      if (!window.confirm(`Restore the GlowDocket backup from this file? Your current planner will be backed up in this browser first, then replaced. The imported version contains ${state.tasks.length} assignment${state.tasks.length === 1 ? "" : "s"}.`)) return;
       applyRecoveryState(state);
-      setRecoveryStatus({ type: "success", message: "Backup restored. TaskCabinet saved your previous version locally in case you need it." });
+      setRecoveryStatus({ type: "success", message: "Backup restored. GlowDocket saved your previous version locally in case you need it." });
     } catch (error) {
-      setRecoveryStatus({ type: "error", message: error.message || "TaskCabinet could not read that backup." });
+      setRecoveryStatus({ type: "error", message: error.message || "GlowDocket could not read that backup." });
     }
   };
 
@@ -4976,7 +4976,7 @@ function App() {
       const response = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: displayName || "TaskCabinet user", message }),
+        body: JSON.stringify({ username: displayName || "GlowDocket user", message }),
       });
 
       let result = null;
@@ -7189,7 +7189,7 @@ function App() {
   };
 
   if (authInitializing) {
-    return <div className={`App ${theme} auth-screen`}><main className="auth-card" role="status"><h1 className="app-title">TaskCabinet</h1><p>Restoring your secure session…</p></main></div>;
+    return <div className={`App ${theme} auth-screen`}><main className="auth-card" role="status"><h1 className="app-title">GlowDocket</h1><p>Restoring your secure session…</p></main></div>;
   }
 
   if (!currentUser || authMode === "recovery") {
@@ -7200,14 +7200,14 @@ function App() {
             <div className="welcome-hero-copy">
               <p className="eyebrow">Your schoolwork, finally in one place</p>
               <h1 id="welcome-title" className="welcome-title">Plan less. Know what to do next.</h1>
-              <p>TaskCabinet brings assignments, checklists, calendars, reminders, and your own workspace together in a planner that feels like yours.</p>
+              <p>GlowDocket brings assignments, checklists, calendars, reminders, and your own workspace together in a planner that feels like yours.</p>
               <div className="welcome-actions">
                 <button type="button" className="btn btn-primary" onClick={() => showWelcomeAuth("signup")}>Get Started</button>
                 <button type="button" className="btn btn-secondary" onClick={() => showWelcomeAuth("signin")}>I Already Have an Account</button>
               </div>
               <div className="welcome-trust"><span aria-hidden="true">&#10003;</span><strong>Local-first by design.</strong> Your planner keeps working on this device, with optional account sync when configured.</div>
             </div>
-            <div className="welcome-preview" aria-label="A preview of TaskCabinet's planner">
+            <div className="welcome-preview" aria-label="A preview of GlowDocket's planner">
               <div className="welcome-preview-top"><span>Today</span><strong>3 things to tackle</strong></div>
               <div className="welcome-preview-task"><i className="is-blue" /><span><strong>Finish history outline</strong><small>Recommended next</small></span><b>Today</b></div>
               <div className="welcome-preview-task"><i className="is-purple" /><span><strong>Study biology notes</strong><small>45 minutes</small></span><b>Tomorrow</b></div>
@@ -7215,7 +7215,7 @@ function App() {
             </div>
           </section>
 
-          <section className="welcome-features" aria-label="What TaskCabinet helps with">
+          <section className="welcome-features" aria-label="What GlowDocket helps with">
             {[
               ["Plan the next move", "Get a recommended plan based on deadlines, priority, time, and progress."],
               ["Pick up on another device", "Secure account sync keeps your planner ready wherever you sign in."],
@@ -7227,7 +7227,7 @@ function App() {
 
           <section ref={authPanelRef} id="auth-panel" className="auth-card welcome-auth-card" aria-labelledby="auth-heading">
           <p className="eyebrow">Ready when you are</p>
-          <h2 id="auth-heading" className="app-title">{authMode === "forgot" ? "Reset your password" : authMode === "recovery" ? "Choose a new password" : "Open TaskCabinet"}</h2>
+          <h2 id="auth-heading" className="app-title">{authMode === "forgot" ? "Reset your password" : authMode === "recovery" ? "Choose a new password" : "Open GlowDocket"}</h2>
           {authMode !== "forgot" && authMode !== "recovery" && <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
             <button type="button" role="tab" aria-selected={authMode === "signin"} className={`tab-button ${authMode === "signin" ? "active" : ""}`} onClick={() => showWelcomeAuth("signin")}>Sign In</button>
             <button type="button" role="tab" aria-selected={authMode === "signup"} className={`tab-button ${authMode === "signup" ? "active" : ""}`} onClick={() => showWelcomeAuth("signup")}>Create Account</button>
@@ -7301,11 +7301,11 @@ function App() {
           <div className="auth-warning">
             <strong>{CLOUD_SYNC_CONFIGURED ? "Your password is protected by your secure account." : "Password recovery is not available for browser-only profiles."}</strong>
             <p>
-              {CLOUD_SYNC_CONFIGURED ? "Your account data can sync across devices. Attachment files and push-reminder connections still stay on each browser." : "TaskCabinet stores only a password verifier. Accounts and assignments stay on this browser, do not sync to other devices, and have no password recovery."}
+              {CLOUD_SYNC_CONFIGURED ? "Your account data can sync across devices. Attachment files and push-reminder connections still stay on each browser." : "GlowDocket stores only a password verifier. Accounts and assignments stay on this browser, do not sync to other devices, and have no password recovery."}
             </p>
           </div>
           </section>
-          <footer className="welcome-footer">TaskCabinet helps you organize the work. You stay in charge of it.</footer>
+          <footer className="welcome-footer">GlowDocket helps you organize the work. You stay in charge of it.</footer>
         </main>
       </div>
     );
@@ -7320,10 +7320,10 @@ function App() {
   const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isAndroidMobile = /Android/i.test(navigator.userAgent);
   const installInstructions = isAppleMobile
-    ? "On iPhone or iPad: open TaskCabinet in Safari, tap Share, choose Add to Home Screen, then open TaskCabinet from its new Home Screen icon."
+    ? "On iPhone or iPad: open GlowDocket in Safari, tap Share, choose Add to Home Screen, then open GlowDocket from its new Home Screen icon."
     : isAndroidMobile
       ? "On Android: open your browser menu and choose Install app or Add to Home screen. In Chrome, this is usually under the three-dot menu."
-      : "On a computer: open your browser’s address-bar install icon or menu, then choose Install TaskCabinet. Chrome and Edge usually show Install app.";
+      : "On a computer: open your browser’s address-bar install icon or menu, then choose Install GlowDocket. Chrome and Edge usually show Install app.";
   const reminderLeadAlreadyPassedCount = tasks.filter((task) => { const deadline = getEffectiveDeadline(task); return deadline && deadline.getTime() > checklistNow.getTime() && deadline.getTime() - Number(userSettings.reminderMinutes || 60) * 60000 < checklistNow.getTime() && !task.isDeleted && !task.isCompleted; }).length;
   const mobileOwnedTabs = ["dashboard", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses"];
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
@@ -7403,7 +7403,7 @@ function App() {
           <header className="mobile-app-header">
             <button type="button" className="mobile-app-brand" onClick={() => openMobileTab("dashboard")} aria-label="Open mobile home">
               <span>TC</span>
-              <div><strong>TaskCabinet</strong></div>
+              <div><strong>GlowDocket</strong></div>
             </button>
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
               {safeDisplayName.charAt(0).toUpperCase()}
@@ -7414,7 +7414,7 @@ function App() {
         <header className="hero-card">
           <div>
             <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
-            <h1 className="app-title">TaskCabinet</h1>
+            <h1 className="app-title">GlowDocket</h1>
             {userSettings.showHeaderSubtitle && (
               <p className="hero-subtitle">
                 {schoolLevelCopy.subtitle}
@@ -7423,7 +7423,7 @@ function App() {
           </div>
 
           <div className="user-pill">
-            {currentUser ? `Signed in as ${displayName || "TaskCabinet user"}` : "Guest Mode"}
+            {currentUser ? `Signed in as ${displayName || "GlowDocket user"}` : "Guest Mode"}
           </div>
         </header>
 
@@ -7512,7 +7512,7 @@ function App() {
 
           {currentUser && (
             <div className="account-action-group">
-              <span>{displayName || "TaskCabinet user"}</span>
+              <span>{displayName || "GlowDocket user"}</span>
               {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Two versions need review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status" aria-live="polite">{{ saved: "All changes saved", saving: "Saving changes…", offline: "Offline — saved on this device", reconnecting: "Back online — reconnecting…", failed: "Online saving paused", "cloud-loading": "Loading your saved planner…", initializing: "Checking your account…" }[syncStatus] || "Preparing your planner…"}</span>)}
               {CLOUD_SYNC_CONFIGURED && accountMode === "local" && <span className="cloud-sync-status">Local profile</span>}
               {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={() => setSyncRetryNonce((value) => value + 1)}>Retry</button>}
@@ -7596,7 +7596,7 @@ function App() {
 
             {currentTab === "mobile-tools" && (
               <>
-                {renderMobilePageTitle("More", "Study tools", "The same TaskCabinet features, arranged for a phone.")}
+                {renderMobilePageTitle("More", "Study tools", "The same GlowDocket features, arranged for a phone.")}
                 <section className="mobile-app-card"><div className="mobile-app-section-heading"><div><span>Plan ahead</span><h3>Reminders</h3></div></div>{renderRemindersWidget()}</section>
                 <section className="mobile-app-card"><div className="mobile-app-section-heading"><div><span>By subject</span><h3>{schoolLevelCopy.courseLabel} overview</h3></div></div>{renderCourseOverviewWidget()}</section>
               </>
@@ -8571,7 +8571,7 @@ function App() {
           {currentTab === "recommendations" && (
             <section className="recommendations-page panel-card" aria-labelledby="recommendations-title">
               <div className="recommendations-header">
-                <p className="eyebrow">Help improve TaskCabinet</p>
+                <p className="eyebrow">Help improve GlowDocket</p>
                 <h2 id="recommendations-title">Recommendations</h2>
                 <p>
                   Suggest an improvement, report something confusing, or recommend a change.
@@ -8637,7 +8637,7 @@ function App() {
                   <p className="eyebrow">Settings</p>
                   <div className="settings-profile-chip">
                     <span>Preferences for</span>
-                    <strong>{displayName || "TaskCabinet user"}</strong>
+                    <strong>{displayName || "GlowDocket user"}</strong>
                   </div>
                   {getOrderedSettingsSections(userSettings.settingsSectionOrder).map((section) => (
                     <div
@@ -8704,7 +8704,7 @@ function App() {
                   <div key={`${settingsSection}-${storageView || "main"}`} className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
                   {!isMobileUi && <div className="settings-onboarding-card">
-                    <div><p className="eyebrow">Getting started</p><h4>TaskCabinet Tutorial</h4><p className="hint-text">Replay the visual introduction or manage optional sample assignments.</p></div>
+                    <div><p className="eyebrow">Getting started</p><h4>GlowDocket Tutorial</h4><p className="hint-text">Replay the visual introduction or manage optional sample assignments.</p></div>
                     <div className="settings-onboarding-actions"><button type="button" className="btn btn-primary" onClick={() => { setTutorialStep(0); setTutorialOpen(true); }}>Replay Tutorial</button></div>
                   </div>}
                   <div
@@ -8837,7 +8837,7 @@ function App() {
                         </label>
                       </div>
                       <label className="settings-toggle settings-toggle-copy">
-                        <span><strong>Header description</strong><small>Show the school-level message below TaskCabinet.</small></span>
+                        <span><strong>Header description</strong><small>Show the school-level message below GlowDocket.</small></span>
                         <input
                           type="checkbox"
                           checked={userSettings.showHeaderSubtitle !== false}
@@ -8877,8 +8877,8 @@ function App() {
                   </div>
                   {personalizationTipsOpen && (
                     <div id="personalization-tips-content" className="settings-collapsible-content personalization-tips-content">
-                      <p className="hint-text">Find friendly explanations for personalizing TaskCabinet and using its features your way.</p>
-                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search reminders, assignments, layouts, colors…" aria-label="Search TaskCabinet tips" />
+                      <p className="hint-text">Find friendly explanations for personalizing GlowDocket and using its features your way.</p>
+                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search reminders, assignments, layouts, colors…" aria-label="Search GlowDocket tips" />
                       <div className="personalization-tip-grid">
                         {PERSONALIZATION_TIPS.filter(([title, copy]) => `${title} ${copy}`.toLowerCase().includes(helpSearch.trim().toLowerCase())).map(([title, copy]) => <PersonalizationTip key={title} title={title} forceOpen={Boolean(helpSearch.trim())}>{copy}</PersonalizationTip>)}
                       </div>
@@ -9082,7 +9082,7 @@ function App() {
                 </section>
 
                 <section className="settings-section" hidden>
-                  <h4>Install TaskCabinet</h4>
+                  <h4>Install GlowDocket</h4>
                   <p className="hint-text">
                     Install the planner as a desktop or home-screen app with offline access.
                   </p>
@@ -9212,7 +9212,7 @@ function App() {
 
                 {settingsSection === "account" && (
                   CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
-                    <SettingsCard title="Preferred Name" description="What should TaskCabinet call you? This can appear in friendly greetings and reminders, but it is never your sign-in or external identity." className="settings-section-wide account-top-card">
+                    <SettingsCard title="Preferred Name" description="What should GlowDocket call you? This can appear in friendly greetings and reminders, but it is never your sign-in or external identity." className="settings-section-wide account-top-card">
                       <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
                         <label htmlFor="account-display-name">Preferred name</label>
                         <input id="account-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
@@ -9231,7 +9231,7 @@ function App() {
                         <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim()}>{accountUpdateBusy === "email" ? "Sending confirmation…" : "Change Email"}</button>
                       </form>
                     </SettingsCard>
-                    <SettingsCard title="Password" description="Choose a new password with at least 8 characters. TaskCabinet never displays your current password." className="settings-section-wide">
+                    <SettingsCard title="Password" description="Choose a new password with at least 8 characters. GlowDocket never displays your current password." className="settings-section-wide">
                       <form className="account-settings-form account-password-form" onSubmit={handleAccountPasswordUpdate}>
                         <label htmlFor="account-new-password">New password</label>
                         <div className="password-input-row"><input id="account-new-password" type={showAccountPassword ? "text" : "password"} value={accountPasswordDraft} minLength={8} autoComplete="new-password" onChange={(event) => setAccountPasswordDraft(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPassword} aria-label={showAccountPassword ? "Hide new password" : "Show new password"} onClick={() => setShowAccountPassword((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPassword} /></button></div>
@@ -9246,7 +9246,7 @@ function App() {
                         <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy)} onClick={handleSignOutAllDevices}>{accountUpdateBusy === "sign-out-all" ? "Signing outâ€¦" : "Sign Out All Devices"}</button>
                       </div>
                       <div className="account-management-action account-delete-explanation">
-                        <div><strong>Delete account permanently</strong><p>This deletes your secure account and online planner data, including assignments, checklists, courses, colors, settings, and workspace layouts. The same saved planner data and attachment files are erased from this browser. This cannot be undone.</p><p>Other devices are signed out as their access expires. An offline device may retain a browser copy until TaskCabinet is opened there or that browser's site data is cleared.</p></div>
+                        <div><strong>Delete account permanently</strong><p>This deletes your secure account and online planner data, including assignments, checklists, courses, colors, settings, and workspace layouts. The same saved planner data and attachment files are erased from this browser. This cannot be undone.</p><p>Other devices are signed out as their access expires. An offline device may retain a browser copy until GlowDocket is opened there or that browser's site data is cleared.</p></div>
                         <button type="button" className="btn btn-danger" disabled={Boolean(accountUpdateBusy)} onClick={handleDeleteAccount}>{accountUpdateBusy === "delete-account" ? "Deleting accountâ€¦" : "Delete My Account"}</button>
                       </div>
                     </SettingsCard>
@@ -9265,7 +9265,7 @@ function App() {
                       <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim() || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "upgrade" ? "Creating secure account…" : "Add Email & Enable Sync"}</button>
                     </form>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
-                  </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what TaskCabinet calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Browser-Only Profile" description="This version saves the profile only in this browser." className="settings-section-wide"><p className="hint-text">Assignments remain available on this device. Online account controls will appear automatically when cross-device saving is available.</p></SettingsCard></>
+                  </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what GlowDocket calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Browser-Only Profile" description="This version saves the profile only in this browser." className="settings-section-wide"><p className="hint-text">Assignments remain available on this device. Online account controls will appear automatically when cross-device saving is available.</p></SettingsCard></>
                 )}
 
                 {settingsSection === "checklists" && (
@@ -9286,23 +9286,23 @@ function App() {
 
                 {settingsSection === "reminders" && (
                   <>
-                    <SettingsCard title="Install TaskCabinet" description="Install the planner on this device for an app-like window and offline access.">
+                    <SettingsCard title="Install GlowDocket" description="Install the planner on this device for an app-like window and offline access.">
                       {isStandalone ? (
                         <span className="settings-status-pill">Installed</span>
                       ) : installPrompt ? (
-                        <button type="button" className="btn btn-primary" onClick={handleInstallApp}>Install TaskCabinet</button>
+                        <button type="button" className="btn btn-primary" onClick={handleInstallApp}>Install GlowDocket</button>
                       ) : (
                         <p className="hint-text">Use your browser’s “Install app” or “Add to Home Screen” menu.</p>
                       )}
                       {!isStandalone && <p className="hint-text install-device-guidance">{installInstructions}</p>}
                     </SettingsCard>
-                    <SettingsCard title="Due Reminders" description="Choose when TaskCabinet should give you a heads-up.">
+                    <SettingsCard title="Due Reminders" description="Choose when GlowDocket should give you a heads-up.">
                       <div className={`external-push-status is-${reminderUserStatus}`} role="status">
                         <strong>{reminderStatusCopy.title}</strong>
                         <small>{reminderStatusCopy.detail}</small>
                       </div>
                       <div className="external-push-detail-grid"><span><strong>Push reminders</strong><small>{reminderUserStatus === "off" ? "Off" : reminderUserStatus === "connecting" ? "Connecting" : reminderUserStatus === "active" ? "Active" : "Needs attention"}</small></span><span><strong>Browser permission</strong><small>{browserNotificationPermission === "default" ? "Not requested" : browserNotificationPermission === "granted" ? "Allowed" : browserNotificationPermission === "denied" ? "Blocked" : "Unsupported"}</small></span><span><strong>Reminder timing</strong><small>{formatReminderLeadTime(userSettings.reminderMinutes || 60)} before</small></span></div>
-                      {reminderUserStatus === "blocked" ? <div className="reminder-permission-guidance"><strong>Allow notifications in your browser settings</strong><p>TaskCabinet cannot reopen a blocked permission prompt. Open this site’s browser permissions, change Notifications to Allow, then return here and repair the sync.</p></div> : <button type="button" className={`btn ${userSettings.externalPushEnabled ? "btn-danger" : "btn-primary"}`} disabled={!EXTERNAL_PUSH_CLIENT_ENABLED || Boolean(externalPushAction)} onClick={() => handleExternalPushSettingChange(!userSettings.externalPushEnabled)}>{externalPushAction === "enabling" ? "Connecting…" : externalPushAction === "disabling" ? "Turning off…" : userSettings.externalPushEnabled ? "Disable Push Reminders" : "Enable Push Reminders"}</button>}
+                      {reminderUserStatus === "blocked" ? <div className="reminder-permission-guidance"><strong>Allow notifications in your browser settings</strong><p>GlowDocket cannot reopen a blocked permission prompt. Open this site’s browser permissions, change Notifications to Allow, then return here and repair the sync.</p></div> : <button type="button" className={`btn ${userSettings.externalPushEnabled ? "btn-danger" : "btn-primary"}`} disabled={!EXTERNAL_PUSH_CLIENT_ENABLED || Boolean(externalPushAction)} onClick={() => handleExternalPushSettingChange(!userSettings.externalPushEnabled)}>{externalPushAction === "enabling" ? "Connecting…" : externalPushAction === "disabling" ? "Turning off…" : userSettings.externalPushEnabled ? "Disable Push Reminders" : "Enable Push Reminders"}</button>}
                       <label className="settings-select-row">
                         <span>Remind me</span>
                         <select value={userSettings.reminderMinutes || 60} onChange={(e) => handleAddFieldSettingChange("reminderMinutes", Number(e.target.value))}>
@@ -9314,13 +9314,13 @@ function App() {
                         </select>
                       </label>
                       <p className="reminder-lead-copy">You’ll be reminded {formatReminderLeadTime(userSettings.reminderMinutes || 60)} before each assignment deadline.</p>
-                      {reminderLeadAlreadyPassedCount > 0 && <p className="hint-text">{reminderLeadAlreadyPassedCount} upcoming assignment{reminderLeadAlreadyPassedCount === 1 ? " is" : "s are"} already inside that reminder window, so TaskCabinet won’t schedule a late alert.</p>}
+                      {reminderLeadAlreadyPassedCount > 0 && <p className="hint-text">{reminderLeadAlreadyPassedCount} upcoming assignment{reminderLeadAlreadyPassedCount === 1 ? " is" : "s are"} already inside that reminder window, so GlowDocket won’t schedule a late alert.</p>}
                       <div className="external-push-actions"><button type="button" className="btn btn-secondary" onClick={handleExternalPushTest} disabled={!canSendReminderTest(reminderUserStatus, Boolean(externalPushAction))}>{externalPushAction === "testing" ? "Sending test…" : testReminderSent ? "Test sent" : "Send Test Reminder"}</button>{shouldShowRepairReminderSync(reminderUserStatus, externalPushStatus) && <button type="button" className="btn btn-secondary" onClick={handleExternalPushSync} disabled={Boolean(externalPushAction)}>{externalPushAction === "repairing" ? "Repairing…" : "Repair Reminder Sync"}</button>}</div>
                       {externalPushMessage && <p className="hint-text external-push-message">{externalPushMessage}</p>}
                       <p className="hint-text">Last successful sync: {externalPushLastSync ? new Date(externalPushLastSync).toLocaleString() : "Not yet"}</p>
                       <details className="reminder-technical-details"><summary>Connection details</summary><dl><div><dt>Browser connection</dt><dd>{externalPushDiagnostics.providerConnected ? "Connected" : "Not connected"}</dd></div><div><dt>Reminder setup</dt><dd>{externalPushDiagnostics.serverEnrolled ? "Ready" : "Needs attention"}</dd></div><div><dt>Update status</dt><dd>{{ idle: "Waiting", active: "Up to date", syncing: "Updating", sync_needed: "Update needed", cleanup_pending: "Finishing cleanup", failed: "Needs attention" }[externalPushDiagnostics.scheduling] || "Checking"}</dd></div>{externalPushDiagnostics.lastError && <div><dt>Latest check</dt><dd>Needs attention</dd></div>}</dl></details>
                       <p className="hint-text">Closed-app delivery depends on your browser, operating system, permission, internet connection, and device notification settings. Reminder text may appear on your lock screen.</p>
-                      {isAppleMobile && <p className="hint-text">On iPhone and iPad, add TaskCabinet to the Home Screen, open the installed app, and then enable Push Reminders.</p>}
+                      {isAppleMobile && <p className="hint-text">On iPhone and iPad, add GlowDocket to the Home Screen, open the installed app, and then enable Push Reminders.</p>}
                     </SettingsCard>
                     <SettingsCard title="Dashboard Reminder Range" description="Choose how far ahead the movable Reminders widget should look. This does not change browser-notification timing.">
                       <label className="settings-select-row">
@@ -9475,7 +9475,7 @@ function App() {
                       <div><strong>Assignment spreadsheet</strong><p>Exports assignment rows for Excel or Google Sheets. CSV files cannot restore the full app.</p><button type="button" className="btn btn-secondary" onClick={handleExportCsv}>Download Assignment CSV</button></div>
                       <div><strong>Restore from JSON</strong><p>Your current planner is backed up locally before the imported version replaces it.</p><label className="btn btn-secondary recovery-file-button">Choose JSON Backup<input type="file" accept="application/json,.json" onChange={handleImportBackup} /></label></div>
                     </div>
-                    {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="cloud-history-panel"><div><strong>Automatic cloud history</strong><p>TaskCabinet keeps up to 20 earlier versions. Restoring one safely makes it the current version without silently overwriting newer work.</p></div><button type="button" className="btn btn-secondary" disabled={cloudHistoryBusy} onClick={handleLoadCloudHistory}>{cloudHistoryBusy ? "Loading earlier versions…" : cloudHistory.length ? "Refresh History" : "View Earlier Versions"}</button>{cloudHistory.length > 0 && <ul>{cloudHistory.map((entry) => <li key={entry.id}><span><strong>{new Date(entry.created_at).toLocaleString()}</strong><small>{entry.state.tasks.length} assignments</small></span><button type="button" className="btn btn-secondary" onClick={() => handleRestoreCloudHistory(entry)}>Restore This Version</button></li>)}</ul>}</div>}
+                    {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="cloud-history-panel"><div><strong>Automatic cloud history</strong><p>GlowDocket keeps up to 20 earlier versions. Restoring one safely makes it the current version without silently overwriting newer work.</p></div><button type="button" className="btn btn-secondary" disabled={cloudHistoryBusy} onClick={handleLoadCloudHistory}>{cloudHistoryBusy ? "Loading earlier versions…" : cloudHistory.length ? "Refresh History" : "View Earlier Versions"}</button>{cloudHistory.length > 0 && <ul>{cloudHistory.map((entry) => <li key={entry.id}><span><strong>{new Date(entry.created_at).toLocaleString()}</strong><small>{entry.state.tasks.length} assignments</small></span><button type="button" className="btn btn-secondary" onClick={() => handleRestoreCloudHistory(entry)}>Restore This Version</button></li>)}</ul>}</div>}
                     {recoveryStatus.message && <div className={`account-update-message is-${recoveryStatus.type}`} role="status">{recoveryStatus.message}</div>}
                   </SettingsCard>
                 )}
@@ -9662,7 +9662,7 @@ function App() {
             {mobileMoreOpen && (
               <div className="mobile-app-sheet-backdrop" role="presentation" onClick={() => setMobileMoreOpen(false)}>
                 <section className="mobile-app-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" onClick={(event) => event.stopPropagation()}>
-                  <header><div><span id="mobile-more-title">TaskCabinet</span></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close account menu">×</button></header>
+                  <header><div><span id="mobile-more-title">GlowDocket</span></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close account menu">×</button></header>
                   <div className="mobile-app-menu-grid">
                     <button type="button" onClick={() => openMobileTab("mobile-tools")}><strong>Study tools</strong><span>Reminders and course overview</span></button>
                     <button type="button" onClick={() => openMobileTab("mobile-courses")}><strong>Courses & colors</strong><span>Manage your subjects</span></button>
@@ -10301,7 +10301,7 @@ function App() {
             {tutorialPracticeOpen ? (
               <div className="tutorial-practice">
                 <header className="tutorial-practice-header">
-                  <div><p className="eyebrow">Practice mode</p><h2 id="tutorial-title">{TUTORIAL_SLIDES[tutorialStep].title}</h2><p id="tutorial-copy">Try this feature safely. Nothing here is saved to your real TaskCabinet.</p></div>
+                  <div><p className="eyebrow">Practice mode</p><h2 id="tutorial-title">{TUTORIAL_SLIDES[tutorialStep].title}</h2><p id="tutorial-copy">Try this feature safely. Nothing here is saved to your real GlowDocket.</p></div>
                   <button type="button" className="btn btn-secondary" onClick={() => { if (tutorialStep !== tutorialPracticeHomeStep) setTutorialStep(tutorialPracticeHomeStep); else setTutorialPracticeOpen(false); }}>← {tutorialStep !== tutorialPracticeHomeStep ? "Back to First Practice Page" : "Back to Tutorial"}</button>
                 </header>
                 <main className="tutorial-practice-stage">
@@ -10309,7 +10309,7 @@ function App() {
                   {tutorialStep === 1 && <div className="practice-form"><h3>Add a practice assignment</h3><label>Assignment name<input value={tutorialPracticeNote} onChange={(event) => setTutorialPracticeNote(event.target.value)} placeholder="Try typing an assignment" /></label><div><label>Course<select><option>Biology</option><option>Work</option><option>Personal</option></select></label><label>Priority<select><option>High</option><option>Medium</option><option>Low</option></select></label></div><button type="button" className="btn btn-primary" disabled={!tutorialPracticeNote.trim()} onClick={() => setTutorialPracticeDone(["created"])}>{tutorialPracticeDone.includes("created") ? "Practice assignment added!" : "Add Assignment"}</button></div>}
                   {tutorialStep === 2 && <div className="practice-plan"><h3>Recommended Plan of Attack</h3><p>Choose an assignment to mark it complete.</p>{[["biology","Review cell structure","Due tomorrow · High priority"],["english","Literature response","Due Friday · 45 minutes"],["math","Practice problems","Due next week · 20 minutes"]].map(([id,title,detail], index) => <button type="button" className={tutorialPracticeDone.includes(id) ? "done" : ""} key={id} onClick={() => setTutorialPracticeDone((done) => done.includes(id) ? done.filter((item) => item !== id) : [...done,id])}><b>{index + 1}</b><span><strong>{title}</strong><small>{tutorialPracticeDone.includes(id) ? "Completed" : detail}</small></span></button>)}</div>}
                   {tutorialStep === 3 && <div className="practice-calendar"><section><h3>July 2026</h3><div>{Array.from({ length: 28 }, (_, index) => index + 1).map((day) => <button type="button" className={tutorialPracticeDate === day ? "selected" : ""} key={day} onClick={() => setTutorialPracticeDate(day)}>{day}</button>)}</div><p>Selected: July {tutorialPracticeDate}</p></section><section><h3>Study checklist</h3>{["Review notes","Practice problems","Pack materials"].map((item) => <label key={item}><input type="checkbox" checked={tutorialPracticeDone.includes(item)} onChange={() => setTutorialPracticeDone((done) => done.includes(item) ? done.filter((value) => value !== item) : [...done,item])} />{item}</label>)}</section></div>}
-                  {tutorialStep === 4 && <div className="practice-workspace"><p className="practice-widget-instruction">Open the <strong>Widgets</strong> tab in TaskCabinet to add widgets. Drag a six-dot handle to move a widget, or drag any edge or corner to resize it.</p>{[["plan","Plan of Attack","Biology review"],["calendar","Mini Calendar","3 deadlines"],["checklists","Checklists","1 of 3 complete"]].filter(([id]) => tutorialPracticeHiddenWidget !== id).map(([id,title,detail]) => <div key={id} style={{ left: tutorialWidgetLayout[id].x, top: tutorialWidgetLayout[id].y, width: tutorialWidgetLayout[id].width, height: tutorialWidgetLayout[id].height }}><header><button type="button" className="practice-widget-drag" aria-label={`Move ${title}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id)}>⠿</button><strong>{title}</strong><button type="button" className="practice-widget-menu-button" aria-label={`${title} options`} onClick={() => setTutorialPracticeWidgetMenu((open) => open === id ? "" : id)}>•••</button></header>{tutorialPracticeWidgetMenu === id && <button type="button" className="practice-widget-hide" onClick={() => { setTutorialPracticeHiddenWidget(id); setTutorialPracticeWidgetMenu(""); }}>Hide widget</button>}<span>{detail}</span>{[["top",{top:true}],["right",{right:true}],["bottom",{bottom:true}],["left",{left:true}],["top-left",{top:true,left:true}],["top-right",{top:true,right:true}],["bottom-right",{bottom:true,right:true}],["bottom-left",{bottom:true,left:true}]].map(([edge, edges]) => <button type="button" key={edge} className={`practice-widget-resize is-${edge}`} aria-label={`Resize ${title} from ${edge}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id, edges)} />)}</div>)}</div>}
+                  {tutorialStep === 4 && <div className="practice-workspace"><p className="practice-widget-instruction">Open the <strong>Widgets</strong> tab in GlowDocket to add widgets. Drag a six-dot handle to move a widget, or drag any edge or corner to resize it.</p>{[["plan","Plan of Attack","Biology review"],["calendar","Mini Calendar","3 deadlines"],["checklists","Checklists","1 of 3 complete"]].filter(([id]) => tutorialPracticeHiddenWidget !== id).map(([id,title,detail]) => <div key={id} style={{ left: tutorialWidgetLayout[id].x, top: tutorialWidgetLayout[id].y, width: tutorialWidgetLayout[id].width, height: tutorialWidgetLayout[id].height }}><header><button type="button" className="practice-widget-drag" aria-label={`Move ${title}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id)}>⠿</button><strong>{title}</strong><button type="button" className="practice-widget-menu-button" aria-label={`${title} options`} onClick={() => setTutorialPracticeWidgetMenu((open) => open === id ? "" : id)}>•••</button></header>{tutorialPracticeWidgetMenu === id && <button type="button" className="practice-widget-hide" onClick={() => { setTutorialPracticeHiddenWidget(id); setTutorialPracticeWidgetMenu(""); }}>Hide widget</button>}<span>{detail}</span>{[["top",{top:true}],["right",{right:true}],["bottom",{bottom:true}],["left",{left:true}],["top-left",{top:true,left:true}],["top-right",{top:true,right:true}],["bottom-right",{bottom:true,right:true}],["bottom-left",{bottom:true,left:true}]].map(([edge, edges]) => <button type="button" key={edge} className={`practice-widget-resize is-${edge}`} aria-label={`Resize ${title} from ${edge}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id, edges)} />)}</div>)}</div>}
                 </main>
               </div>
             ) : (<>
@@ -10348,7 +10348,7 @@ function App() {
           <section className="sync-conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="sync-conflict-title">
             <p className="eyebrow">Nothing will be overwritten automatically</p>
             <h2 id="sync-conflict-title">Choose which saved version to keep</h2>
-            <p>This device and the cloud both contain different TaskCabinet data. A local backup has already been saved in this browser.</p>
+            <p>This device and the cloud both contain different GlowDocket data. A local backup has already been saved in this browser.</p>
             <div className="sync-conflict-actions">
               <button type="button" className="btn btn-secondary" onClick={handleKeepCloudConflict}>Keep cloud data</button>
               <button type="button" className="btn btn-primary" onClick={handleUseDeviceConflict}>Use this device’s data</button>

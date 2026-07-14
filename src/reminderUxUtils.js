@@ -16,10 +16,10 @@ export function deriveReminderUserStatus({ featureEnabled, remindersEnabled, sup
 export function getReminderStatusCopy(status) {
   return {
     off: { title: "Push reminders are off", detail: "Push reminders are disabled." },
-    connecting: { title: "Connecting", detail: "TaskCabinet is connecting this browser." },
+    connecting: { title: "Connecting", detail: "GlowDocket is connecting this browser." },
     active: { title: "Push reminders are active", detail: "Reminders are up to date." },
     needs_attention: { title: "Push reminders need attention", detail: "Some reminders could not be updated." },
-    blocked: { title: "Notifications are blocked", detail: "TaskCabinet cannot reopen the browser permission prompt." },
+    blocked: { title: "Notifications are blocked", detail: "GlowDocket cannot reopen the browser permission prompt." },
     unsupported: { title: "Push reminders are unsupported", detail: "This browser or platform does not support the required notification features." },
   }[status];
 }
@@ -29,7 +29,7 @@ export const canSendReminderTest = (status, busy) => status === "active" && !bus
 
 export function friendlyReminderError(error, offline = false) {
   const message = String(error?.message || "");
-  if (offline || error?.name === "TypeError" || /failed to fetch|network|offline/i.test(message)) return "You’re offline. TaskCabinet will finish setting up reminders when you reconnect.";
+  if (offline || error?.name === "TypeError" || /failed to fetch|network|offline/i.test(message)) return "You’re offline. GlowDocket will finish setting up reminders when you reconnect.";
   if (/permission|blocked|denied/i.test(message)) return "Notifications are blocked. Allow them in your browser settings, then try again.";
   return "We couldn’t finish setting up reminders right now. Your assignments are safe. Try again in a moment.";
 }

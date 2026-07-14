@@ -102,7 +102,7 @@ function extractResponseText(payload) {
 async function transcribeAudio(audio, apiKey, courseNames) {
   const body = new FormData();
   body.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
-  body.append("file", audio, audio.name || "taskcabinet-voice.webm");
+  body.append("file", audio, audio.name || "glowdocket-voice.webm");
   if (courseNames.length > 0) {
     body.append("prompt", `Likely course names: ${courseNames.join(", ")}`);
   }
@@ -153,7 +153,7 @@ async function parseAssignments(transcript, context, apiKey) {
       text: {
         format: {
           type: "json_schema",
-          name: "taskcabinet_voice_assignments",
+          name: "glowdocket_voice_assignments",
           strict: true,
           schema: responseSchema,
         },

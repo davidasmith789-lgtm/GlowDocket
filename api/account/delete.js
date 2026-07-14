@@ -24,6 +24,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   } catch (error) {
     console.error("[account-delete] Supabase deletion failed", { message: messageFor(error) });
-    return res.status(500).json({ error: "TaskCabinet could not delete the account. No browser data was erased; please retry." });
+    return res.status(500).json({ error: "GlowDocket could not delete the account. No browser data was erased; please retry." });
   }
 }

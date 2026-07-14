@@ -1,6 +1,6 @@
 // Network-first service worker for the small installable application shell.
 // Compatibility-sensitive cache names retain the historical taskacadia prefix.
-const CACHE_NAME = "taskacadia-shell-v1";
+const CACHE_NAME = "taskacadia-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
