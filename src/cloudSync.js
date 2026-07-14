@@ -125,6 +125,21 @@ export async function replaceCloudSnapshot(client, userId, state, expectedRevisi
   return data;
 }
 
+export async function loadCloudHistory(client, userId, limit = 10) {
+  const { data, error } = await client.from("taskcabinet_cloud_history").select("id,state,revision,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return (data || []).map((item) => ({ ...item, state: validateCloudState(item.state), revision: Number(item.revision) || 0 }));
+}
+
+export function createPortableExport(state, exportedAt = new Date().toISOString()) {
+  return { format: "taskcabinet-export", version: 1, exportedAt, data: validateCloudState(state) };
+}
+
+export function parsePortableExport(value) {
+  if (!value || value.format !== "taskcabinet-export" || Number(value.version) !== 1) throw new Error("This is not a supported TaskCabinet export file.");
+  return validateCloudState(value.data);
+}
+
 export function getCloudStateFingerprint(state) {
   return JSON.stringify(Object.fromEntries(ACCOUNT_FIELDS.map((key) => [key, state?.[key]])));
 }

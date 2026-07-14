@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, readLegacySnapshot, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -77,4 +77,12 @@ test("deleting a cloud account clears only that account's browser data", () => {
   assert.equal(storage.getItem("tasks_deleted-user"), null);
   assert.equal(storage.getItem("taskcabinet_cloud_backup_deleted-user_123"), null);
   assert.equal(storage.getItem("tasks_other-user"), "keep");
+});
+
+test("portable exports round-trip validated planner data", () => {
+  const original = state({ tasks: [{ id: "assignment", title: "Essay" }] });
+  const exported = createPortableExport(original, "2026-07-13T12:00:00.000Z");
+  assert.equal(exported.format, "taskcabinet-export");
+  assert.deepEqual(parsePortableExport(exported), original);
+  assert.throws(() => parsePortableExport({ format: "unknown" }), /supported/i);
 });

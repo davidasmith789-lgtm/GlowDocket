@@ -40,7 +40,8 @@ import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalRe
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -65,7 +66,7 @@ const DEFAULT_USER_SETTINGS = {
   defaultDueTime: "11:00",
   defaultDueAmPm: "PM",
   autoCompleteChecklist: true,
-  confirmBeforeTrash: false,
+  confirmBeforeTrash: true,
   notificationsEnabled: false,
   externalPushEnabled: false,
   reminderMinutes: 60,
@@ -1801,6 +1802,10 @@ function App() {
   });
   const tutorialRef = useRef(null);
   const [storageView, setStorageView] = useState(null);
+  const [deletedAssignmentUndo, setDeletedAssignmentUndo] = useState(null);
+  const [recoveryStatus, setRecoveryStatus] = useState({ type: "", message: "" });
+  const [cloudHistory, setCloudHistory] = useState([]);
+  const [cloudHistoryBusy, setCloudHistoryBusy] = useState(false);
   const [draggedSettingsSection, setDraggedSettingsSection] = useState(null);
   const [settingsDropTarget, setSettingsDropTarget] = useState(null);
   const [appearanceSettingsOpen, setAppearanceSettingsOpen] = useState(true);
@@ -2322,6 +2327,28 @@ function App() {
     const intervalId = window.setInterval(() => setChecklistNow(new Date()), 60000);
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+    const removeExpiredTrash = () => {
+      const expired = tasks.filter((task) => isTrashExpired(task));
+      if (expired.length === 0) return;
+      const remaining = tasks.filter((task) => !isTrashExpired(task));
+      expired.flatMap((task) => getSafeAttachments(task)).forEach((attachment) => {
+        const stillReferenced = remaining.some((task) => getSafeAttachments(task).some((item) => item.id === attachment.id));
+        if (!stillReferenced) deleteAttachmentFile(attachment.id).catch((error) => console.error("Failed to auto-delete expired Trash attachment:", error));
+      });
+      setTasks(remaining);
+      try {
+        localStorage.setItem(currentStorageKey, JSON.stringify(remaining));
+      } catch (error) {
+        console.error("Failed to save automatic Trash cleanup:", error);
+      }
+    };
+    removeExpiredTrash();
+    const intervalId = window.setInterval(removeExpiredTrash, 60 * 60 * 1000);
+    return () => window.clearInterval(intervalId);
+  }, [currentStorageKey, currentUser, tasks]);
 
   useEffect(() => {
     const handleResize = () => setWorkspaceMode(getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
@@ -3992,7 +4019,7 @@ function App() {
   // Deleting moves an assignment to recoverable Trash instead of erasing it.
   const handleDelete = (id) => {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
-    if (userSettings.confirmBeforeTrash) {
+    if (userSettings.confirmBeforeTrash !== false) {
       const taskToDelete = tasks.find((task) => task.id === id);
       const confirmed = window.confirm(
         `Move "${taskToDelete?.title || "this assignment"}" to Trash?`,
@@ -4001,6 +4028,7 @@ function App() {
     }
 
     const deletedAt = new Date().toISOString();
+    setDeletedAssignmentUndo({ id, title: taskBeingDeleted?.title || "Assignment" });
 
     setTasks((prev) => {
       const updated = prev.map((task) =>
@@ -4714,6 +4742,12 @@ function App() {
     } finally { setAccountUpdateBusy(""); }
   };
 
+  const handleUndoDeletedAssignment = () => {
+    if (!deletedAssignmentUndo) return;
+    handleRestoreDeleted(deletedAssignmentUndo.id);
+    setDeletedAssignmentUndo(null);
+  };
+
   const handleResendVerification = async () => {
     setAccountUpdateBusy("verification");
     setAccountUpdateStatus({ type: "", message: "" });
@@ -4776,6 +4810,74 @@ function App() {
     } catch (error) {
       setAccountUpdateStatus({ type: "error", message: error.message || "Account deletion failed. Your data has not been erased from this browser." });
     } finally { setAccountUpdateBusy(""); }
+  };
+
+  const getCurrentPortableState = () => collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
+  const downloadTextFile = (name, text, type) => {
+    const url = URL.createObjectURL(new Blob([text], { type }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = name;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+  const exportFileDate = () => new Date().toISOString().slice(0, 10);
+
+  const handleExportJson = () => {
+    downloadTextFile(`taskcabinet-backup-${exportFileDate()}.json`, JSON.stringify(createPortableExport(getCurrentPortableState()), null, 2), "application/json");
+    setRecoveryStatus({ type: "success", message: "Complete JSON backup downloaded. Keep it somewhere safe; this file can restore your planner." });
+  };
+
+  const handleExportCsv = () => {
+    const columns = ["title", "course", "dueYear", "dueMonth", "dueDay", "dueTime", "priority", "estimatedMinutes", "status", "notes", "isArchived", "isDeleted"];
+    const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const rows = tasks.map((task) => columns.map((column) => escape(column === "status" ? getTaskStatus(task) : task[column])).join(","));
+    downloadTextFile(`taskcabinet-assignments-${exportFileDate()}.csv`, [columns.join(","), ...rows].join("\r\n"), "text/csv;charset=utf-8");
+    setRecoveryStatus({ type: "success", message: "Assignment CSV downloaded for spreadsheets. Use the JSON backup—not CSV—to restore TaskCabinet." });
+  };
+
+  const applyRecoveryState = (state) => {
+    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, customColors: userSettings.customColors };
+    saveLocalBackup(localStorage, currentUser, getCurrentPortableState());
+    applyCloudStateToLocal(localStorage, currentUser, state, deviceSettings);
+    setTasks(state.tasks);
+    setCourses(state.courses);
+    setCourseColors(state.courseColors);
+    setUserSettings({ ...DEFAULT_USER_SETTINGS, ...state.userSettings, ...deviceSettings });
+    setChecklists(state.checklists);
+    setWorkspaceLayout(repairLoadedWorkspace(state.workspaceLayout));
+    setDisplayName(resolveProfileDisplayName(state.displayName, currentUser, displayName));
+  };
+
+  const handleImportBackup = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const state = parsePortableExport(JSON.parse(await file.text()));
+      if (!window.confirm(`Restore the TaskCabinet backup from this file? Your current planner will be backed up in this browser first, then replaced. The imported version contains ${state.tasks.length} assignment${state.tasks.length === 1 ? "" : "s"}.`)) return;
+      applyRecoveryState(state);
+      setRecoveryStatus({ type: "success", message: "Backup restored. TaskCabinet saved your previous version locally in case you need it." });
+    } catch (error) {
+      setRecoveryStatus({ type: "error", message: error.message || "TaskCabinet could not read that backup." });
+    }
+  };
+
+  const handleLoadCloudHistory = async () => {
+    setCloudHistoryBusy(true);
+    setRecoveryStatus({ type: "", message: "" });
+    try {
+      setCloudHistory(await loadCloudHistory(getSupabaseBrowserClient(), currentUser));
+    } catch (error) {
+      setRecoveryStatus({ type: "error", message: error.message || "Cloud backup history could not be loaded. Make sure the history migration has been installed." });
+    } finally { setCloudHistoryBusy(false); }
+  };
+
+  const handleRestoreCloudHistory = (entry) => {
+    if (!window.confirm(`Restore the cloud backup saved ${new Date(entry.created_at).toLocaleString()}? Your current planner will be preserved as another recoverable version.`)) return;
+    applyRecoveryState(entry.state);
+    setRecoveryStatus({ type: "success", message: "Earlier cloud version restored. It will sync as the newest version without bypassing conflict protection." });
+    setCloudHistory([]);
   };
 
   const handleRecommendationSubmit = async (event) => {
@@ -9020,14 +9122,14 @@ function App() {
 
                 {settingsSection === "account" && (
                   CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
-                    <SettingsCard title="Preferred Name" description="What should TaskCabinet call you? This can appear in friendly greetings and reminders, but it is never your sign-in or external identity.">
+                    <SettingsCard title="Preferred Name" description="What should TaskCabinet call you? This can appear in friendly greetings and reminders, but it is never your sign-in or external identity." className="settings-section-wide account-top-card">
                       <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
                         <label htmlFor="account-display-name">Preferred name</label>
                         <input id="account-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
                         <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button>
                       </form>
                     </SettingsCard>
-                    <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. Supabase may ask you to confirm both addresses.`}>
+                    <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. Supabase may ask you to confirm both addresses.`} className="settings-section-wide account-top-card">
                       <div className={`account-verification-status ${accountEmailVerified ? "is-verified" : "is-unverified"}`}>
                         <strong>{accountEmailVerified ? "Email verified" : "Email verification needed"}</strong>
                         <span>{accountEmailVerified ? "Your sign-in email has been confirmed." : "Confirm your email to make account recovery and secure sign-in fully available."}</span>
@@ -9257,7 +9359,7 @@ function App() {
                     </SettingsCard>
                     <SettingsCard title="Workflow & Safety" description="Control automatic behavior and extra safeguards.">
                       <label className="settings-toggle settings-toggle-copy"><span><strong>Complete finished checklists</strong><small>Complete an assignment when every checklist item is checked.</small></span><input type="checkbox" checked={userSettings.autoCompleteChecklist !== false} onChange={(e) => handleAddFieldSettingChange("autoCompleteChecklist", e.target.checked)} /></label>
-                      <label className="settings-toggle settings-toggle-copy"><span><strong>Confirm before Trash</strong><small>Ask before moving an assignment into recoverable Trash.</small></span><input type="checkbox" checked={Boolean(userSettings.confirmBeforeTrash)} onChange={(e) => handleAddFieldSettingChange("confirmBeforeTrash", e.target.checked)} /></label>
+                      <label className="settings-toggle settings-toggle-copy"><span><strong>Confirm before Trash</strong><small>Ask before moving an assignment into recoverable Trash.</small></span><input type="checkbox" checked={userSettings.confirmBeforeTrash !== false} onChange={(e) => handleAddFieldSettingChange("confirmBeforeTrash", e.target.checked)} /></label>
                     </SettingsCard>
                   </>
                 )}
@@ -9269,10 +9371,22 @@ function App() {
                       <span className="settings-count">{archivedTasks.length}</span>
                     </button>
                     <button type="button" className="storage-choice-card" onClick={() => setStorageView("trash")}>
-                      <span><strong>Trash</strong><small>Recover assignments or remove them permanently.</small></span>
+                      <span><strong>Trash</strong><small>Recover assignments before they are automatically deleted after 30 days.</small></span>
                       <span className="settings-count">{trashTasks.length}</span>
                     </button>
                   </div>
+                )}
+
+                {settingsSection === "storage" && (
+                  <SettingsCard title="Backup & Restore" description="Download a copy you control, restore a complete JSON backup, or recover an earlier cloud version." className="settings-section-wide recovery-center-card">
+                    <div className="recovery-action-grid">
+                      <div><strong>Complete JSON backup</strong><p>Includes assignments, Trash, checklists, courses, preferences, and workspace layouts. Attachment files are browser-only and are not included.</p><button type="button" className="btn btn-primary" onClick={handleExportJson}>Download JSON Backup</button></div>
+                      <div><strong>Assignment spreadsheet</strong><p>Exports assignment rows for Excel or Google Sheets. CSV files cannot restore the full app.</p><button type="button" className="btn btn-secondary" onClick={handleExportCsv}>Download Assignment CSV</button></div>
+                      <div><strong>Restore from JSON</strong><p>Your current planner is backed up locally before the imported version replaces it.</p><label className="btn btn-secondary recovery-file-button">Choose JSON Backup<input type="file" accept="application/json,.json" onChange={handleImportBackup} /></label></div>
+                    </div>
+                    {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="cloud-history-panel"><div><strong>Automatic cloud history</strong><p>TaskCabinet keeps up to 20 prior cloud versions. Restoring one creates a new current version and still uses revision conflict protection.</p></div><button type="button" className="btn btn-secondary" disabled={cloudHistoryBusy} onClick={handleLoadCloudHistory}>{cloudHistoryBusy ? "Loading…" : cloudHistory.length ? "Refresh History" : "View Cloud History"}</button>{cloudHistory.length > 0 && <ul>{cloudHistory.map((entry) => <li key={entry.id}><span><strong>{new Date(entry.created_at).toLocaleString()}</strong><small>Revision {entry.revision} · {entry.state.tasks.length} assignments</small></span><button type="button" className="btn btn-secondary" onClick={() => handleRestoreCloudHistory(entry)}>Restore This Version</button></li>)}</ul>}</div>}
+                    {recoveryStatus.message && <div className={`account-update-message is-${recoveryStatus.type}`} role="status">{recoveryStatus.message}</div>}
+                  </SettingsCard>
                 )}
 
                 <details className="settings-section settings-storage-section" hidden>
@@ -9405,7 +9519,7 @@ function App() {
                           <ul className="storage-management-list">
                             {archivedTasks.map((task) => (
                               <li key={task.id} className="task-card storage-management-card">
-                                <div><strong>{task.title}</strong><div className="task-details">{formatTaskDetails(task)}</div></div>
+                                <div><strong>{task.title}</strong><div className="task-details">{formatTaskDetails(task)}</div>{getTrashDaysRemaining(task) !== null && <div className="trash-retention-note">Auto-deletes in {getTrashDaysRemaining(task)} day{getTrashDaysRemaining(task) === 1 ? "" : "s"}</div>}</div>
                                 <div className="task-actions">
                                   <button type="button" className="btn btn-secondary" onClick={() => handleRestoreArchived(task.id)}>Restore</button>
                                   {renderVoiceUndoAction(task)}
@@ -10161,6 +10275,13 @@ function App() {
         >
           <span aria-hidden="true">✓</span>
           <div><strong>Nice work!</strong><small>{completionCelebration.title} is complete.</small></div>
+        </div>
+      )}
+      {deletedAssignmentUndo && (
+        <div className="delete-undo-toast" role="status">
+          <span><strong>Moved to Trash</strong><small>{deletedAssignmentUndo.title} can still be recovered.</small></span>
+          <button type="button" className="btn btn-secondary" onClick={handleUndoDeletedAssignment}>Undo</button>
+          <button type="button" className="delete-undo-dismiss" aria-label="Dismiss undo message" onClick={() => setDeletedAssignmentUndo(null)}>×</button>
         </div>
       )}
       <Analytics />

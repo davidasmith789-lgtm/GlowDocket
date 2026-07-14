@@ -3201,6 +3201,7 @@ html[data-theme="dark"] .edit-notes-side {
 .recommended-plan-title-row strong {
   overflow-wrap: anywhere;
 }
+.trash-retention-note { margin-top: 6px; color: var(--danger-color); font-size: 0.82rem; font-weight: 800; }
 
 html[data-theme="light"] .recommended-plan-title-row strong,
 html[data-theme="light"] .recommended-plan-button {
@@ -5222,6 +5223,24 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .account-management-action .btn { flex: 0 0 auto; }
 .account-danger-zone { border-color: color-mix(in srgb, var(--danger-color) 38%, var(--border-color)); }
 @media (max-width: 700px) { .account-management-action { flex-direction: column; } .account-management-action .btn { width: 100%; } }
+.account-top-card { width: 100%; }
+.recovery-action-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.recovery-action-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
+.recovery-action-grid p, .cloud-history-panel p { margin: 0; color: var(--muted-text); line-height: 1.45; }
+.recovery-action-grid .btn { margin-top: auto; }
+.recovery-file-button { cursor: pointer; }
+.recovery-file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cloud-history-panel { display: grid; gap: 12px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+.cloud-history-panel > .btn { width: fit-content; }
+.cloud-history-panel ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cloud-history-panel li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--border-color); border-radius: 10px; }
+.cloud-history-panel li span { display: grid; gap: 3px; }
+.cloud-history-panel small { color: var(--muted-text); }
+.delete-undo-toast { position: fixed; z-index: 10020; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 14px; width: min(440px, calc(100vw - 32px)); padding: 14px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--card-bg); color: var(--text-color); box-shadow: var(--shadow-card); }
+.delete-undo-toast span { display: grid; flex: 1; gap: 2px; }
+.delete-undo-toast small { color: var(--muted-text); }
+.delete-undo-dismiss { border: 0; background: transparent; color: var(--muted-text); font-size: 1.35rem; cursor: pointer; }
+@media (max-width: 850px) { .recovery-action-grid { grid-template-columns: 1fr; } .cloud-history-panel li { align-items: stretch; flex-direction: column; } .delete-undo-toast { right: 16px; bottom: 84px; } }
 .account-update-message { padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); color: var(--text-color); font-weight: 700; }
 .account-update-message.is-success { border-color: color-mix(in srgb, var(--success-color) 55%, var(--border-color)); color: var(--success-color); }
 .account-update-message.is-error { border-color: color-mix(in srgb, var(--danger-color) 55%, var(--border-color)); color: var(--danger-color); }

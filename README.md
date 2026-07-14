@@ -49,6 +49,8 @@ Attachments are stored in IndexedDB. Compatibility-sensitive keys still use the 
 - **Calendar:** fixed full-calendar month/week views plus a movable dashboard mini calendar.
 - **Checklists:** independent colored lists with optional deadlines and reminders.
 - **Settings:** assignment defaults, field visibility, calendar behavior, notifications, school cycles, appearance, custom themes, archive, trash, and workspace guidance.
+
+Assignments moved to Trash remain recoverable for 30 days. TaskCabinet permanently removes expired Trash assignments the next time the app is open (and checks hourly while it remains open), including attachment blobs that are no longer referenced by another assignment. The deletion then follows the normal local/cloud sync path.
 - **Imports:** pasted assignment lists and local PDF, DOCX, TXT, Markdown, or CSV syllabus extraction.
 
 ## Voice assignments
@@ -122,6 +124,8 @@ Sync is local-first: local writes happen immediately, cloud writes are debounced
 Signed-out visitors see the public TaskCabinet welcome page with Sign In and Create Account embedded on the same page. Supabase account users can choose **Forgot password?** to request a recovery email. The recovery link returns to the configured TaskCabinet origin, opens the new-password form, and keeps the recovered session signed in after a successful update. Supabase Auth sends and validates these emails; SMTP secrets and service credentials must never be placed in React code or a `VITE_` variable. Local-only browser profiles do not have email recovery until they add an email and enable account sync from Account Settings.
 
 Cloud users can manage verification, display name, email, password, global sign-out, and permanent deletion under **Settings > Account**. `/api/account/delete` validates the signed-in user's access token, then uses the server-only `SUPABASE_SECRET_KEY` to delete that exact Auth user. The `taskcabinet_cloud_state` foreign key uses `on delete cascade`, so deleting the Auth user also permanently removes the user's cloud planner snapshot. The current browser's account-scoped planner cache and attachment blobs are removed only after the server confirms deletion. Offline copies on other devices cannot be remotely erased from browser storage; those devices lose cloud access as their sessions expire and should have their site data cleared if they will never reconnect.
+
+**Settings > Storage > Backup & Restore** provides a complete restorable JSON export, a spreadsheet-friendly assignment CSV, confirmed JSON restore, and cloud snapshot history. Run `supabase/migrations/202607130003_create_taskcabinet_cloud_history.sql` to enable automatic history. The database trigger records the prior state before each meaningful cloud update and retains the newest 20 versions per user. History remains protected by RLS, and restores still pass through the existing revision-checked save path. Attachment blobs are not included in JSON or cloud history because they remain device-local in IndexedDB.
 
 Two-device test:
 
