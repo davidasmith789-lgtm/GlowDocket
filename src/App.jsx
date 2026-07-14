@@ -45,6 +45,7 @@ import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
 import { MANUAL_ACCESSIBILITY_CHECKS, runAccessibilityAudit } from "./accessibilityAudit.js";
+import { RECOVERY_SESSION_KEY } from "./AppErrorBoundary.jsx";
 import GlowDocketLogo from "./GlowDocketLogo.jsx";
 /*
  * GLOWDOCKET APPLICATION MAP
@@ -721,6 +722,14 @@ function friendlyAttachmentStorageError(error) {
   return error?.name === "QuotaExceededError"
     ? "This browser does not have enough storage space for the selected attachments. Remove unused files and try again."
     : "The selected file could not be stored in this browser.";
+}
+
+function recoveryRequestedOnLoad() {
+  try {
+    return sessionStorage.getItem(RECOVERY_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1748,7 +1757,7 @@ function App() {
   const externalPushActionGuardRef = useRef(createReminderActionGuard());
   const [externalPushSubscriptionVersion, setExternalPushSubscriptionVersion] = useState(0);
   const externalPushSyncTimerRef = useRef(null);
-  const [currentTab, setCurrentTab] = useState("dashboard");
+  const [currentTab, setCurrentTab] = useState(() => recoveryRequestedOnLoad() ? "settings" : "dashboard");
   const [recommendationMessage, setRecommendationMessage] = useState("");
   const [recommendationStatus, setRecommendationStatus] = useState("idle");
   const [recommendationFeedback, setRecommendationFeedback] = useState("");
@@ -1833,7 +1842,7 @@ function App() {
   const [courseColorsOpen, setCourseColorsOpen] = useState(true);
   const [completionCelebration, setCompletionCelebration] = useState(null);
   const completionCelebrationSequenceRef = useRef(0);
-  const [settingsSection, setSettingsSection] = useState("personalization");
+  const [settingsSection, setSettingsSection] = useState(() => recoveryRequestedOnLoad() ? "storage" : "personalization");
   const [accessibilityAudit, setAccessibilityAudit] = useState(null);
   const [manualAccessibilityChecks, setManualAccessibilityChecks] = useState([]);
   const [tutorialOpen, setTutorialOpen] = useState(false);
@@ -2989,6 +2998,20 @@ function App() {
     setIsMobileUi(query.matches);
     query.addEventListener?.("change", handleMobileUiChange);
     return () => query.removeEventListener?.("change", handleMobileUiChange);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(RECOVERY_SESSION_KEY) !== "1") return;
+      sessionStorage.removeItem(RECOVERY_SESSION_KEY);
+      setCurrentTab("settings");
+      setSettingsSection("storage");
+      setStorageView(null);
+      setMobileMoreOpen(false);
+      setMobileSettingsOpen(true);
+    } catch {
+      // Recovery routing is optional; normal app loading remains available.
+    }
   }, []);
 
   useEffect(() => {

@@ -59,6 +59,22 @@ body {
   margin: 0;
 }
 
+.app-error-boundary-content { display: contents; }
+.app-crash-screen { display: grid; width: 100%; min-height: 100svh; padding: 24px; place-items: center; box-sizing: border-box; text-align: left; }
+.app-crash-card { display: grid; width: min(620px, 100%); gap: 14px; padding: clamp(22px, 5vw, 40px); border: 1px solid var(--border); border-radius: 24px; background: var(--bg); box-shadow: var(--shadow); box-sizing: border-box; }
+.app-crash-mark { display: grid; width: 54px; height: 54px; place-items: center; border-radius: 16px; background: var(--accent-bg); color: var(--accent); font-size: 2rem; font-weight: 900; }
+.app-crash-card .eyebrow { color: var(--accent); font-size: .75rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.app-crash-card h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.7rem); line-height: 1.1; }
+.app-crash-card > p { color: var(--text); line-height: 1.6; }
+.app-crash-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.app-crash-actions button { min-height: 46px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--code-bg); color: var(--text-h); font: inherit; font-weight: 800; cursor: pointer; }
+.app-crash-actions .btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+.app-crash-actions button:focus-visible, .app-crash-details summary:focus-visible, .app-crash-card h1:focus-visible { outline: 3px solid var(--accent-border); outline-offset: 3px; }
+.app-crash-details { margin-top: 6px; color: var(--text); }
+.app-crash-details summary { width: fit-content; cursor: pointer; font-weight: 700; }
+.app-crash-details code { display: block; margin-top: 10px; overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 560px) { .app-crash-screen { padding: 12px; } .app-crash-actions { display: grid; } .app-crash-actions button { width: 100%; } }
+
 #root {
   width: 1126px;
   max-width: 100%;

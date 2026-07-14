@@ -2,12 +2,15 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import AppErrorBoundary from './AppErrorBoundary.jsx'
 
 // Mount the single-page application. StrictMode catches unsafe React behavior
 // during local development without changing the production interface.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 )
 
