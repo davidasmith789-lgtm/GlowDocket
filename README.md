@@ -2,6 +2,8 @@
 
 TaskCabinet is a browser-local assignment planner built for students. It combines assignment tracking, due-date planning, course organization, independent checklists, calendar views, recommendations, workspace widgets, personalization, archive/trash recovery, and optional browser notifications in one React application.
 
+User-facing errors should explain what happened, whether work remains safe on the device, and what the user can do next. Provider names, request details, identifiers, and raw service errors belong only in developer logs or protected diagnostics—not ordinary interface copy.
+
 ## Run locally
 
 Requirements: a current Node.js release and npm.

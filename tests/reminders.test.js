@@ -225,8 +225,8 @@ test("action guard prevents duplicate reminder requests", async () => {
 });
 
 test("friendly offline messaging hides raw fetch errors and success clears stale diagnostics", () => {
-  assert.equal(friendlyReminderError(new TypeError("Failed to fetch")), "TaskCabinet will retry when you’re back online.");
-  assert.equal(friendlyReminderError(new Error("provider exploded")), "Some reminders could not be updated.");
+  assert.equal(friendlyReminderError(new TypeError("Failed to fetch")), "You’re offline. TaskCabinet will finish setting up reminders when you reconnect.");
+  assert.equal(friendlyReminderError(new Error("provider exploded")), "We couldn’t finish setting up reminders right now. Your assignments are safe. Try again in a moment.");
   assert.deepEqual(clearReminderFailure({ lastError: "old failure", scheduling: "failed" }, { scheduling: "active" }), { lastError: "", scheduling: "active" });
 });
 

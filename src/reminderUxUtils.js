@@ -28,8 +28,10 @@ export const shouldShowRepairReminderSync = (status, rawStatus) => status === "n
 export const canSendReminderTest = (status, busy) => status === "active" && !busy;
 
 export function friendlyReminderError(error, offline = false) {
-  if (offline || error?.name === "TypeError" || /failed to fetch|network|offline/i.test(String(error?.message || ""))) return "TaskCabinet will retry when you’re back online.";
-  return "Some reminders could not be updated.";
+  const message = String(error?.message || "");
+  if (offline || error?.name === "TypeError" || /failed to fetch|network|offline/i.test(message)) return "You’re offline. TaskCabinet will finish setting up reminders when you reconnect.";
+  if (/permission|blocked|denied/i.test(message)) return "Notifications are blocked. Allow them in your browser settings, then try again.";
+  return "We couldn’t finish setting up reminders right now. Your assignments are safe. Try again in a moment.";
 }
 
 export function formatReminderLeadTime(minutes) {

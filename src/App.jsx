@@ -42,6 +42,7 @@ import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, d
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
 import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
+import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -1089,7 +1090,7 @@ const PERSONALIZATION_TIPS = [
   ["Accounts and profiles", "With account sync configured, your assignments and personalization can follow your email account. Push permission, reminder connection, and attachment files still belong to each browser."],
   ["Forgot your password", "On the welcome page, choose Sign In and then Forgot password? Enter your account email, open the recovery link, and choose a new password. Your planner data is not reset."],
   ["Password eye buttons", "Each password box has its own eye button. Showing one password never reveals the confirmation box, so you can check either entry safely."],
-  ["Preferred name", "Add the name you like to be called under Account. TaskCabinet can use it in friendly greetings and reminders, but never as your sign-in or OneSignal identity."],
+  ["Preferred name", "Add the name you like to be called under Account. TaskCabinet can use it in friendly greetings and reminders, but never as your sign-in identity."],
   ["Welcome page", "The public welcome page explains TaskCabinet before you sign in. Get Started and I Already Have an Account both move you straight to the account panel."],
   ["Keep local data safe", "TaskCabinet saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
 ];
@@ -1569,6 +1570,7 @@ function App() {
   const [authInitializing, setAuthInitializing] = useState(CLOUD_SYNC_CONFIGURED);
   const [syncStatus, setSyncStatus] = useState(CLOUD_SYNC_CONFIGURED ? "initializing" : "local-only");
   const [syncError, setSyncError] = useState("");
+  const [assignmentSaveError, setAssignmentSaveError] = useState("");
   const [syncConflict, setSyncConflict] = useState(null);
   const [syncConflictOpen, setSyncConflictOpen] = useState(false);
   const [syncRetryNonce, setSyncRetryNonce] = useState(0);
@@ -1580,6 +1582,7 @@ function App() {
   const cloudConflictResolutionRef = useRef(false);
   const latestCloudStateRef = useRef(null);
   const cloudLastSavedFingerprintRef = useRef("");
+  const intentionalSignOutRef = useRef(false);
   const authPanelRef = useRef(null);
 
   const waitForCloudRequest = async (request, message) => {
@@ -1922,8 +1925,15 @@ function App() {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
     const client = getSupabaseBrowserClient();
     let mounted = true;
+    const initializationTimer = window.setTimeout(() => {
+      if (!mounted) return;
+      setAuthInitializing(false);
+      setSyncStatus("local-only");
+      setAuthError("TaskCabinet couldn’t reach the sign-in service. Check your connection and try again.");
+    }, 15000);
     client.auth.getSession().then(({ data }) => {
       if (!mounted) return;
+      window.clearTimeout(initializationTimer);
       const user = data.session?.user;
       if (user) {
         setCurrentUser(user.id);
@@ -1936,8 +1946,10 @@ function App() {
       }
       setAuthInitializing(false);
       if (!user) setSyncStatus("local-only");
-    }).catch(() => {
-      if (mounted) { setAuthInitializing(false); setSyncStatus("local-only"); }
+    }).catch((error) => {
+      window.clearTimeout(initializationTimer);
+      console.error("Session restoration failed:", error);
+      if (mounted) { setAuthInitializing(false); setSyncStatus("local-only"); setAuthError(friendlyAccountError(error, { offline: !navigator.onLine })); }
     });
     const { data: listener } = client.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
@@ -1948,6 +1960,15 @@ function App() {
         setAuthInitializing(false);
       }
       const user = session?.user;
+      if (event === "SIGNED_OUT") {
+        const wasIntentional = intentionalSignOutRef.current;
+        intentionalSignOutRef.current = false;
+        setCurrentUser("");
+        setAccountMode("signed-out");
+        setSyncStatus("local-only");
+        if (!wasIntentional) setAuthError("Your sign-in expired. Sign in again to reconnect your saved planner.");
+        return;
+      }
       if (user) {
         setCurrentUser(user.id);
         setAccountMode("cloud");
@@ -1958,7 +1979,7 @@ function App() {
         setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
       }
     });
-    return () => { mounted = false; listener.subscription.unsubscribe(); };
+    return () => { mounted = false; window.clearTimeout(initializationTimer); listener.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -2030,7 +2051,8 @@ function App() {
         setSyncStatus("saved");
       } catch (error) {
         if (cancelled) return;
-        setSyncError(error.message || "Cloud sync could not start.");
+        console.error("Cloud loading failed:", error);
+        setSyncError(friendlyCloudSaveError({ offline: !navigator.onLine }));
         setSyncStatus(navigator.onLine ? "failed" : "offline");
       }
     };
@@ -2078,7 +2100,8 @@ function App() {
           setSyncStatus("conflict");
         } else {
           cloudSaveQueuedRef.current = false;
-          setSyncError(error.message || "Cloud save failed.");
+          console.error("Cloud saving failed:", error);
+          setSyncError(friendlyCloudSaveError({ offline: !navigator.onLine }));
           setSyncStatus(navigator.onLine ? "failed" : "offline");
         }
       } finally {
@@ -2092,8 +2115,8 @@ function App() {
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
-    const handleOnline = () => { if (accountMode === "cloud" && currentUser && ["offline", "failed"].includes(syncStatus)) { setSyncStatus("saving"); setSyncRetryNonce((value) => value + 1); } };
-    const handleOffline = () => { if (accountMode === "cloud" && currentUser) setSyncStatus("offline"); };
+    const handleOnline = () => { if (accountMode === "cloud" && currentUser && ["offline", "failed"].includes(syncStatus)) { setSyncStatus("reconnecting"); window.setTimeout(() => setSyncRetryNonce((value) => value + 1), 250); } };
+    const handleOffline = () => { if (accountMode === "cloud" && currentUser) { setSyncError(friendlyCloudSaveError({ offline: true })); setSyncStatus("offline"); } };
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
@@ -3379,8 +3402,10 @@ function App() {
   const saveTasksForCurrentUser = (updated) => {
     try {
       localStorage.setItem(currentStorageKey, JSON.stringify(updated));
+      setAssignmentSaveError("");
     } catch (error) {
       console.error("Failed to save tasks to localStorage:", error);
+      setAssignmentSaveError("We couldn’t save that assignment on this device. Keep this page open, free some browser storage, and try again.");
     }
   };
 
@@ -4528,7 +4553,7 @@ function App() {
       setCurrentTab("dashboard");
     } catch (error) {
       console.error("Account error:", error);
-      setAuthError(CLOUD_SYNC_CONFIGURED ? (error.message || "TaskCabinet could not reach your account. Check your connection and try again.") : "This browser could not save or verify the local account.");
+      setAuthError(CLOUD_SYNC_CONFIGURED ? friendlyAccountError(error, { offline: !navigator.onLine }) : "This browser could not save or verify the local account.");
     } finally {
       setAuthBusy(false);
     }
@@ -4541,7 +4566,7 @@ function App() {
     setSelectedChecklistId(null);
     setCalendarAddOpen(false);
     if (currentUser && userSettings.externalPushEnabled) await cancelAllExternalReminders(currentUser);
-    if (CLOUD_SYNC_CONFIGURED) await getSupabaseBrowserClient().auth.signOut();
+    if (CLOUD_SYNC_CONFIGURED) { intentionalSignOutRef.current = true; await getSupabaseBrowserClient().auth.signOut(); }
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     cloudHydratedUserRef.current = "";
     cloudRevisionRef.current = 0;
@@ -4644,7 +4669,8 @@ function App() {
       if (error) throw error;
       setAuthNotice("If that email has a TaskCabinet account, a password reset link is on its way. You can safely try again if it does not arrive.");
     } catch (error) {
-      setAuthError(error.message || "The recovery email could not be sent. Try again in a moment.");
+      console.error("Recovery email failed:", error);
+      setAuthError(friendlyAccountError(error, { offline: !navigator.onLine, action: "recovery" }));
     } finally { setAuthBusy(false); }
   };
 
@@ -4665,7 +4691,8 @@ function App() {
       setAuthMode("signin");
       setAuthNotice("Your password is updated. Welcome back!");
     } catch (error) {
-      setAuthError(error.message || "That recovery session has expired. Request a fresh link and try again.");
+      console.error("Password recovery failed:", error);
+      setAuthError(friendlyAccountError(error, { offline: !navigator.onLine, action: "recovery" }));
     } finally { setAuthBusy(false); }
   };
 
@@ -4686,7 +4713,8 @@ function App() {
       setDisplayName(nextName);
       setAccountUpdateStatus({ type: "success", message: "Preferred name updated. Friendly greetings and newly synced reminders will use it." });
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "Preferred name could not be updated." });
+      console.error("Preferred-name update failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine, action: "save" }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4704,7 +4732,7 @@ function App() {
       const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName: nextName });
       const { data, error } = await getSupabaseBrowserClient().auth.signUp({ email, password: accountPasswordDraft, options: { data: { display_name: nextName } } });
       if (error) throw error;
-      if (!data.user) throw new Error("Supabase did not create the account.");
+      if (!data.user) throw new Error("Account creation did not finish.");
       applyCloudStateToLocal(localStorage, data.user.id, snapshot, { externalPushEnabled: false, notificationsEnabled: false });
       saveLocalSnapshot(localStorage, data.user.id, snapshot, 0, true);
       setAccountPasswordDraft("");
@@ -4722,7 +4750,8 @@ function App() {
         setAccountUpdateStatus({ type: "success", message: "Your local data is safely prepared. Confirm the email, then sign in with it to finish enabling cross-device sync." });
       }
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "This account could not be upgraded." });
+      console.error("Account upgrade failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine, action: "save" }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4738,7 +4767,8 @@ function App() {
       setAccountEmail(data.user?.email || accountEmail);
       setAccountUpdateStatus({ type: "success", message: "Check your email to confirm the address change. Your current email remains active until confirmation is complete." });
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "Email could not be updated." });
+      console.error("Email update failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine, action: "save" }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4757,7 +4787,8 @@ function App() {
       setShowAccountPasswordConfirm(false);
       setAccountUpdateStatus({ type: "success", message: "Password updated." });
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "Password could not be updated." });
+      console.error("Password update failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine, action: "save" }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4800,7 +4831,8 @@ function App() {
       if (error) throw error;
       setAccountUpdateStatus({ type: "success", message: "Verification email sent. Open the link in that email, then return to TaskCabinet." });
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "The verification email could not be sent." });
+      console.error("Verification email failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4808,6 +4840,7 @@ function App() {
     setAccountUpdateBusy("sign-out-all");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
+      intentionalSignOutRef.current = true;
       const { error } = await getSupabaseBrowserClient().auth.signOut({ scope: "global" });
       if (error) throw error;
       localStorage.removeItem(AUTH_USER_STORAGE_KEY);
@@ -4815,7 +4848,9 @@ function App() {
       setAccountMode("signed-out");
       setCurrentTab("dashboard");
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "TaskCabinet could not sign out every device." });
+      intentionalSignOutRef.current = false;
+      console.error("Global sign-out failed:", error);
+      setAccountUpdateStatus({ type: "error", message: friendlyAccountError(error, { offline: !navigator.onLine }) });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4826,6 +4861,7 @@ function App() {
       return;
     }
     setAccountUpdateBusy("delete-account");
+    intentionalSignOutRef.current = true;
     setAccountUpdateStatus({ type: "", message: "" });
     try {
       if (userSettings.externalPushEnabled) {
@@ -4848,7 +4884,9 @@ function App() {
       setCurrentTab("dashboard");
       setAuthNotice("Your account and cloud planner data were permanently deleted.");
     } catch (error) {
-      setAccountUpdateStatus({ type: "error", message: error.message || "Account deletion failed. Your data has not been erased from this browser." });
+      intentionalSignOutRef.current = false;
+      console.error("Account deletion failed:", error);
+      setAccountUpdateStatus({ type: "error", message: "We couldn’t delete your account right now. Nothing was erased from this browser. Check your connection and try again." });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -4909,7 +4947,8 @@ function App() {
     try {
       setCloudHistory(await loadCloudHistory(getSupabaseBrowserClient(), currentUser));
     } catch (error) {
-      setRecoveryStatus({ type: "error", message: error.message || "Cloud backup history could not be loaded. Make sure the history migration has been installed." });
+      console.error("Backup history loading failed:", error);
+      setRecoveryStatus({ type: "error", message: "Earlier versions aren’t available right now. Your current planner is still safe." });
     } finally { setCloudHistoryBusy(false); }
   };
 
@@ -6820,6 +6859,7 @@ function App() {
   );
 
   const renderCourseOverviewWidget = () => {
+    if (courses.length === 0) return <div className="empty-state-action friendly-empty" role="status"><p>No courses yet. Add your first course to organize assignments and colors.</p><button type="button" className="btn btn-primary" onClick={() => setCurrentTab(isMobileUi ? "mobile-courses" : "settings")}>Add a Course</button></div>;
     const courseColor = getCourseColor(overviewCourse);
     return (
       <section className="course-overview-widget">
@@ -7192,7 +7232,7 @@ function App() {
           </div>}
 
           {authMode === "forgot" ? <form key="forgot" className="card-form auth-form auth-mode-content" onSubmit={handleForgotPassword}>
-            <p className="auth-form-intro">Enter your account email and Supabase will send you a secure recovery link.</p>
+            <p className="auth-form-intro">Enter your account email and we’ll send you a secure recovery link.</p>
             <label htmlFor="auth-username">Email</label>
             <input id="auth-username" type="email" autoComplete="email" value={signInName} onChange={(event) => setSignInName(event.target.value)} />
             {authError && <p className="auth-error" role="alert">{authError}</p>}
@@ -7253,11 +7293,11 @@ function App() {
             {authNotice && <p className="auth-notice" role="status" aria-live="polite">{authNotice}</p>}
             {CLOUD_SYNC_CONFIGURED && authMode === "signin" && <button type="button" className="auth-text-button" onClick={() => showWelcomeAuth("forgot")}>Forgot password?</button>}
             <button type="submit" className="btn btn-primary" disabled={authBusy}>
-              {authBusy ? "Working…" : authMode === "signin" ? "Sign In" : "Create Account"}
+              {authBusy ? (authMode === "signin" ? "Signing in…" : "Creating account…") : authMode === "signin" ? "Sign In" : "Create Account"}
             </button>
           </form>}
           <div className="auth-warning">
-            <strong>{CLOUD_SYNC_CONFIGURED ? "Your password is handled by Supabase Auth." : "Password does not save, save independently!"}</strong>
+            <strong>{CLOUD_SYNC_CONFIGURED ? "Your password is protected by your secure account." : "Password recovery is not available for browser-only profiles."}</strong>
             <p>
               {CLOUD_SYNC_CONFIGURED ? "Your account data can sync across devices. Attachment files and push-reminder connections still stay on each browser." : "TaskCabinet stores only a password verifier. Accounts and assignments stay on this browser, do not sync to other devices, and have no password recovery."}
             </p>
@@ -7471,14 +7511,16 @@ function App() {
           {currentUser && (
             <div className="account-action-group">
               <span>{displayName || "TaskCabinet user"}</span>
-              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Conflict needs review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status">{{ saved: "Saved", saving: "Saving…", offline: "Offline — changes will sync", failed: "Sync failed", "cloud-loading": "Loading cloud data…" }[syncStatus] || "Preparing sync…"}</span>)}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Two versions need review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status" aria-live="polite">{{ saved: "All changes saved", saving: "Saving changes…", offline: "Offline — saved on this device", reconnecting: "Back online — reconnecting…", failed: "Online saving paused", "cloud-loading": "Loading your saved planner…", initializing: "Checking your account…" }[syncStatus] || "Preparing your planner…"}</span>)}
               {CLOUD_SYNC_CONFIGURED && accountMode === "local" && <span className="cloud-sync-status">Local profile</span>}
               {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={() => setSyncRetryNonce((value) => value + 1)}>Retry</button>}
-              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && syncError && <span className="cloud-sync-error" title={syncError}>Your local changes are safe.</span>}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && ["failed", "offline"].includes(syncStatus) && syncError && <span className="cloud-sync-error">{syncError}</span>}
               <button className="btn btn-danger sign-out-button" onClick={handleSignOut}>Sign Out</button>
             </div>
           )}
         </div>
+
+        {assignmentSaveError && <div className="persistent-status-banner is-error" role="alert"><strong>Assignment not saved</strong><span>{assignmentSaveError}</span><button type="button" onClick={() => setAssignmentSaveError("")} aria-label="Dismiss assignment save warning">×</button></div>}
 
         {widgetsTrayOpen && (
           <section className="widgets-tray workspace-organizer" aria-label="Workspace organizer">
@@ -8404,7 +8446,7 @@ function App() {
                       <p>
                         Courses: {selectedCycleCourses.length > 0
                           ? selectedCycleCourses.join(", ")
-                          : "No courses assigned"}
+                          : "No courses are scheduled for this day yet"}
                       </p>
                     )}
                     {selectedCycleDay && (
@@ -9175,7 +9217,7 @@ function App() {
                         <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button>
                       </form>
                     </SettingsCard>
-                    <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. Supabase may ask you to confirm both addresses.`} className="settings-section-wide account-top-card">
+                    <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. You may be asked to confirm both the old and new addresses.`} className="settings-section-wide account-top-card">
                       <div className={`account-verification-status ${accountEmailVerified ? "is-verified" : "is-unverified"}`}>
                         <strong>{accountEmailVerified ? "Email verified" : "Email verification needed"}</strong>
                         <span>{accountEmailVerified ? "Your sign-in email has been confirmed." : "Confirm your email to make account recovery and secure sign-in fully available."}</span>
@@ -9202,12 +9244,12 @@ function App() {
                         <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy)} onClick={handleSignOutAllDevices}>{accountUpdateBusy === "sign-out-all" ? "Signing outâ€¦" : "Sign Out All Devices"}</button>
                       </div>
                       <div className="account-management-action account-delete-explanation">
-                        <div><strong>Delete account permanently</strong><p>This deletes your Supabase Auth account and the cloud snapshot containing assignments, checklists, courses, colors, settings, and workspace layouts. The same cached planner data and attachment files are erased from this browser. This cannot be undone.</p><p>Other devices are signed out as their sessions expire. A device that was offline may retain a browser cache until TaskCabinet is opened there or that browser's site data is cleared.</p></div>
+                        <div><strong>Delete account permanently</strong><p>This deletes your secure account and online planner data, including assignments, checklists, courses, colors, settings, and workspace layouts. The same saved planner data and attachment files are erased from this browser. This cannot be undone.</p><p>Other devices are signed out as their access expires. An offline device may retain a browser copy until TaskCabinet is opened there or that browser's site data is cleared.</p></div>
                         <button type="button" className="btn btn-danger" disabled={Boolean(accountUpdateBusy)} onClick={handleDeleteAccount}>{accountUpdateBusy === "delete-account" ? "Deleting accountâ€¦" : "Delete My Account"}</button>
                       </div>
                     </SettingsCard>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
-                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing local profile into a secure Supabase account without removing its assignments or personalization." className="settings-section-wide">
+                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing browser-only profile into a secure account without removing its assignments or personalization." className="settings-section-wide">
                     <form className="account-settings-form account-password-form" onSubmit={handleLocalAccountUpgrade}>
                       <label htmlFor="upgrade-display-name">Preferred name</label>
                       <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
@@ -9221,7 +9263,7 @@ function App() {
                       <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim() || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "upgrade" ? "Creating secure account…" : "Add Email & Enable Sync"}</button>
                     </form>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
-                  </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what TaskCabinet calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Local Account" description="Email and cross-device account controls become available when Supabase account sync is configured." className="settings-section-wide"><p className="hint-text">Restart Vite after adding the public Supabase variables. Your existing assignments and password verifier remain unchanged.</p></SettingsCard></>
+                  </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what TaskCabinet calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Browser-Only Profile" description="This version saves the profile only in this browser." className="settings-section-wide"><p className="hint-text">Assignments remain available on this device. Online account controls will appear automatically when cross-device saving is available.</p></SettingsCard></>
                 )}
 
                 {settingsSection === "checklists" && (
@@ -9274,7 +9316,7 @@ function App() {
                       <div className="external-push-actions"><button type="button" className="btn btn-secondary" onClick={handleExternalPushTest} disabled={!canSendReminderTest(reminderUserStatus, Boolean(externalPushAction))}>{externalPushAction === "testing" ? "Sending test…" : testReminderSent ? "Test sent" : "Send Test Reminder"}</button>{shouldShowRepairReminderSync(reminderUserStatus, externalPushStatus) && <button type="button" className="btn btn-secondary" onClick={handleExternalPushSync} disabled={Boolean(externalPushAction)}>{externalPushAction === "repairing" ? "Repairing…" : "Repair Reminder Sync"}</button>}</div>
                       {externalPushMessage && <p className="hint-text external-push-message">{externalPushMessage}</p>}
                       <p className="hint-text">Last successful sync: {externalPushLastSync ? new Date(externalPushLastSync).toLocaleString() : "Not yet"}</p>
-                      <details className="reminder-technical-details"><summary>Technical details</summary><dl><div><dt>Provider connection</dt><dd>{externalPushDiagnostics.providerConnected ? "Connected" : "Not connected"}</dd></div><div><dt>Server enrollment</dt><dd>{externalPushDiagnostics.serverEnrolled ? "Confirmed" : "Not confirmed"}</dd></div><div><dt>Scheduling state</dt><dd>{externalPushDiagnostics.scheduling}</dd></div>{externalPushDiagnostics.lastError && <div><dt>Latest diagnostic</dt><dd>Available in this session</dd></div>}</dl></details>
+                      <details className="reminder-technical-details"><summary>Connection details</summary><dl><div><dt>Browser connection</dt><dd>{externalPushDiagnostics.providerConnected ? "Connected" : "Not connected"}</dd></div><div><dt>Reminder setup</dt><dd>{externalPushDiagnostics.serverEnrolled ? "Ready" : "Needs attention"}</dd></div><div><dt>Update status</dt><dd>{{ idle: "Waiting", active: "Up to date", syncing: "Updating", sync_needed: "Update needed", cleanup_pending: "Finishing cleanup", failed: "Needs attention" }[externalPushDiagnostics.scheduling] || "Checking"}</dd></div>{externalPushDiagnostics.lastError && <div><dt>Latest check</dt><dd>Needs attention</dd></div>}</dl></details>
                       <p className="hint-text">Closed-app delivery depends on your browser, operating system, permission, internet connection, and device notification settings. Reminder text may appear on your lock screen.</p>
                       {isAppleMobile && <p className="hint-text">On iPhone and iPad, add TaskCabinet to the Home Screen, open the installed app, and then enable Push Reminders.</p>}
                     </SettingsCard>
@@ -9431,7 +9473,7 @@ function App() {
                       <div><strong>Assignment spreadsheet</strong><p>Exports assignment rows for Excel or Google Sheets. CSV files cannot restore the full app.</p><button type="button" className="btn btn-secondary" onClick={handleExportCsv}>Download Assignment CSV</button></div>
                       <div><strong>Restore from JSON</strong><p>Your current planner is backed up locally before the imported version replaces it.</p><label className="btn btn-secondary recovery-file-button">Choose JSON Backup<input type="file" accept="application/json,.json" onChange={handleImportBackup} /></label></div>
                     </div>
-                    {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="cloud-history-panel"><div><strong>Automatic cloud history</strong><p>TaskCabinet keeps up to 20 prior cloud versions. Restoring one creates a new current version and still uses revision conflict protection.</p></div><button type="button" className="btn btn-secondary" disabled={cloudHistoryBusy} onClick={handleLoadCloudHistory}>{cloudHistoryBusy ? "Loading…" : cloudHistory.length ? "Refresh History" : "View Cloud History"}</button>{cloudHistory.length > 0 && <ul>{cloudHistory.map((entry) => <li key={entry.id}><span><strong>{new Date(entry.created_at).toLocaleString()}</strong><small>Revision {entry.revision} · {entry.state.tasks.length} assignments</small></span><button type="button" className="btn btn-secondary" onClick={() => handleRestoreCloudHistory(entry)}>Restore This Version</button></li>)}</ul>}</div>}
+                    {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="cloud-history-panel"><div><strong>Automatic cloud history</strong><p>TaskCabinet keeps up to 20 earlier versions. Restoring one safely makes it the current version without silently overwriting newer work.</p></div><button type="button" className="btn btn-secondary" disabled={cloudHistoryBusy} onClick={handleLoadCloudHistory}>{cloudHistoryBusy ? "Loading earlier versions…" : cloudHistory.length ? "Refresh History" : "View Earlier Versions"}</button>{cloudHistory.length > 0 && <ul>{cloudHistory.map((entry) => <li key={entry.id}><span><strong>{new Date(entry.created_at).toLocaleString()}</strong><small>{entry.state.tasks.length} assignments</small></span><button type="button" className="btn btn-secondary" onClick={() => handleRestoreCloudHistory(entry)}>Restore This Version</button></li>)}</ul>}</div>}
                     {recoveryStatus.message && <div className={`account-update-message is-${recoveryStatus.type}`} role="status">{recoveryStatus.message}</div>}
                   </SettingsCard>
                 )}
