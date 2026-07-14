@@ -7,9 +7,11 @@ const read = (relativePath) => readFile(new URL(relativePath, import.meta.url), 
 test("calendar and telemetry features are lazy-loaded outside the application entry", async () => {
   const app = await read("../src/App.jsx");
   const calendarFeature = await read("../src/CalendarFeature.jsx");
+  const deferredCalendar = await read("../src/components/DeferredCalendar.jsx");
   const telemetry = await read("../src/Telemetry.jsx");
 
-  assert.match(app, /lazy\(\(\) => import\("\.\/CalendarFeature\.jsx"\)\)/);
+  assert.match(app, /import DeferredCalendar from "\.\/components\/DeferredCalendar\.jsx"/);
+  assert.match(deferredCalendar, /lazy\(\(\) => import\("\.\.\/CalendarFeature\.jsx"\)\)/);
   assert.match(app, /lazy\(\(\) => import\("\.\/Telemetry\.jsx"\)\)/);
   assert.doesNotMatch(app, /from "react-calendar"/);
   assert.doesNotMatch(app, /from "@vercel\/(analytics|speed-insights)/);

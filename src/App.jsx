@@ -46,17 +46,11 @@ import GlowDocketLogo from "./GlowDocketLogo.jsx";
 import { PrivacyDataDialog, PrivacyDataPanel } from "./PrivacyDataPanel.jsx";
 import { readPrivacyPreferences, writePrivacyPreferences } from "./privacyPreferences.js";
 import { APP_BUILD_METADATA, createReportMetadata, createRuntimeDiagnostics, getBuildFingerprint } from "./buildMetadata.js";
+import { AssignmentCountdown, MobilePageTitle, PasswordEyeIcon, PersonalizationTip, SettingsCard, SubtaskProgressLine } from "./components/AppDisplayComponents.jsx";
+import { AssignmentFilterControls, AssignmentFilterToggle } from "./components/AssignmentFilters.jsx";
+import DeferredCalendar from "./components/DeferredCalendar.jsx";
 
-const Calendar = lazy(() => import("./CalendarFeature.jsx"));
 const Telemetry = lazy(() => import("./Telemetry.jsx"));
-
-function DeferredCalendar(props) {
-  return (
-    <Suspense fallback={<div className="calendar-loading" role="status">Loading calendar…</div>}>
-      <Calendar {...props} />
-    </Suspense>
-  );
-}
 /*
  * GLOWDOCKET APPLICATION MAP
  *
@@ -555,55 +549,6 @@ function chooseLegalWorkspaceRect(desired, xOnly, yOnly, lastSafe, obstacles, op
     const bDistance = Math.abs(b.x - desired.x) + Math.abs(b.y - desired.y);
     return aDistance - bDistance;
   })[0];
-}
-
-function SettingsCard({ title, description, className = "", children }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <section className={`settings-section ${className}`.trim()}>
-      <div className="settings-collapse-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Use the button to expand or minimize">
-        <h4>{title}</h4>
-        <button
-          type="button"
-          className="settings-collapse-button"
-          onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))}
-          onDoubleClick={stopControlDoubleClick}
-          aria-expanded={isOpen}
-          aria-label={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
-          title={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}
-        >
-          {isOpen ? "−" : "+"}
-        </button>
-      </div>
-      {isOpen && (
-        <div className="settings-collapsible-content">
-          {description && <p className="hint-text settings-card-description">{description}</p>}
-          {children}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function PersonalizationTip({ title, children, forceOpen = false }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const expanded = forceOpen || isOpen;
-  const contentId = `personalization-tip-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-
-  return (
-    <article className="personalization-tip-card">
-      <div className="personalization-tip-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Double-click to enlarge or minimize">
-        <strong>{title}</strong>
-        <button type="button" className="settings-collapse-button settings-collapse-button-small" onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))} onDoubleClick={stopControlDoubleClick} aria-expanded={expanded} aria-controls={contentId} aria-label={`${expanded ? "Minimize" : "Enlarge"} ${title}`}>{expanded ? "−" : "+"}</button>
-      </div>
-      {expanded && <p id={contentId}>{children}</p>}
-    </article>
-  );
-}
-
-function PasswordEyeIcon({ hidden }) {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.75" />{hidden ? <path d="m4 4 16 16" /> : null}</svg>;
 }
 
 function getTaskCategory(task) {
@@ -5880,116 +5825,29 @@ function App() {
   // These small render helpers keep the identical filter interface shared by
   // the To Do and Completed tabs in one place.
   const renderFilterToggle = () => (
-    <button
-      type="button"
-      className="filter-bar"
-      onClick={() => setFiltersOpen((prev) => !prev)}
-    >
-      <span>🔎 Filter Assignments</span>
-      <span>{filtersOpen ? "▲ Hide" : "▼ Show"}</span>
-    </button>
+    <AssignmentFilterToggle filtersOpen={filtersOpen} onToggle={() => setFiltersOpen((prev) => !prev)} />
   );
 
-  const renderFilterControls = () => {
-    if (!filtersOpen) return null;
-
-    return (
-      <div className="card filter-controls-card">
-        <input
-          type="text"
-          placeholder="Search by title, course, or notes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-
-        <div className="filter-grid">
-          <div>
-            <label>Category:</label>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              {TASK_CATEGORIES.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label>{schoolLevelCopy.courseLabel}:</label>
-            <select
-              value={filterCourse}
-              onChange={(e) => setFilterCourse(e.target.value)}
-            >
-              <option value="ALL">All Courses</option>
-              {courses.map((course) => (
-                <option key={course} value={course}>
-                  {course}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label>Priority:</label>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-            >
-              <option value="ALL">All Priorities</option>
-              <option value="HIGH">High</option>
-              <option value="MED">Medium</option>
-              <option value="LOW">Low</option>
-            </select>
-          </div>
-
-          <div>
-            <label>Due:</label>
-            <select
-              value={filterDueBucket}
-              onChange={(e) => setFilterDueBucket(e.target.value)}
-            >
-              <option value="ALL">All Due Dates</option>
-              {bucketsOrder.map((bucket) => (
-                <option key={bucket} value={bucket}>
-                  {bucket}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label>Repeat:</label>
-            <select
-              value={filterRepeat}
-              onChange={(e) => setFilterRepeat(e.target.value)}
-            >
-              <option value="ALL">All Repeat Types</option>
-              <option value="NONE">Does not repeat</option>
-              <option value="DAILY">Daily</option>
-              <option value="EVERY_OTHER_WEEKDAY">Every Other Weekday</option>
-              <option value="WEEKLY">Weekly</option>
-              <option value="MONTHLY">Monthly</option>
-            </select>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={resetFilters}
-          style={{
-            marginTop: "12px",
-            padding: "8px 12px",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
-          Reset Filters
-        </button>
-      </div>
-    );
-  };
+  const renderFilterControls = () => <AssignmentFilterControls
+    filtersOpen={filtersOpen}
+    searchTerm={searchTerm}
+    onSearchTermChange={setSearchTerm}
+    filterCategory={filterCategory}
+    onFilterCategoryChange={setFilterCategory}
+    taskCategories={TASK_CATEGORIES}
+    courseLabel={schoolLevelCopy.courseLabel}
+    filterCourse={filterCourse}
+    onFilterCourseChange={setFilterCourse}
+    courses={courses}
+    filterPriority={filterPriority}
+    onFilterPriorityChange={setFilterPriority}
+    filterDueBucket={filterDueBucket}
+    onFilterDueBucketChange={setFilterDueBucket}
+    dueBuckets={bucketsOrder}
+    filterRepeat={filterRepeat}
+    onFilterRepeatChange={setFilterRepeat}
+    onReset={resetFilters}
+  />;
 
   const handleCourseOverviewOpen = (course) => {
     resetFilters();
@@ -6013,7 +5871,7 @@ function App() {
     const label = formatAssignmentCountdown(deadline, checklistNow);
     if (!label) return null;
     const tone = getAssignmentCountdownTone(deadline, checklistNow);
-    return <p className={`assignment-countdown countdown-${tone} ${extraClassName}`.trim()} aria-label={`Time until ${task.title} is due: ${label}`}>{label}</p>;
+    return <AssignmentCountdown title={task.title} label={label} tone={tone} extraClassName={extraClassName} />;
   };
 
   /**
@@ -6025,11 +5883,7 @@ function App() {
 
     if (!progress) return null;
 
-    return (
-      <p className={`subtask-progress-line ${extraClassName}`.trim()}>
-        {progress.label}
-      </p>
-    );
+    return <SubtaskProgressLine label={progress.label} extraClassName={extraClassName} />;
   };
 
   /**
@@ -7587,13 +7441,7 @@ function App() {
     document.querySelector(".mobile-app-ui .app-shell")?.scrollTo({ top: 0, behavior });
     window.scrollTo({ top: 0, behavior });
   };
-  const renderMobilePageTitle = (eyebrow, title, copy) => (
-    <header className="mobile-app-page-heading">
-      <p>{eyebrow}</p>
-      <h2>{title}</h2>
-      {copy && <span>{copy}</span>}
-    </header>
-  );
+  const renderMobilePageTitle = (eyebrow, title, copy) => <MobilePageTitle eyebrow={eyebrow} title={title} copy={copy} />;
   const mobileTodayTasks = activeDashboardTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today"));
   const mobileOverdueTasks = activeDashboardTasks.filter((task) => getTaskDueBucket(task).startsWith("Overdue"));
   const mobileSummaryTasks = mobileSummaryCategory === "active"
