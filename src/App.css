@@ -5133,7 +5133,6 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
   padding: clamp(22px, 4vw, 38px); border: 1px solid var(--border-color); border-radius: 26px;
   background: var(--modal-color, var(--surface-color)); color: var(--text-color); box-shadow: 0 28px 80px rgba(0,0,0,.32);
 }
-.tutorial-skip { position: absolute; top: 16px; right: 18px; z-index: 2; border: 0; background: transparent; color: #ffffff; font-weight: 800; cursor: pointer; min-height: 44px; }
 .tutorial-visual { overflow: hidden; height: 260px; margin: 20px 0 26px; border: 1px solid color-mix(in srgb, var(--focus-color) 28%, var(--border-color)); border-radius: 20px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 13%, var(--surface-color)), var(--surface-alt-color)); }
 .tutorial-visual.tutorial-welcome { height: 310px; }
 .tutorial-welcome .tutorial-illustration { height: 290px; padding: 26px; }
@@ -5648,7 +5647,6 @@ html[data-theme="dark"] .empty-state-action p {
 }
 html[data-theme="dark"] .tutorial-copy h2 { color: #ffffff; }
 html[data-theme="dark"] .tutorial-copy > p:last-child { color: #ffffff; }
-html[data-theme="dark"] .tutorial-skip,
 html[data-theme="dark"] .tutorial-demo-link {
   color: #ffffff;
 }

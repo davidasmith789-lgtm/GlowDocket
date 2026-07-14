@@ -3031,12 +3031,6 @@ function App() {
   }, [currentUser, isMobileUi]);
 
   useEffect(() => {
-    if (!isMobileUi) return;
-    setTutorialOpen(false);
-    setTutorialPracticeOpen(false);
-  }, [isMobileUi]);
-
-  useEffect(() => {
     if (isMobileUi || !["mobile-add", "mobile-tools", "mobile-courses"].includes(currentTab)) return;
     setCurrentTab("dashboard");
   }, [currentTab, isMobileUi]);
@@ -3107,7 +3101,7 @@ function App() {
   }, [currentUser, tutorialOpen]);
 
   useEffect(() => {
-    if (!currentUser || isMobileUi) return;
+    if (!currentUser) return;
     try {
       const saved = localStorage.getItem(getTutorialStorageKey(currentUser));
       if (saved && JSON.parse(saved).complete === false) {
@@ -3115,7 +3109,7 @@ function App() {
         setTutorialOpen(true);
       }
     } catch { /* A damaged optional tutorial flag must never block the planner. */ }
-  }, [currentUser, isMobileUi]);
+  }, [currentUser]);
 
   const finishTutorial = () => {
     localStorage.setItem(getTutorialStorageKey(currentUser), JSON.stringify({ complete: true }));
@@ -4531,6 +4525,17 @@ function App() {
     setEditOptionalSections({ files: false, links: false, checklist: false });
   };
 
+  const startTutorialForProfile = (profileKey) => {
+    try {
+      localStorage.setItem(getTutorialStorageKey(profileKey), JSON.stringify({ complete: false }));
+    } catch {
+      // Tutorial persistence is optional and must never turn a successful sign-in into an error.
+    }
+    setTutorialStep(0);
+    setTutorialPracticeOpen(false);
+    setTutorialOpen(true);
+  };
+
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     const trimmedName = signInName.trim();
@@ -4560,6 +4565,7 @@ function App() {
           setCurrentUser(data.user.id);
           setAccountMode("cloud");
           setDisplayName(data.user.user_metadata?.display_name || data.user.email?.split("@")[0] || "");
+          startTutorialForProfile(data.user.id);
         } else {
           if (!displayName.trim()) { setAuthError("Enter a display name."); return; }
           const { data, error } = await client.auth.signUp({ email: trimmedName, password: authPassword, options: { data: { display_name: displayName.trim() } } });
@@ -4581,8 +4587,7 @@ function App() {
           }
           setCurrentUser(data.user.id);
           setAccountMode("cloud");
-          setTutorialStep(0);
-          setTutorialOpen(true);
+          startTutorialForProfile(data.user.id);
         }
         setSignInName("");
         setAuthPassword("");
@@ -4609,6 +4614,7 @@ function App() {
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
         setCurrentUser(existingAccount.profileKey);
         setAccountMode("local");
+        startTutorialForProfile(existingAccount.profileKey);
       } else {
         if (existingAccount) {
           setAuthError("That username already has a local account.");
@@ -4629,11 +4635,9 @@ function App() {
           localStorage.setItem(`courses_${profileKey}`, JSON.stringify(["Other"]));
         }
         localStorage.setItem(AUTH_USER_STORAGE_KEY, normalizedName);
-        localStorage.setItem(getTutorialStorageKey(profileKey), JSON.stringify({ complete: false }));
         setCurrentUser(profileKey);
         setAccountMode("local");
-        setTutorialStep(0);
-        setTutorialOpen(true);
+        startTutorialForProfile(profileKey);
       }
 
       setSignInName("");
@@ -10470,7 +10474,7 @@ function App() {
           </div>
         </div>
       )}
-      {tutorialOpen && !isMobileUi && (
+      {tutorialOpen && (
         <div className="tutorial-backdrop" role="presentation">
           <section ref={tutorialRef} className="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy" tabIndex="-1">
             {tutorialPracticeOpen ? (
@@ -10488,7 +10492,6 @@ function App() {
                 </main>
               </div>
             ) : (<>
-            <button type="button" className="tutorial-skip" onClick={finishTutorial}>Skip tutorial</button>
             <div className={`tutorial-visual tutorial-${TUTORIAL_SLIDES[tutorialStep].visual}`} aria-hidden="true">
               {tutorialStep !== 0 && <div className="tutorial-browser-bar"><i /><i /><i /></div>}
               <div className="tutorial-illustration">
