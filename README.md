@@ -121,6 +121,8 @@ Sync is local-first: local writes happen immediately, cloud writes are debounced
 
 Signed-out visitors see the public TaskCabinet welcome page with Sign In and Create Account embedded on the same page. Supabase account users can choose **Forgot password?** to request a recovery email. The recovery link returns to the configured TaskCabinet origin, opens the new-password form, and keeps the recovered session signed in after a successful update. Supabase Auth sends and validates these emails; SMTP secrets and service credentials must never be placed in React code or a `VITE_` variable. Local-only browser profiles do not have email recovery until they add an email and enable account sync from Account Settings.
 
+Cloud users can manage verification, display name, email, password, global sign-out, and permanent deletion under **Settings > Account**. `/api/account/delete` validates the signed-in user's access token, then uses the server-only `SUPABASE_SECRET_KEY` to delete that exact Auth user. The `taskcabinet_cloud_state` foreign key uses `on delete cascade`, so deleting the Auth user also permanently removes the user's cloud planner snapshot. The current browser's account-scoped planner cache and attachment blobs are removed only after the server confirms deletion. Offline copies on other devices cannot be remotely erased from browser storage; those devices lose cloud access as their sessions expire and should have their site data cleared if they will never reconnect.
+
 Two-device test:
 
 1. Create or sign into the same confirmed email account in two clean browser profiles.

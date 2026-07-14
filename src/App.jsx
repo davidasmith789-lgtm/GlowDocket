@@ -40,7 +40,7 @@ import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalRe
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudSnapshot, loadLocalMeta, loadLocalSnapshot, readLegacySnapshot, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 /*
  * TASKCABINET APPLICATION MAP
  *
@@ -1544,6 +1544,7 @@ function App() {
   const [signInName, setSignInName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
+  const [accountEmailVerified, setAccountEmailVerified] = useState(false);
   const [accountDisplayNameDraft, setAccountDisplayNameDraft] = useState("");
   const [accountEmailDraft, setAccountEmailDraft] = useState("");
   const [accountPasswordDraft, setAccountPasswordDraft] = useState("");
@@ -1924,6 +1925,7 @@ function App() {
         setAccountMode("cloud");
         setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
         setAccountEmail(user.email || "");
+        setAccountEmailVerified(Boolean(user.email_confirmed_at));
         setAccountEmailDraft(user.email || "");
         setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
       }
@@ -1946,6 +1948,7 @@ function App() {
         setAccountMode("cloud");
         setDisplayName(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
         setAccountEmail(user.email || "");
+        setAccountEmailVerified(Boolean(user.email_confirmed_at));
         setAccountEmailDraft(user.email || "");
         setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
       }
@@ -4708,6 +4711,70 @@ function App() {
       setAccountUpdateStatus({ type: "success", message: "Password updated." });
     } catch (error) {
       setAccountUpdateStatus({ type: "error", message: error.message || "Password could not be updated." });
+    } finally { setAccountUpdateBusy(""); }
+  };
+
+  const handleResendVerification = async () => {
+    setAccountUpdateBusy("verification");
+    setAccountUpdateStatus({ type: "", message: "" });
+    try {
+      const { error } = await getSupabaseBrowserClient().auth.resend({
+        type: "signup",
+        email: accountEmail,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (error) throw error;
+      setAccountUpdateStatus({ type: "success", message: "Verification email sent. Open the link in that email, then return to TaskCabinet." });
+    } catch (error) {
+      setAccountUpdateStatus({ type: "error", message: error.message || "The verification email could not be sent." });
+    } finally { setAccountUpdateBusy(""); }
+  };
+
+  const handleSignOutAllDevices = async () => {
+    setAccountUpdateBusy("sign-out-all");
+    setAccountUpdateStatus({ type: "", message: "" });
+    try {
+      const { error } = await getSupabaseBrowserClient().auth.signOut({ scope: "global" });
+      if (error) throw error;
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+      setCurrentUser("");
+      setAccountMode("signed-out");
+      setCurrentTab("dashboard");
+    } catch (error) {
+      setAccountUpdateStatus({ type: "error", message: error.message || "TaskCabinet could not sign out every device." });
+    } finally { setAccountUpdateBusy(""); }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmation = window.prompt("This permanently deletes your TaskCabinet cloud account and all cloud-synced assignments, checklists, courses, settings, and workspace layouts. It also erases this account's cached planner data from this browser. This cannot be undone.\n\nType DELETE to continue.");
+    if (confirmation !== "DELETE") {
+      if (confirmation !== null) setAccountUpdateStatus({ type: "error", message: "Account deletion cancelled. Type DELETE exactly to confirm." });
+      return;
+    }
+    setAccountUpdateBusy("delete-account");
+    setAccountUpdateStatus({ type: "", message: "" });
+    try {
+      if (userSettings.externalPushEnabled) {
+        const reminderResult = await cancelAllExternalReminders(currentUser);
+        if (reminderResult.status === "cleanup_pending") throw new Error("Scheduled reminders could not be fully removed yet. Repair reminder sync, then retry account deletion.");
+      }
+      const { data: sessionData } = await getSupabaseBrowserClient().auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Your session expired. Sign in again before deleting your account.");
+      const response = await fetch("/api/account/delete", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "TaskCabinet could not delete the account.");
+      const deletedTaskAttachments = tasks.flatMap((task) => getSafeAttachments(task).map((attachment) => attachment.id));
+      await Promise.allSettled(deletedTaskAttachments.map((id) => deleteAttachmentFile(id)));
+      removeCloudAccountLocalData(localStorage, currentUser);
+      localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+      await getSupabaseBrowserClient().auth.signOut({ scope: "local" }).catch(() => {});
+      setCurrentUser("");
+      setAccountMode("signed-out");
+      setCurrentTab("dashboard");
+      setAuthNotice("Your account and cloud planner data were permanently deleted.");
+    } catch (error) {
+      setAccountUpdateStatus({ type: "error", message: error.message || "Account deletion failed. Your data has not been erased from this browser." });
     } finally { setAccountUpdateBusy(""); }
   };
 
@@ -8961,6 +9028,11 @@ function App() {
                       </form>
                     </SettingsCard>
                     <SettingsCard title="Email Address" description={`Your current sign-in email is ${accountEmail || "still loading"}. Supabase may ask you to confirm both addresses.`}>
+                      <div className={`account-verification-status ${accountEmailVerified ? "is-verified" : "is-unverified"}`}>
+                        <strong>{accountEmailVerified ? "Email verified" : "Email verification needed"}</strong>
+                        <span>{accountEmailVerified ? "Your sign-in email has been confirmed." : "Confirm your email to make account recovery and secure sign-in fully available."}</span>
+                        {!accountEmailVerified && <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy) || !accountEmail} onClick={handleResendVerification}>{accountUpdateBusy === "verification" ? "Sendingâ€¦" : "Resend Verification Email"}</button>}
+                      </div>
                       <form className="account-settings-form" onSubmit={handleAccountEmailUpdate}>
                         <label htmlFor="account-email">New email</label>
                         <input id="account-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} />
@@ -8975,6 +9047,16 @@ function App() {
                         <div className="password-input-row"><input id="account-confirm-password" type={showAccountPasswordConfirm ? "text" : "password"} value={accountPasswordConfirm} minLength={8} autoComplete="new-password" onChange={(event) => setAccountPasswordConfirm(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPasswordConfirm} aria-label={showAccountPasswordConfirm ? "Hide password confirmation" : "Show password confirmation"} onClick={() => setShowAccountPasswordConfirm((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPasswordConfirm} /></button></div>
                         <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "password" ? "Updating…" : "Update Password"}</button>
                       </form>
+                    </SettingsCard>
+                    <SettingsCard title="Sessions & Account Deletion" description="Manage access on other devices or permanently remove this cloud account." className="settings-section-wide account-danger-zone">
+                      <div className="account-management-action">
+                        <div><strong>Sign out of all devices</strong><p>Revokes this account's refresh sessions everywhere, including this browser. A device may remain visible until its short-lived access token expires.</p></div>
+                        <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy)} onClick={handleSignOutAllDevices}>{accountUpdateBusy === "sign-out-all" ? "Signing outâ€¦" : "Sign Out All Devices"}</button>
+                      </div>
+                      <div className="account-management-action account-delete-explanation">
+                        <div><strong>Delete account permanently</strong><p>This deletes your Supabase Auth account and the cloud snapshot containing assignments, checklists, courses, colors, settings, and workspace layouts. The same cached planner data and attachment files are erased from this browser. This cannot be undone.</p><p>Other devices are signed out as their sessions expire. A device that was offline may retain a browser cache until TaskCabinet is opened there or that browser's site data is cleared.</p></div>
+                        <button type="button" className="btn btn-danger" disabled={Boolean(accountUpdateBusy)} onClick={handleDeleteAccount}>{accountUpdateBusy === "delete-account" ? "Deleting accountâ€¦" : "Delete My Account"}</button>
+                      </div>
                     </SettingsCard>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
                   </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing local profile into a secure Supabase account without removing its assignments or personalization." className="settings-section-wide">

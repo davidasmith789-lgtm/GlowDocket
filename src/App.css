@@ -5212,6 +5212,16 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .account-settings-form label { color: var(--text-color); font-weight: 800; }
 .account-settings-form .btn { width: fit-content; margin-top: 4px; }
 .account-password-form { max-width: 620px; }
+.account-verification-status { display: grid; gap: 7px; margin-bottom: 18px; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
+.account-verification-status.is-verified strong { color: var(--success-color); }
+.account-verification-status.is-unverified strong { color: var(--warning-color, #a15c00); }
+.account-verification-status .btn { width: fit-content; margin-top: 4px; }
+.account-management-action { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 16px 0; }
+.account-management-action + .account-management-action { border-top: 1px solid var(--border-color); }
+.account-management-action p { max-width: 760px; margin: 5px 0 0; color: var(--muted-text); line-height: 1.5; }
+.account-management-action .btn { flex: 0 0 auto; }
+.account-danger-zone { border-color: color-mix(in srgb, var(--danger-color) 38%, var(--border-color)); }
+@media (max-width: 700px) { .account-management-action { flex-direction: column; } .account-management-action .btn { width: 100%; } }
 .account-update-message { padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); color: var(--text-color); font-weight: 700; }
 .account-update-message.is-success { border-color: color-mix(in srgb, var(--success-color) 55%, var(--border-color)); color: var(--success-color); }
 .account-update-message.is-error { border-color: color-mix(in srgb, var(--danger-color) 55%, var(--border-color)); color: var(--danger-color); }

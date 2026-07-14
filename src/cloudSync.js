@@ -78,6 +78,23 @@ export function readLegacySnapshot(storage, profileKey, defaults) {
   });
 }
 
+export function removeCloudAccountLocalData(storage, userId) {
+  const id = String(userId || "");
+  if (!id) return;
+  const exactKeys = [
+    `tasks_${id}`, `courses_${id}`, `courseColors_${id}`, `settings_${id}`,
+    `checklists_${id}`, `workspaceLayout_${id}`, `taskacadia_preferred_name_${id}`,
+    `taskacadia_notified_${id}`, `taskacadia_checklist_notified_${id}`,
+    getCloudCacheKey(id), getCloudMetaKey(id),
+  ];
+  exactKeys.forEach((key) => storage.removeItem(key));
+  const backupPrefix = `taskcabinet_cloud_backup_${id}_`;
+  for (let index = storage.length - 1; index >= 0; index -= 1) {
+    const key = storage.key(index);
+    if (key?.startsWith(backupPrefix)) storage.removeItem(key);
+  }
+}
+
 export function applyCloudStateToLocal(storage, userId, state, deviceSettings = {}) {
   const valid = validateCloudState(state);
   storage.setItem(`tasks_${userId}`, JSON.stringify(valid.tasks));

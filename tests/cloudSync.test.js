@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, readLegacySnapshot, resolveProfileDisplayName, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, getCloudStateFingerprint, hasMeaningfulState, loadLocalSnapshot, readLegacySnapshot, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
-  return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };
+  return { get length() { return values.size; }, key: (index) => [...values.keys()][index] ?? null, getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };
 }
 
 const state = (overrides = {}) => collectSyncableState({ tasks: [], courses: ["Other"], courseColors: {}, userSettings: {}, checklists: [], workspaceLayout: { desktop: {}, mobile: {}, collapsed: {} }, theme: "light", displayName: "Student", ...overrides });
@@ -65,4 +65,16 @@ test("saved fingerprints cannot be changed through a shared object reference", (
   const savedFingerprint = getCloudStateFingerprint(snapshot);
   task.title = "Changed later";
   assert.notEqual(getCloudStateFingerprint(snapshot), savedFingerprint);
+});
+
+test("deleting a cloud account clears only that account's browser data", () => {
+  const storage = memoryStorage();
+  saveLocalSnapshot(storage, "deleted-user", state({ tasks: [{ id: "gone" }] }), 2, false);
+  storage.setItem("tasks_deleted-user", "[]");
+  storage.setItem("taskcabinet_cloud_backup_deleted-user_123", "{}");
+  storage.setItem("tasks_other-user", "keep");
+  removeCloudAccountLocalData(storage, "deleted-user");
+  assert.equal(storage.getItem("tasks_deleted-user"), null);
+  assert.equal(storage.getItem("taskcabinet_cloud_backup_deleted-user_123"), null);
+  assert.equal(storage.getItem("tasks_other-user"), "keep");
 });
