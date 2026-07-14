@@ -33,6 +33,8 @@ export default function FocusSession({
 
   const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
   const completedSteps = subtasks.filter((step) => step.isDone).length;
+  const notes = typeof task.notes === "string" ? task.notes.trim() : "";
+  const hasSessionDetails = Boolean(notes) || subtasks.length > 0;
 
   return (
     <div className="focus-session-backdrop" role="presentation">
@@ -54,14 +56,14 @@ export default function FocusSession({
           </button>
         </div>
 
-        <div className="focus-session-body">
-          {task.notes && <section><h3>Notes</h3><p className="focus-session-notes">{task.notes}</p></section>}
-          <section>
-            <div className="focus-session-section-heading">
-              <h3>Checklist</h3>
-              {subtasks.length > 0 && <span>{completedSteps} of {subtasks.length} complete</span>}
-            </div>
-            {subtasks.length === 0 ? <p className="placeholder-text">No checklist steps yet. Use this time to work on the assignment itself.</p> : (
+        {hasSessionDetails && (
+          <div className="focus-session-body">
+            {notes && <section><h3>Notes</h3><p className="focus-session-notes">{notes}</p></section>}
+            {subtasks.length > 0 && <section>
+              <div className="focus-session-section-heading">
+                <h3>Checklist</h3>
+                <span>{completedSteps} of {subtasks.length} complete</span>
+              </div>
               <ul className="focus-session-checklist">
                 {subtasks.map((step) => (
                   <li key={step.id} className={step.isDone ? "done" : ""}>
@@ -72,9 +74,9 @@ export default function FocusSession({
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
-        </div>
+            </section>}
+          </div>
+        )}
 
         <footer className="focus-session-footer">
           <label className="focus-session-estimate-option">
