@@ -1100,7 +1100,26 @@ const PERSONALIZATION_TIPS = [
   ["Preferred name", "Add the name you like to be called under Account. GlowDocket can use it in friendly greetings and reminders, but never as your sign-in identity."],
   ["Welcome page", "The public welcome page explains GlowDocket before you sign in. Get Started and I Already Have an Account both move you straight to the account panel."],
   ["Keep local data safe", "GlowDocket saves your work in this browser. Clearing browser storage or using a different device does not automatically bring that data with you."],
+  ["Privacy and usage analytics", "Open Privacy & Data to see where information is stored. Usage analytics is optional, stays off until you enable it, and can be disabled again on this browser."],
+  ["Install a GlowDocket update", "When an update is ready, finish any open edit and choose Update. Choose Later if you need to keep working; GlowDocket will not force the new version into the middle of your task."],
+  ["Check your GlowDocket version", "Open Storage, then Version & Diagnostics, to see the app version, commit, environment, build time, and data schema. Copy these details when reporting a problem."],
+  ["Restore a previous local version", "Backup & Restore can recover the latest safety copy made before a restore or cloud conflict. GlowDocket saves the current version again before replacing it."],
+  ["Storage and attachment warnings", "The Browser Storage card warns when this site is getting full. Attachment limits prevent one assignment from unexpectedly using too much browser space."],
+  ["Verify accessibility", "Accessibility Settings includes an automated scan and a manual checklist. Use both because keyboard flow, zoom, focus order, and screen-reader clarity need human review."],
+  ["Tutorial after sign-in", "The quick tour opens after every successful sign-in so each account gets the same introduction. Use Finish on the last page, and replay it later from Personalization."],
+  ["Edit assignments on mobile", "Edit opens as a full-screen mobile form. Labels stay beside their fields, Notes has its own section, and Save and Close remain reachable above the phone keyboard."],
 ];
+
+const PERSONALIZATION_TIP_CATEGORIES = ["All", "Workspace", "Appearance", "Assignments", "Reminders", "Calendar", "Data & Accounts", "Accessibility"];
+function getPersonalizationTipCategory(title) {
+  if (/widget|layout|minimize|enlarge/i.test(title)) return "Workspace";
+  if (/theme|color|contrast|text size|font|spacing|motion|action layout/i.test(title)) return "Appearance";
+  if (/reminder|notification|deadline is too close/i.test(title)) return "Reminders";
+  if (/calendar|school-day cycle/i.test(title)) return "Calendar";
+  if (/accessibility/i.test(title)) return "Accessibility";
+  if (/account|password|welcome|local data|privacy|analytics|version|storage|restore|update|tutorial/i.test(title)) return "Data & Accounts";
+  return "Assignments";
+}
 
 function WorkspaceWidget({
   instance,
@@ -1856,6 +1875,7 @@ function App() {
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
   const [widgetSearch, setWidgetSearch] = useState("");
   const [helpSearch, setHelpSearch] = useState("");
+  const [helpCategory, setHelpCategory] = useState("All");
   const [isMobileUi, setIsMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
@@ -7416,6 +7436,13 @@ function App() {
   const mobileTaskTabActive = ["todo", "inProgress", "completed"].includes(currentTab);
   const mobileMoreActive = ["settings", "recommendations", "mobile-tools", "mobile-courses"].includes(currentTab);
   const selectedMobileSettingsSection = SETTINGS_SECTIONS.find((section) => section.id === settingsSection) || SETTINGS_SECTIONS[0];
+  const normalizedHelpSearch = helpSearch.trim().toLowerCase();
+  const visiblePersonalizationTips = PERSONALIZATION_TIPS
+    .map(([title, copy]) => ({ title, copy, category: getPersonalizationTipCategory(title) }))
+    .filter(({ title, copy, category }) => (
+      (helpCategory === "All" || category === helpCategory)
+      && (!normalizedHelpSearch || `${title} ${copy} ${category}`.toLowerCase().includes(normalizedHelpSearch))
+    ));
   const openMobileSettingsSection = (sectionId) => {
     setStorageView(null);
     setSettingsSection(sectionId);
@@ -8957,10 +8984,28 @@ function App() {
                   </div>
                   {personalizationTipsOpen && (
                     <div id="personalization-tips-content" className="settings-collapsible-content personalization-tips-content">
-                      <p className="hint-text">Find friendly explanations for personalizing GlowDocket and using its features your way.</p>
+                      <p className="hint-text">Browse by topic or search for a specific setting, feature, or workflow.</p>
                       <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search reminders, assignments, layouts, colors…" aria-label="Search GlowDocket tips" />
+                      <div className="personalization-tip-toolbar" role="group" aria-label="Filter personalization tips by topic">
+                        {PERSONALIZATION_TIP_CATEGORIES.map((category) => (
+                          <button
+                            type="button"
+                            key={category}
+                            className={helpCategory === category ? "active" : ""}
+                            aria-pressed={helpCategory === category}
+                            onClick={() => setHelpCategory(category)}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="personalization-tip-results" role="status" aria-live="polite">
+                        <span>{visiblePersonalizationTips.length} {visiblePersonalizationTips.length === 1 ? "tip" : "tips"}</span>
+                        <span>{helpCategory === "All" ? "All topics" : helpCategory}</span>
+                      </div>
                       <div className="personalization-tip-grid">
-                        {PERSONALIZATION_TIPS.filter(([title, copy]) => `${title} ${copy}`.toLowerCase().includes(helpSearch.trim().toLowerCase())).map(([title, copy]) => <PersonalizationTip key={title} title={title} forceOpen={Boolean(helpSearch.trim())}>{copy}</PersonalizationTip>)}
+                        {visiblePersonalizationTips.map(({ title, copy, category }) => <PersonalizationTip key={title} title={title} category={category} forceOpen={Boolean(normalizedHelpSearch)}>{copy}</PersonalizationTip>)}
+                        {visiblePersonalizationTips.length === 0 && <p className="personalization-tip-empty">No tips match this topic and search. Try another topic or a shorter search.</p>}
                       </div>
                     </div>
                   )}

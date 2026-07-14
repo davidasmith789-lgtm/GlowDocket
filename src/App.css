@@ -4313,6 +4313,7 @@ html[data-theme="dark"] {
 .workspace-widget.is-collapsed { overflow: visible; }
 
 .workspace-widget-header {
+  position: relative;
   display: grid;
   min-height: 58px;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -4326,7 +4327,19 @@ html[data-theme="dark"] {
 }
 
 .workspace-widget.is-collapsed .workspace-widget-header { border-bottom: 0; }
-.workspace-widget-header > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-widget-header > strong {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max-content;
+  max-width: calc(100% - 170px);
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 .widget-drag-grip,
 .widget-collapse-button,
@@ -4792,11 +4805,18 @@ html[data-theme="dark"] {
 
 .personalization-tips-content { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .personalization-tips-content > input { width: 100%; margin: 10px 0; }
+.personalization-tip-toolbar { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 10px; }
+.personalization-tip-toolbar button { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--card-bg); color: var(--text-color); font: inherit; font-size: .78rem; font-weight: 800; cursor: pointer; }
+.personalization-tip-toolbar button.active { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 14%, var(--card-bg)); color: var(--primary-color); }
+.personalization-tip-results { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 9px; color: var(--muted-text); font-size: .78rem; }
 .personalization-tip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
 .personalization-tip-grid article { padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
 .personalization-tip-header { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
 .personalization-tip-header strong { color: var(--text-color); }
+.personalization-tip-heading { display: grid; gap: 4px; }
+.personalization-tip-category { width: fit-content; color: var(--primary-color); font-size: .65rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
 .personalization-tip-grid p { margin: 6px 0 0; color: var(--muted-text); font-size: 0.82rem; line-height: 1.45; }
+.personalization-tip-empty { grid-column: 1 / -1; margin: 0; padding: 18px; border: 1px dashed var(--border-color); border-radius: 12px; color: var(--muted-text); text-align: center; }
 
 @media (min-width: 1050px) {
   .settings-grid-personalization {

@@ -27,14 +27,14 @@ export function SettingsCard({ title, description, className = "", children }) {
   );
 }
 
-export function PersonalizationTip({ title, children, forceOpen = false }) {
+export function PersonalizationTip({ title, category, children, forceOpen = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const expanded = forceOpen || isOpen;
   const contentId = `personalization-tip-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <article className="personalization-tip-card">
       <div className="personalization-tip-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Double-click to enlarge or minimize">
-        <strong>{title}</strong>
+        <span className="personalization-tip-heading"><small className="personalization-tip-category">{category}</small><strong>{title}</strong></span>
         <button type="button" className="settings-collapse-button settings-collapse-button-small" onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))} onDoubleClick={stopControlDoubleClick} aria-expanded={expanded} aria-controls={contentId} aria-label={`${expanded ? "Minimize" : "Enlarge"} ${title}`}>{expanded ? "−" : "+"}</button>
       </div>
       {expanded && <p id={contentId}>{children}</p>}
