@@ -2199,6 +2199,25 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   border-bottom: 1px solid var(--border-color);
 }
 
+.settings-horizontal-options .settings-collapsible-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 14px;
+}
+
+.settings-horizontal-options .settings-card-description {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.settings-horizontal-options .settings-toggle {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-alt) 68%, transparent);
+}
+
 .settings-option-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2347,6 +2366,10 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   }
 
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-horizontal-options .settings-collapsible-content {
     grid-template-columns: 1fr;
   }
 }

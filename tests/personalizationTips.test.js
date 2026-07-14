@@ -32,3 +32,15 @@ test("personalization tips can be searched and filtered by useful topics", async
   assert.match(display, /personalization-tip-category/);
   assert.match(display, /\{category\}/);
 });
+
+test("assignment field and workflow settings expand horizontally on wider screens", async () => {
+  const [app, styles] = await Promise.all([
+    read("../src/App.jsx"),
+    read("../src/App.css"),
+  ]);
+
+  assert.match(app, /title="Add Assignment Fields"[\s\S]{0,250}className="settings-horizontal-options settings-section-wide"/);
+  assert.match(app, /title="Workflow & Safety"[\s\S]{0,250}className="settings-horizontal-options settings-section-wide"/);
+  assert.match(styles, /\.settings-horizontal-options \.settings-collapsible-content \{[\s\S]*?grid-template-columns: repeat\(auto-fit, minmax\(190px, 1fr\)\);/);
+  assert.match(styles, /@media \(max-width: 560px\)[\s\S]*?\.settings-horizontal-options \.settings-collapsible-content \{[\s\S]*?grid-template-columns: 1fr;/);
+});

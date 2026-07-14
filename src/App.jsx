@@ -9518,7 +9518,7 @@ function App() {
 
                 {settingsSection === "assignments" && (
                   <>
-                    <SettingsCard title="Add Assignment Fields" description={currentUser ? `Saved for ${displayName || "this account"}.` : "Sign in to keep these preferences with a profile."}>
+                    <SettingsCard title="Add Assignment Fields" description={currentUser ? `Saved for ${displayName || "this account"}.` : "Sign in to keep these preferences with a profile."} className="settings-horizontal-options settings-section-wide">
                       <label className="settings-toggle"><span>Priority</span><input type="checkbox" checked={userSettings.showPriority} onChange={(e) => handleAddFieldSettingChange("showPriority", e.target.checked)} /></label>
                       <label className="settings-toggle"><span>Repeat</span><input type="checkbox" checked={userSettings.showRepeat} onChange={(e) => handleAddFieldSettingChange("showRepeat", e.target.checked)} /></label>
                       <label className="settings-toggle"><span>Estimated Minutes</span><input type="checkbox" checked={userSettings.showEstimatedMinutes} onChange={(e) => handleAddFieldSettingChange("showEstimatedMinutes", e.target.checked)} /></label>
@@ -9558,7 +9558,7 @@ function App() {
                         ) : <p className="hint-text quick-match-preset-empty">No extra time choices yet.</p>}
                       </form>
                     </SettingsCard>
-                    <SettingsCard title="Workflow & Safety" description="Control automatic behavior and extra safeguards.">
+                    <SettingsCard title="Workflow & Safety" description="Control automatic behavior and extra safeguards." className="settings-horizontal-options settings-section-wide">
                       <label className="settings-toggle settings-toggle-copy"><span><strong>Complete finished checklists</strong><small>Complete an assignment when every checklist item is checked.</small></span><input type="checkbox" checked={userSettings.autoCompleteChecklist !== false} onChange={(e) => handleAddFieldSettingChange("autoCompleteChecklist", e.target.checked)} /></label>
                       <label className="settings-toggle settings-toggle-copy"><span><strong>Confirm before Trash</strong><small>Ask before moving an assignment into recoverable Trash.</small></span><input type="checkbox" checked={userSettings.confirmBeforeTrash !== false} onChange={(e) => handleAddFieldSettingChange("confirmBeforeTrash", e.target.checked)} /></label>
                     </SettingsCard>
