@@ -5697,6 +5697,66 @@ html[data-theme="dark"] .tutorial-demo-link {
     padding-top: 18px;
   }
 
+  .mobile-app-ui .mobile-edit-backdrop {
+    display: block;
+    padding: 0;
+    background: var(--page-bg);
+    backdrop-filter: none;
+  }
+
+  .mobile-app-ui .edit-modal.mobile-edit-screen {
+    width: 100%;
+    height: var(--taskcabinet-mobile-height, 100dvh);
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0 max(14px, env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    background: var(--page-bg) !important;
+    box-shadow: none;
+    overscroll-behavior: contain;
+  }
+
+  .mobile-app-ui .mobile-edit-header {
+    top: 0;
+    margin: 0 -14px 16px;
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-left: max(14px, env(safe-area-inset-left));
+    border-radius: 0;
+    background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+  }
+
+  .mobile-app-ui .mobile-edit-header .modal-close-button {
+    display: grid;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    border-radius: 50%;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-actions {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-app-ui .delete-undo-toast {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .mobile-app-ui .delete-undo-toast span { min-width: 0; }
+  .mobile-app-ui .delete-undo-toast .btn { grid-row: 2; grid-column: 1 / -1; width: 100%; }
+  .mobile-app-ui .delete-undo-dismiss { grid-row: 1; grid-column: 2; align-self: start; }
+
   .widget-menu-popover {
     right: 0;
     width: min(240px, calc(100vw - 32px));

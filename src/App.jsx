@@ -2956,10 +2956,13 @@ function App() {
   useEffect(() => {
     if (!isMobileUi || !window.visualViewport) return undefined;
     const viewport = window.visualViewport;
+    let stableMobileHeight = window.innerHeight;
     const updateMobileViewport = () => {
-      document.documentElement.style.setProperty("--taskcabinet-mobile-height", `${viewport.height}px`);
-      if (viewport.height < window.innerHeight * 0.82 && document.activeElement?.matches?.("input, textarea, select")) {
-        window.requestAnimationFrame(() => document.activeElement?.scrollIntoView?.({ block: "center", behavior: "smooth" }));
+      const fieldHasFocus = document.activeElement?.matches?.("input, textarea, select");
+      const keyboardIsOpen = fieldHasFocus && viewport.height < stableMobileHeight * 0.82;
+      if (!keyboardIsOpen) {
+        stableMobileHeight = viewport.height;
+        document.documentElement.style.setProperty("--taskcabinet-mobile-height", `${stableMobileHeight}px`);
       }
     };
     updateMobileViewport();
@@ -9715,12 +9718,13 @@ function App() {
         modal remains open while the user interacts with its fields.
       */}
       {editingTask && (
-        <div className="modal-backdrop" onClick={handleEditCancel}>
-          <div className="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-assignment-title" onClick={(e) => e.stopPropagation()}>
-            <div className="edit-modal-header">
+        <div className={`modal-backdrop${isMobileUi ? " mobile-edit-backdrop" : ""}`} onClick={handleEditCancel}>
+          <div className={`edit-modal${isMobileUi ? " mobile-edit-screen" : ""}`} role="dialog" aria-modal="true" aria-labelledby="edit-assignment-title" onClick={(e) => e.stopPropagation()}>
+            <div className={`edit-modal-header${isMobileUi ? " mobile-fullscreen-header mobile-edit-header" : ""}`}>
               <div>
-                <p className="eyebrow modal-eyebrow">Edit Assignment</p>
-                <h2 id="edit-assignment-title">✏️ {editingTask.title || "Untitled Assignment"}</h2>
+                <p className={isMobileUi ? "" : "eyebrow modal-eyebrow"}>{isMobileUi ? "Update assignment" : "Edit Assignment"}</p>
+                <h2 id="edit-assignment-title">{isMobileUi ? "Edit Assignment" : `✏️ ${editingTask.title || "Untitled Assignment"}`}</h2>
+                {isMobileUi && <span>Change the details below, then save when you’re finished.</span>}
               </div>
 
               <button
