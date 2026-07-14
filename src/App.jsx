@@ -7097,7 +7097,9 @@ function App() {
     setMobileMoreOpen(false);
     setMobileSettingsOpen(false);
     setStorageView(null);
-    window.scrollTo({ top: 0, behavior: userSettings.reduceMotion ? "auto" : "smooth" });
+    const behavior = userSettings.reduceMotion ? "auto" : "smooth";
+    document.querySelector(".mobile-app-ui .app-shell")?.scrollTo({ top: 0, behavior });
+    window.scrollTo({ top: 0, behavior });
   };
   const renderMobilePageTitle = (eyebrow, title, copy) => (
     <header className="mobile-app-page-heading">
@@ -7137,7 +7139,7 @@ function App() {
     </ul>
   );
   return (
-    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.reduceMotion ? " reduce-motion" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}`}>
+    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.reduceMotion ? " reduce-motion" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}>
       <div className="app-shell">
         {isMobileUi && currentUser && (
           <header className="mobile-app-header">
