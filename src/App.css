@@ -335,6 +335,13 @@ html { scrollbar-gutter: stable; }
 
 /* react-calendar supplies its own class names; these rules make the third-party
    calendar match GlowDocket in both light and dark themes. */
+.calendar-loading {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  color: var(--muted-text);
+}
+
 .react-calendar {
   width: 100%;
   max-width: 500px;

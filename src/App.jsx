@@ -1,9 +1,5 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import Calendar from "react-calendar";
-import "react-calendar/dist/Calendar.css";
+import { lazy, Suspense, useState, useEffect, useLayoutEffect, useRef } from "react";
 import "./App.css";
-import { SpeedInsights } from "@vercel/speed-insights/react"
-import { Analytics } from "@vercel/analytics/react";
 import {
   formatChecklistCountdown,
   formatChecklistDeadline,
@@ -47,6 +43,17 @@ import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus,
 import { MANUAL_ACCESSIBILITY_CHECKS, runAccessibilityAudit } from "./accessibilityAudit.js";
 import { RECOVERY_SESSION_KEY } from "./AppErrorBoundary.jsx";
 import GlowDocketLogo from "./GlowDocketLogo.jsx";
+
+const Calendar = lazy(() => import("./CalendarFeature.jsx"));
+const Telemetry = lazy(() => import("./Telemetry.jsx"));
+
+function DeferredCalendar(props) {
+  return (
+    <Suspense fallback={<div className="calendar-loading" role="status">Loading calendar…</div>}>
+      <Calendar {...props} />
+    </Suspense>
+  );
+}
 /*
  * GLOWDOCKET APPLICATION MAP
  *
@@ -1980,15 +1987,18 @@ function App() {
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
-    const client = getSupabaseBrowserClient();
     let mounted = true;
+    let authListener;
     const initializationTimer = window.setTimeout(() => {
       if (!mounted) return;
       setAuthInitializing(false);
       setSyncStatus("local-only");
       setAuthError("GlowDocket couldn’t reach the sign-in service. Check your connection and try again.");
     }, 15000);
-    client.auth.getSession().then(({ data }) => {
+    const restoreSession = async () => {
+      const client = await getSupabaseBrowserClient();
+      if (!mounted) return;
+      client.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       window.clearTimeout(initializationTimer);
       const user = data.session?.user;
@@ -2007,8 +2017,8 @@ function App() {
       window.clearTimeout(initializationTimer);
       console.error("Session restoration failed:", error);
       if (mounted) { setAuthInitializing(false); setSyncStatus("local-only"); setAuthError(friendlyAccountError(error, { offline: !navigator.onLine })); }
-    });
-    const { data: listener } = client.auth.onAuthStateChange((event, session) => {
+      });
+      const { data: listener } = client.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (event === "PASSWORD_RECOVERY") {
         setAuthMode("recovery");
@@ -2035,8 +2045,15 @@ function App() {
         setAccountEmailDraft(user.email || "");
         setAccountDisplayNameDraft(user.user_metadata?.display_name || user.email?.split("@")[0] || "");
       }
+      });
+      authListener = listener;
+    };
+    restoreSession().catch((error) => {
+      window.clearTimeout(initializationTimer);
+      console.error("Sign-in service loading failed:", error);
+      if (mounted) { setAuthInitializing(false); setSyncStatus("local-only"); setAuthError(friendlyAccountError(error, { offline: !navigator.onLine })); }
     });
-    return () => { mounted = false; window.clearTimeout(initializationTimer); listener.subscription.unsubscribe(); };
+    return () => { mounted = false; window.clearTimeout(initializationTimer); authListener?.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -2059,12 +2076,12 @@ function App() {
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser) return undefined;
-    const client = getSupabaseBrowserClient();
     let cancelled = false;
     setSyncStatus("cloud-loading");
     setSyncError("");
     const hydrate = async () => {
       try {
+        const client = await getSupabaseBrowserClient();
         const local = loadLocalSnapshot(localStorage, currentUser) || readLegacySnapshot(localStorage, currentUser, DEFAULT_USER_SETTINGS);
         const localMeta = loadLocalMeta(localStorage, currentUser);
         const cloud = await loadCloudSnapshot(client, currentUser);
@@ -2137,7 +2154,7 @@ function App() {
       try {
         const stateToSave = latestCloudStateRef.current;
         const result = await waitForCloudRequest(
-          replaceCloudSnapshot(getSupabaseBrowserClient(), currentUser, stateToSave, cloudRevisionRef.current),
+          replaceCloudSnapshot(await getSupabaseBrowserClient(), currentUser, stateToSave, cloudRevisionRef.current),
           "Cloud saving took too long. Your changes are still safe on this device.",
         );
         if (cloudHydratedUserRef.current !== currentUser) return;
@@ -2150,7 +2167,7 @@ function App() {
       } catch (error) {
         if (error.code === "revision_conflict") {
           cloudSaveQueuedRef.current = false;
-          const newest = await loadCloudSnapshot(getSupabaseBrowserClient(), currentUser).catch(() => null);
+          const newest = await loadCloudSnapshot(await getSupabaseBrowserClient(), currentUser).catch(() => null);
           saveLocalBackup(localStorage, currentUser, latestCloudStateRef.current);
           setSyncConflict({ local: latestCloudStateRef.current, cloud: newest?.state, cloudRevision: newest?.revision || cloudRevisionRef.current });
           setSyncConflictOpen(true);
@@ -4569,7 +4586,7 @@ function App() {
     setAuthBusy(true);
     try {
       if (CLOUD_SYNC_CONFIGURED) {
-        const client = getSupabaseBrowserClient();
+        const client = await getSupabaseBrowserClient();
         if (authMode === "signin") {
           const { data, error } = await client.auth.signInWithPassword({ email: trimmedName, password: authPassword });
           if (error) throw error;
@@ -4671,7 +4688,7 @@ function App() {
     setSelectedChecklistId(null);
     setCalendarAddOpen(false);
     if (currentUser && userSettings.externalPushEnabled) await cancelAllExternalReminders(currentUser);
-    if (CLOUD_SYNC_CONFIGURED) { intentionalSignOutRef.current = true; await getSupabaseBrowserClient().auth.signOut(); }
+    if (CLOUD_SYNC_CONFIGURED) { intentionalSignOutRef.current = true; await (await getSupabaseBrowserClient()).auth.signOut(); }
     localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     cloudHydratedUserRef.current = "";
     cloudRevisionRef.current = 0;
@@ -4727,7 +4744,7 @@ function App() {
     setSyncError("");
     try {
       const result = await waitForCloudRequest(
-        replaceCloudSnapshot(getSupabaseBrowserClient(), currentUser, localChoice, expectedRevision),
+        replaceCloudSnapshot(await getSupabaseBrowserClient(), currentUser, localChoice, expectedRevision),
         "Cloud saving took too long. Your changes are still safe on this device.",
       );
       cloudRevisionRef.current = Number(result.revision);
@@ -4736,7 +4753,7 @@ function App() {
       setSyncStatus("saved");
     } catch (error) {
       if (error.code === "revision_conflict") {
-        const newest = await loadCloudSnapshot(getSupabaseBrowserClient(), currentUser).catch(() => null);
+        const newest = await loadCloudSnapshot(await getSupabaseBrowserClient(), currentUser).catch(() => null);
         setSyncConflict({ local: localChoice, cloud: newest?.state, cloudRevision: newest?.revision || expectedRevision });
         setSyncConflictOpen(true);
         setSyncStatus("conflict");
@@ -4770,7 +4787,7 @@ function App() {
     if (!navigator.onLine) { setAuthError("You appear to be offline. Reconnect, then send the recovery email again."); return; }
     setAuthBusy(true);
     try {
-      const { error } = await getSupabaseBrowserClient().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
+      const { error } = await (await getSupabaseBrowserClient()).auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` });
       if (error) throw error;
       setAuthNotice("If that email has a GlowDocket account, a password reset link is on its way. You can safely try again if it does not arrive.");
     } catch (error) {
@@ -4787,7 +4804,7 @@ function App() {
     if (recoveryPassword !== recoveryPasswordConfirm) { setAuthError("Those passwords do not match yet."); return; }
     setAuthBusy(true);
     try {
-      const { error } = await getSupabaseBrowserClient().auth.updateUser({ password: recoveryPassword });
+      const { error } = await (await getSupabaseBrowserClient()).auth.updateUser({ password: recoveryPassword });
       if (error) throw error;
       setRecoveryPassword("");
       setRecoveryPasswordConfirm("");
@@ -4810,7 +4827,7 @@ function App() {
     setAccountUpdateStatus({ type: "", message: "" });
     try {
       if (CLOUD_SYNC_CONFIGURED && accountMode === "cloud") {
-        const { error } = await getSupabaseBrowserClient().auth.updateUser({ data: { display_name: nextName } });
+        const { error } = await (await getSupabaseBrowserClient()).auth.updateUser({ data: { display_name: nextName } });
         if (error) throw error;
       } else {
         localStorage.setItem(`taskacadia_preferred_name_${currentUser}`, nextName);
@@ -4835,7 +4852,7 @@ function App() {
     setAccountUpdateStatus({ type: "", message: "" });
     try {
       const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName: nextName });
-      const { data, error } = await getSupabaseBrowserClient().auth.signUp({ email, password: accountPasswordDraft, options: { data: { display_name: nextName } } });
+      const { data, error } = await (await getSupabaseBrowserClient()).auth.signUp({ email, password: accountPasswordDraft, options: { data: { display_name: nextName } } });
       if (error) throw error;
       if (!data.user) throw new Error("Account creation did not finish.");
       applyCloudStateToLocal(localStorage, data.user.id, snapshot, { externalPushEnabled: false, notificationsEnabled: false });
@@ -4867,7 +4884,7 @@ function App() {
     setAccountUpdateBusy("email");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
-      const { data, error } = await getSupabaseBrowserClient().auth.updateUser({ email: nextEmail });
+      const { data, error } = await (await getSupabaseBrowserClient()).auth.updateUser({ email: nextEmail });
       if (error) throw error;
       setAccountEmail(data.user?.email || accountEmail);
       setAccountUpdateStatus({ type: "success", message: "Check your email to confirm the address change. Your current email remains active until confirmation is complete." });
@@ -4884,7 +4901,7 @@ function App() {
     setAccountUpdateBusy("password");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
-      const { error } = await getSupabaseBrowserClient().auth.updateUser({ password: accountPasswordDraft });
+      const { error } = await (await getSupabaseBrowserClient()).auth.updateUser({ password: accountPasswordDraft });
       if (error) throw error;
       setAccountPasswordDraft("");
       setAccountPasswordConfirm("");
@@ -4956,7 +4973,7 @@ function App() {
     setAccountUpdateBusy("verification");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
-      const { error } = await getSupabaseBrowserClient().auth.resend({
+      const { error } = await (await getSupabaseBrowserClient()).auth.resend({
         type: "signup",
         email: accountEmail,
         options: { emailRedirectTo: `${window.location.origin}/` },
@@ -4974,7 +4991,7 @@ function App() {
     setAccountUpdateStatus({ type: "", message: "" });
     try {
       intentionalSignOutRef.current = true;
-      const { error } = await getSupabaseBrowserClient().auth.signOut({ scope: "global" });
+      const { error } = await (await getSupabaseBrowserClient()).auth.signOut({ scope: "global" });
       if (error) throw error;
       localStorage.removeItem(AUTH_USER_STORAGE_KEY);
       setCurrentUser("");
@@ -5001,7 +5018,7 @@ function App() {
         const reminderResult = await cancelAllExternalReminders(currentUser);
         if (reminderResult.status === "cleanup_pending") throw new Error("Scheduled reminders could not be fully removed yet. Repair reminder sync, then retry account deletion.");
       }
-      const { data: sessionData } = await getSupabaseBrowserClient().auth.getSession();
+      const { data: sessionData } = await (await getSupabaseBrowserClient()).auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Your session expired. Sign in again before deleting your account.");
       const response = await fetch("/api/account/delete", { method: "POST", headers: { authorization: `Bearer ${token}` } });
@@ -5011,7 +5028,7 @@ function App() {
       await Promise.allSettled(deletedTaskAttachments.map((id) => deleteAttachmentFile(id)));
       removeCloudAccountLocalData(localStorage, currentUser);
       localStorage.removeItem(AUTH_USER_STORAGE_KEY);
-      await getSupabaseBrowserClient().auth.signOut({ scope: "local" }).catch(() => {});
+      await (await getSupabaseBrowserClient()).auth.signOut({ scope: "local" }).catch(() => {});
       setCurrentUser("");
       setAccountMode("signed-out");
       setCurrentTab("dashboard");
@@ -5104,7 +5121,7 @@ function App() {
     setCloudHistoryBusy(true);
     setRecoveryStatus({ type: "", message: "" });
     try {
-      setCloudHistory(await loadCloudHistory(getSupabaseBrowserClient(), currentUser));
+      setCloudHistory(await loadCloudHistory(await getSupabaseBrowserClient(), currentUser));
     } catch (error) {
       console.error("Backup history loading failed:", error);
       setRecoveryStatus({ type: "error", message: "Earlier versions aren’t available right now. Your current planner is still safe." });
@@ -6891,7 +6908,7 @@ function App() {
         <button type="button" onClick={() => setCurrentTab("calendar")}>Open</button>
       </div>
       <p>Select a date to open the full calendar.</p>
-      <Calendar
+      <DeferredCalendar
         value={selectedDate}
         calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
         showNeighboringMonth={userSettings.showNeighboringMonth !== false}
@@ -8573,7 +8590,7 @@ function App() {
                   </div>
                 </section>
               ) : (
-                  <Calendar
+                  <DeferredCalendar
                     onChange={handleCalendarDateChange}
                     value={selectedDate}
                     minDetail="decade"
@@ -10476,7 +10493,7 @@ function App() {
                 </button>
               )}
             </div>
-            <Calendar
+            <DeferredCalendar
               activeStartDate={copyCalendarStart}
               calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
               showNeighboringMonth={userSettings.showNeighboringMonth !== false}
@@ -10620,8 +10637,9 @@ function App() {
           <button type="button" className="delete-undo-dismiss" aria-label="Dismiss undo message" onClick={() => setDeletedAssignmentUndo(null)}>×</button>
         </div>
       )}
-      <Analytics />
-      <SpeedInsights />
+      <Suspense fallback={null}>
+        <Telemetry />
+      </Suspense>
     </div>
   );
 }

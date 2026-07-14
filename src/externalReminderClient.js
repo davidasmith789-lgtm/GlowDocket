@@ -1,8 +1,13 @@
-import OneSignal from "react-onesignal";
 import { createOpaqueDeviceId, EXTERNAL_PUSH_CLIENT_ENABLED, getPushCleanupStorageKey, getPushDeviceStorageKey, isPushEnvironmentSupported } from "./externalReminderUtils.js";
 
 let initializationPromise;
+let oneSignalPromise;
 let subscriptionListenerAttached = false;
+
+function loadOneSignal() {
+  oneSignalPromise ||= import("react-onesignal").then((module) => module.default || module);
+  return oneSignalPromise;
+}
 
 async function api(action, body, token = "") {
   const response = await fetch(`/api/reminders/${action}`, { method: "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) });
@@ -21,6 +26,7 @@ async function initialize() {
   if (!isPushEnvironmentSupported()) return "unsupported";
   const appId = String(import.meta.env.VITE_ONESIGNAL_APP_ID || "");
   if (!appId) return "not_configured";
+  const OneSignal = await loadOneSignal();
   initializationPromise ||= OneSignal.init({ appId, serviceWorkerPath: "push/onesignal/OneSignalSDKWorker.js", serviceWorkerParam: { scope: "/push/onesignal/" }, notifyButton: { enable: false }, allowLocalhostAsSecureOrigin: true });
   await initializationPromise;
   if (!subscriptionListenerAttached) { OneSignal.User.PushSubscription.addEventListener("change", () => window.dispatchEvent(new Event("taskcabinet-push-subscription-change"))); subscriptionListenerAttached = true; }
@@ -30,6 +36,7 @@ async function initialize() {
 export async function connectExternalPush(profile, { requestPermission = false } = {}) {
   const ready = await initialize();
   if (ready !== "ready") return { status: ready };
+  const OneSignal = await loadOneSignal();
   if (requestPermission && Notification.permission !== "granted") await OneSignal.Notifications.requestPermission();
   if (Notification.permission !== "granted") return { status: Notification.permission === "denied" ? "permission_blocked" : "permission_needed" };
   if (!OneSignal.User.PushSubscription.optedIn) await OneSignal.User.PushSubscription.optIn();
