@@ -7271,8 +7271,8 @@ function App() {
 );
     return (
       <div className="task-master-widget">
-        {!onlyBucket && renderFilterToggle()}
-        <div className="task-master-heading"><h3>{status === "todo" ? `${schoolLevelCopy.todoLabel} (${source.length})` : status === "inProgress" ? `In Progress (${source.length})` : `Completed ${schoolLevelCopy.taskPlural} (${source.length})`}</h3>{status === "completed" && <button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button>}</div>
+        {!onlyBucket && !isMobileUi && status === "completed" ? <div className="desktop-task-master-toolbar">{renderFilterToggle()}<button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button></div> : !onlyBucket ? renderFilterToggle() : null}
+        {isMobileUi && <div className="task-master-heading"><h3>{status === "todo" ? `${schoolLevelCopy.todoLabel} (${source.length})` : status === "inProgress" ? `In Progress (${source.length})` : `Completed ${schoolLevelCopy.taskPlural} (${source.length})`}</h3>{status === "completed" && <button type="button" className="btn btn-secondary" onClick={handleArchiveAll} disabled={unarchivedCompletedCount === 0}>Archive All</button>}</div>}
         {!onlyBucket && renderFilterControls()}
         {source.length === 0 ? <p className="placeholder-text friendly-empty" role="status">{schoolLevelCopy.emptyCopy}</p> : (status === "completed" || onlyBucket) ? <ul className="task-list">{source.map(renderCard)}</ul> : <div>{bucketsOrder.map((bucket) => grouped[bucket]?.length ? <section className="bucket-section" key={bucket}><h4 className="bucket-title">{bucket}</h4><ul className="task-list">{grouped[bucket].map(renderCard)}</ul></section> : null)}</div>}
       </div>
