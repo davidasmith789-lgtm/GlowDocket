@@ -9738,6 +9738,7 @@ function App() {
             </div>
 
             <div className="edit-modal-grid">
+              {isMobileUi && <div className="mobile-add-option-heading mobile-edit-option-heading"><span>Assignment details</span><h3>Edit Assignment</h3><p>Update the assignment details below.</p></div>}
               <div className="edit-field edit-field-full">
                 <label>Assignment Name</label>
                 <input
@@ -10205,8 +10206,13 @@ function App() {
                 />
                 Mark as completed
               </label>
+              {isMobileUi && (
+                <button type="button" className="btn btn-primary mobile-edit-save" onClick={handleEditSave}>
+                  Save Changes
+                </button>
+              )}
             </div>
-            <div className="edit-modal-actions">
+            {!isMobileUi && <div className="edit-modal-actions">
               <button
                 type="button"
                 className="btn btn-danger"
@@ -10222,7 +10228,7 @@ function App() {
               >
                 Save Changes
               </button>
-            </div>
+            </div>}
           </div>
         </div>
       )}

@@ -5738,7 +5738,99 @@ html[data-theme="dark"] .tutorial-demo-link {
   }
 
   .mobile-app-ui .mobile-edit-screen .edit-modal-actions {
-    padding-bottom: env(safe-area-inset-bottom);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    border: 0;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 22px;
+    color: var(--text-color);
+    background: var(--card-bg);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  }
+
+  .mobile-app-ui .mobile-edit-option-heading { margin-bottom: 4px; }
+
+  .mobile-app-ui .mobile-edit-screen .edit-main-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-notes-side {
+    display: grid;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-notes-side textarea {
+    height: auto;
+    min-height: 110px;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-subtask-section,
+  .mobile-app-ui .mobile-edit-screen .edit-checkbox {
+    margin-top: 4px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: rgba(99, 102, 241, 0.06);
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-field label,
+  .mobile-app-ui .mobile-edit-screen .edit-checkbox {
+    font-weight: 800;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-actions .btn {
+    width: 100%;
+    min-height: 48px;
+    border-radius: 4px;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-actions .btn-primary {
+    grid-row: 1;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-actions .btn-danger {
+    grid-row: 2;
+    border-color: var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+  }
+
+  .mobile-app-ui .mobile-edit-save {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
   }
 
   .mobile-app-ui .delete-undo-toast {
