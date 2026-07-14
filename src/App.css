@@ -5812,6 +5812,10 @@ html[data-theme="dark"] .tutorial-demo-link {
     line-height: 1.25;
   }
 
+  .mobile-app-ui .mobile-edit-screen .edit-notes-side > label {
+    align-self: center;
+  }
+
   .mobile-app-ui .mobile-edit-screen .edit-field > :is(input, select, textarea) {
     min-width: 0;
   }
