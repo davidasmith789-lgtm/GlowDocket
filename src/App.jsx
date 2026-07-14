@@ -43,6 +43,7 @@ import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClien
 import { applyCloudStateToLocal, collectSyncableState, createCloudSnapshot, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, sameState, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
+import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
 import GlowDocketLogo from "./GlowDocketLogo.jsx";
 /*
  * GLOWDOCKET APPLICATION MAP
@@ -706,6 +707,18 @@ async function deleteAttachmentFile(id) {
     transaction.oncomplete = () => { database.close(); resolve(); };
     transaction.onerror = () => { database.close(); reject(transaction.error); };
   });
+}
+
+async function readBrowserStorageEstimate() {
+  if (!navigator.storage?.estimate) return { supported: false, usage: 0, quota: 0 };
+  const estimate = await navigator.storage.estimate();
+  return { supported: true, usage: Number(estimate.usage) || 0, quota: Number(estimate.quota) || 0 };
+}
+
+function friendlyAttachmentStorageError(error) {
+  return error?.name === "QuotaExceededError"
+    ? "This browser does not have enough storage space for the selected attachments. Remove unused files and try again."
+    : "The selected file could not be stored in this browser.";
 }
 
 /**
@@ -1712,6 +1725,7 @@ function App() {
   const [draftLinkMessage, setDraftLinkMessage] = useState("");
   const [draftLinks, setDraftLinks] = useState([]);
   const [draftFiles, setDraftFiles] = useState([]);
+  const [attachmentSelectionMessage, setAttachmentSelectionMessage] = useState("");
   const [optionalLinksOpen, setOptionalLinksOpen] = useState(false);
   const [optionalFilesOpen, setOptionalFilesOpen] = useState(false);
   const [optionalChecklistOpen, setOptionalChecklistOpen] = useState(false);
@@ -1836,6 +1850,7 @@ function App() {
   const [storageView, setStorageView] = useState(null);
   const [deletedAssignmentUndo, setDeletedAssignmentUndo] = useState(null);
   const [recoveryStatus, setRecoveryStatus] = useState({ type: "", message: "" });
+  const [browserStorage, setBrowserStorage] = useState({ supported: null, usage: 0, quota: 0, error: "" });
   const [cloudHistory, setCloudHistory] = useState([]);
   const [cloudHistoryBusy, setCloudHistoryBusy] = useState(false);
   const [draggedSettingsSection, setDraggedSettingsSection] = useState(null);
@@ -2569,6 +2584,7 @@ function App() {
     if (!isEnabled && field === "showAssignmentFiles") {
       setOptionalFilesOpen(false);
       setDraftFiles([]);
+      setAttachmentSelectionMessage("");
     }
     if (!isEnabled && field === "showAssignmentChecklistSteps") {
       setOptionalChecklistOpen(false);
@@ -2921,6 +2937,15 @@ function App() {
     checklistStorageKey,
     workspaceStorageKey,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    readBrowserStorageEstimate()
+      .then((estimate) => { if (!cancelled) setBrowserStorage({ ...estimate, error: "" }); })
+      .catch(() => { if (!cancelled) setBrowserStorage({ supported: true, usage: 0, quota: 0, error: "Storage details are temporarily unavailable." }); });
+    return () => { cancelled = true; };
+  }, [currentUser, tasks]);
+
   useEffect(() => {
     const query = window.matchMedia("(max-width: 767px)");
     const handleMobileUiChange = (event) => setIsMobileUi(event.matches);
@@ -3170,13 +3195,22 @@ function App() {
     return true;
   };
 
-  const handleFileSelection = (fileList, setter) => {
+  const handleFileSelection = async (fileList, setter, currentFiles = []) => {
     const files = Array.from(fileList || []);
-    const accepted = files.filter((file) => file.size <= 10 * 1024 * 1024);
-    if (accepted.length !== files.length) {
-      alert("Files larger than 10 MB were skipped.");
+    if (files.length === 0) return;
+    let estimate = browserStorage;
+    try {
+      estimate = await readBrowserStorageEstimate();
+      setBrowserStorage({ ...estimate, error: "" });
+    } catch {
+      // Per-file and per-assignment limits still protect the selection.
     }
-    setter((prev) => [...prev, ...accepted]);
+    const result = evaluateAttachmentSelection(currentFiles, files, estimate);
+    const reasons = [...new Set(result.rejected.map((item) => item.reason))];
+    if (result.projectedStatus.level === "warning") reasons.push(`Browser storage will be about ${result.projectedStatus.percent}% full after these files are saved.`);
+    const message = reasons.join(" ");
+    setAttachmentSelectionMessage(message || `${result.accepted.length} file${result.accepted.length === 1 ? "" : "s"} ready to attach.`);
+    if (result.accepted.length > 0) setter((prev) => [...prev, ...result.accepted]);
   };
 
   const handleAttachmentDownload = async (attachment) => {
@@ -3252,7 +3286,7 @@ function App() {
       );
     } catch (error) {
       console.error("Failed to save attachment:", error);
-      alert("The selected file could not be stored in this browser.");
+      alert(friendlyAttachmentStorageError(error));
       return;
     }
 
@@ -3315,6 +3349,7 @@ function App() {
     setDraftLinks([]);
     setDraftLinkMessage("");
     setDraftFiles([]);
+    setAttachmentSelectionMessage("");
     setOptionalLinksOpen(false);
     setOptionalFilesOpen(false);
     setOptionalChecklistOpen(false);
@@ -4187,6 +4222,7 @@ function App() {
     setEditLinkUrl("");
     setEditLinkMessage("");
     setPendingEditFiles([]);
+    setAttachmentSelectionMessage("");
     setRemovedEditAttachmentIds([]);
     setEditOptionalSections({ files: false, links: false, checklist: false });
   };
@@ -4384,7 +4420,7 @@ function App() {
       );
     } catch (error) {
       console.error("Failed to save attachment:", error);
-      alert("The selected file could not be stored in this browser.");
+      alert(friendlyAttachmentStorageError(error));
       return;
     }
 
@@ -4419,6 +4455,7 @@ function App() {
     setEditingTaskId(null);
     setEditingTask(null);
     setPendingEditFiles([]);
+    setAttachmentSelectionMessage("");
     setEditOptionalSections({ files: false, links: false, checklist: false });
 
     removedEditAttachmentIds.forEach((attachmentId) => {
@@ -4445,6 +4482,7 @@ function App() {
     setEditLinkUrl("");
     setEditLinkMessage("");
     setPendingEditFiles([]);
+    setAttachmentSelectionMessage("");
     setRemovedEditAttachmentIds([]);
     setEditOptionalSections({ files: false, links: false, checklist: false });
   };
@@ -4990,6 +5028,15 @@ function App() {
       setRecoveryStatus({ type: "success", message: "Previous local version restored. Your newer version was also saved locally in case you need it again." });
     } catch (error) {
       setRecoveryStatus({ type: "error", message: error.message || "GlowDocket could not restore the previous local version safely." });
+    }
+  };
+
+  const handleRefreshStorageEstimate = async () => {
+    setBrowserStorage((current) => ({ ...current, error: "" }));
+    try {
+      setBrowserStorage({ ...(await readBrowserStorageEstimate()), error: "" });
+    } catch {
+      setBrowserStorage({ supported: true, usage: 0, quota: 0, error: "Storage details are temporarily unavailable." });
     }
   };
 
@@ -5545,6 +5592,10 @@ function App() {
     .sort((a, b) =>
       String(b.deletedAt || "").localeCompare(String(a.deletedAt || "")),
     );
+  const uniqueAttachmentMetadata = new Map();
+  tasks.forEach((task) => getSafeAttachments(task).forEach((attachment) => uniqueAttachmentMetadata.set(attachment.id, attachment)));
+  const attachmentMetadataBytes = [...uniqueAttachmentMetadata.values()].reduce((total, attachment) => total + attachment.size, 0);
+  const storageQuotaStatus = getStorageQuotaStatus(browserStorage.usage, browserStorage.quota);
 
   const calendarTasks = tasks.filter(
     (task) =>
@@ -6339,11 +6390,12 @@ function App() {
           type="file"
           multiple
           onChange={(e) => {
-            handleFileSelection(e.target.files, setDraftFiles);
+            handleFileSelection(e.target.files, setDraftFiles, draftFiles);
             e.target.value = "";
           }}
         />
-        <p className="subtask-form-hint">Stored only in this browser. Maximum 10 MB per file.</p>
+        <p className="subtask-form-hint">Stored only in this browser. Maximum 10 MB per file, {MAX_ATTACHMENTS_PER_ASSIGNMENT} files and 50 MB per assignment.</p>
+        {attachmentSelectionMessage && <p className="attachment-selection-message" role="status" aria-live="polite">{attachmentSelectionMessage}</p>}
         {draftFiles.map((file, index) => (
           <div className="attachment-draft-row" key={`${file.name}-${file.lastModified}-${index}`}>
             <span>{file.name}</span>
@@ -9526,6 +9578,27 @@ function App() {
                 )}
 
                 {settingsSection === "storage" && (
+                  <SettingsCard title="Browser Storage" description="Monitor the browser space used by GlowDocket, attachments, and other saved site data." className="settings-section-wide storage-quota-card">
+                    {browserStorage.supported === false ? (
+                      <p className="hint-text">This browser does not report storage quota details. Attachment limits still remain active.</p>
+                    ) : browserStorage.error ? (
+                      <div className="account-update-message is-error" role="alert">{browserStorage.error}</div>
+                    ) : browserStorage.supported === null ? (
+                      <p className="hint-text">Checking browser storage…</p>
+                    ) : (
+                      <div className={`storage-quota-summary is-${storageQuotaStatus.level}`}>
+                        <div><strong>{formatStorageBytes(browserStorage.usage)} used</strong><span>of approximately {formatStorageBytes(browserStorage.quota)} available to this site</span></div>
+                        <meter min="0" max="100" low="80" high="95" optimum="0" value={storageQuotaStatus.percent} aria-label={`${storageQuotaStatus.percent}% of browser storage used`}>{storageQuotaStatus.percent}%</meter>
+                        <p>{storageQuotaStatus.level === "critical" ? "Storage is critically full. Remove unused attachments or browser site data before adding more files." : storageQuotaStatus.level === "warning" ? "Storage is getting full. Consider removing unused attachments or downloading a backup." : "Storage has comfortable room available."}</p>
+                      </div>
+                    )}
+                    <div className="storage-quota-details"><span><strong>{uniqueAttachmentMetadata.size}</strong> attachment file{uniqueAttachmentMetadata.size === 1 ? "" : "s"} referenced</span><span><strong>{formatStorageBytes(attachmentMetadataBytes)}</strong> attachment size recorded</span></div>
+                    <p className="hint-text">Browser estimates cover this site’s IndexedDB, localStorage, caches, and related data. Attachment totals use assignment metadata and may include files unavailable on this device.</p>
+                    <button type="button" className="btn btn-secondary" onClick={handleRefreshStorageEstimate}>Refresh Storage Check</button>
+                  </SettingsCard>
+                )}
+
+                {settingsSection === "storage" && (
                   <SettingsCard title="Backup & Restore" description="Download a copy you control, restore a complete JSON backup, or recover an earlier cloud version." className="settings-section-wide recovery-center-card">
                     <div className="recovery-action-grid">
                       <div><strong>Complete JSON backup</strong><p>Includes assignments, Trash, checklists, courses, preferences, and workspace layouts. Attachment files are browser-only and are not included.</p><button type="button" className="btn btn-primary" onClick={handleExportJson}>Download JSON Backup</button></div>
@@ -9968,12 +10041,13 @@ function App() {
                   </button>
                 </div>
                 {editOptionalSections.files && <div className="edit-optional-content">
-                <p className="subtask-form-hint">Files stay in this browser and may be up to 10 MB each.</p>
+                <p className="subtask-form-hint">Files stay in this browser. Maximum 10 MB per file, {MAX_ATTACHMENTS_PER_ASSIGNMENT} files and 50 MB per assignment.</p>
+                {attachmentSelectionMessage && <p className="attachment-selection-message" role="status" aria-live="polite">{attachmentSelectionMessage}</p>}
                 <input
                   type="file"
                   multiple
                   onChange={(e) => {
-                    handleFileSelection(e.target.files, setPendingEditFiles);
+                    handleFileSelection(e.target.files, setPendingEditFiles, [...getSafeAttachments(editingTask), ...pendingEditFiles]);
                     e.target.value = "";
                   }}
                 />

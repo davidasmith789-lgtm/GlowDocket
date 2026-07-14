@@ -51,6 +51,7 @@ Attachments are stored in IndexedDB. Compatibility-sensitive keys still use the 
 - **Calendar:** fixed full-calendar month/week views plus a movable dashboard mini calendar.
 - **Checklists:** independent colored lists with optional deadlines and reminders.
 - **Settings:** assignment defaults, field visibility, calendar behavior, notifications, school cycles, appearance, custom themes, archive, trash, and workspace guidance.
+- **Storage safety:** browser quota monitoring, local backup recovery, and attachment limits of 10 MB per file, 10 files, and 50 MB per assignment.
 
 Assignments moved to Trash remain recoverable for 30 days. GlowDocket permanently removes expired Trash assignments the next time the app is open (and checks hourly while it remains open), including attachment blobs that are no longer referenced by another assignment. The deletion then follows the normal local/cloud sync path.
 - **Imports:** pasted assignment lists and local PDF, DOCX, TXT, Markdown, or CSV syllabus extraction.

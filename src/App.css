@@ -5277,6 +5277,19 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 @media (max-width: 700px) { .account-management-action { flex-direction: column; } .account-management-action .btn { width: 100%; } }
 .account-top-card { width: 100%; }
 .recovery-action-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.storage-quota-card { display: grid; gap: 14px; }
+.storage-quota-summary { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); }
+.storage-quota-summary > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; }
+.storage-quota-summary > div span, .storage-quota-summary p { color: var(--muted-text); }
+.storage-quota-summary p { margin: 0; }
+.storage-quota-summary meter { width: 100%; height: 18px; accent-color: var(--success-color); }
+.storage-quota-summary.is-warning meter { accent-color: var(--warning-color); }
+.storage-quota-summary.is-critical meter { accent-color: var(--danger-color); }
+.storage-quota-summary.is-warning { border-color: color-mix(in srgb, var(--warning-color) 55%, var(--border-color)); }
+.storage-quota-summary.is-critical { border-color: color-mix(in srgb, var(--danger-color) 55%, var(--border-color)); }
+.storage-quota-details { display: flex; flex-wrap: wrap; gap: 10px; }
+.storage-quota-details span { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--card-bg); }
+.attachment-selection-message { margin: 4px 0 0; color: var(--warning-color); font-size: 0.8rem; font-weight: 700; line-height: 1.4; }
 .recovery-action-grid > div { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
 .recovery-action-grid p, .cloud-history-panel p { margin: 0; color: var(--muted-text); line-height: 1.45; }
 .recovery-action-grid .btn { margin-top: auto; }
