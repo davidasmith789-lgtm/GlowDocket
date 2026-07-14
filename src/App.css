@@ -5782,6 +5782,9 @@ html[data-theme="dark"] .tutorial-demo-link {
 
   .mobile-app-ui .mobile-edit-screen .edit-notes-side {
     display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 10px;
     min-height: 0;
     padding: 0;
     border: 0;
@@ -5792,6 +5795,25 @@ html[data-theme="dark"] .tutorial-demo-link {
   .mobile-app-ui .mobile-edit-screen .edit-notes-side textarea {
     height: auto;
     min-height: 110px;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-grid > .edit-field:not(.edit-subtask-section),
+  .mobile-app-ui .mobile-edit-screen .edit-details-grid > .edit-field {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-modal-grid > .edit-field:not(.edit-subtask-section) > label,
+  .mobile-app-ui .mobile-edit-screen .edit-details-grid > .edit-field > label,
+  .mobile-app-ui .mobile-edit-screen .edit-notes-side > label {
+    margin: 0;
+    line-height: 1.25;
+  }
+
+  .mobile-app-ui .mobile-edit-screen .edit-field > :is(input, select, textarea) {
+    min-width: 0;
   }
 
   .mobile-app-ui .mobile-edit-screen .edit-subtask-section,
