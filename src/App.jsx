@@ -105,7 +105,8 @@ const DEFAULT_USER_SETTINGS = {
   cycleAnchorDate: "",
   courseCycleDays: {},
   customColors: {},
-  activeColorThemeId: "light",
+  activeColorThemeId: "midnight-neon",
+  customCategories: [],
   customColorThemes: [],
   deletedColorThemeIds: [],
 };
@@ -119,6 +120,7 @@ const TUTORIAL_SLIDES = [
   { title: "Know what to do next", copy: "Plan of Attack weighs deadlines, priority, progress, and time so the next step is always clear.", visual: "plan" },
   { title: "See the whole week", copy: "Calendar and independent checklists keep deadlines, routines, and small details visible.", visual: "calendar" },
   { title: "Make the workspace yours", copy: "Move, resize, minimize, and theme widgets to build a dashboard that fits how you study.", visual: "workspace" },
+  { title: "Match your day cycle", copy: "Have different classes on different days? Use Day Cycles to name each schedule day, choose an anchor date, and see the right cycle across your calendar.", visual: "cycle" },
 ];
 const TASK_CATEGORIES = ["School", "Work", "Personal"];
 const SCHOOL_LEVEL_COPY = {
@@ -558,6 +560,10 @@ function chooseLegalWorkspaceRect(desired, xOnly, yOnly, lastSafe, obstacles, op
 
 function getTaskCategory(task) {
   return task?.category || "School";
+}
+
+function getTaskCourseOrCategory(task) {
+  return getTaskCategory(task) === "School" ? task?.course || "Other" : getTaskCategory(task);
 }
 
 function getCycleDayForDate(date, settings) {
@@ -1680,9 +1686,9 @@ function App() {
   const [userSettings, setUserSettings] = useState(() => {
     try {
       const storedSettings = localStorage.getItem(settingsStorageKey);
-      return storedSettings
-        ? { ...DEFAULT_USER_SETTINGS, ...JSON.parse(storedSettings) }
-        : DEFAULT_USER_SETTINGS;
+      if (storedSettings) return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(storedSettings) };
+      const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
+      return { ...DEFAULT_USER_SETTINGS, customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark };
     } catch (error) {
       console.error("Error reading user settings from localStorage:", error);
       return DEFAULT_USER_SETTINGS;
@@ -1691,6 +1697,7 @@ function App() {
 
   const [isCustomCourse, setIsCustomCourse] = useState(false);
   const [customCourseName, setCustomCourseName] = useState("");
+  const [customCategoryName, setCustomCategoryName] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
 
   // ---------------------------------------------------------------------------
@@ -1887,14 +1894,14 @@ function App() {
   // ---------------------------------------------------------------------------
   // COLOR THEME
   // ---------------------------------------------------------------------------
-  // Prefer the saved selection, then fall back to the operating system theme.
+  // Prefer the saved selection, then use Midnight Neon for a new device.
   const [theme, setTheme] = useState(() => {
     try {
       const storedTheme = localStorage.getItem("theme");
-      return storedTheme ? storedTheme : getSystemPreference();
+      return storedTheme ? storedTheme : "dark";
     } catch (error) {
       console.error("Error reading theme from localStorage:", error);
-      return getSystemPreference();
+      return "dark";
     }
   });
 
@@ -1962,6 +1969,11 @@ function App() {
     ...customColorThemes,
   ];
   const activeColorThemeId = userSettings.activeColorThemeId || theme;
+  const categoryChoices = [...new Set([
+    ...TASK_CATEGORIES,
+    ...(Array.isArray(userSettings.customCategories) ? userSettings.customCategories : []),
+    ...tasks.map((task) => getTaskCategory(task)),
+  ].filter(Boolean))];
   const safeDisplayName = resolveProfileDisplayName(displayName, currentUser, accountEmail.split("@")[0]) || "GlowDocket user";
 
   useEffect(() => {
@@ -2191,7 +2203,22 @@ function App() {
         ? ` | 🔁 Repeats: ${formatRepeatLabel(task.repeat)}`
         : "";
 
-    return `${getTaskCategory(task)} | 📅 Due: ${dateLabel} at ${timeLabel} | ⏱️ Est: ${task.estimatedMinutes || 0} mins | ⚠️ Priority: ${task.priority}${repeatLabel}`;
+    return `${getTaskCourseOrCategory(task)} | 📅 Due: ${dateLabel} at ${timeLabel} | ⏱️ Est: ${task.estimatedMinutes || 0} mins | ⚠️ Priority: ${task.priority}${repeatLabel}`;
+  };
+
+  const handleAddCustomCategory = () => {
+    const nextCategory = customCategoryName.trim();
+    if (!nextCategory) return;
+    const existingCategory = categoryChoices.find((item) => item.toLowerCase() === nextCategory.toLowerCase());
+    const savedCategory = existingCategory || nextCategory;
+    if (!existingCategory) {
+      setUserSettings((settings) => ({
+        ...settings,
+        customCategories: [...(Array.isArray(settings.customCategories) ? settings.customCategories : []), savedCategory],
+      }));
+    }
+    setCategory(savedCategory);
+    setCustomCategoryName("");
   };
 
   // ---------------------------------------------------------------------------
@@ -2658,14 +2685,15 @@ function App() {
       "Reset appearance, assignment, calendar, reminder, and school-cycle preferences? Your assignments and courses will not be deleted.",
     );
     if (!confirmed) return;
-    const resetTheme = getSystemPreference();
+    const resetTheme = "dark";
+    const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
 
     const resetSettings = {
       ...DEFAULT_USER_SETTINGS,
-      activeColorThemeId: resetTheme,
+      activeColorThemeId: "midnight-neon",
       cycleDayNames: [...DEFAULT_USER_SETTINGS.cycleDayNames],
       courseCycleDays: {},
-      customColors: {},
+      customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark,
       customColorThemes: [],
       deletedColorThemeIds: [],
     };
@@ -2953,7 +2981,10 @@ function App() {
     const loadedCourses = readStoredSection(localStorage, courseStorageKey, ["Other"], (value) => Array.isArray(value) && value.every((course) => typeof course === "string"));
     const loadedCourseColors = readStoredSection(localStorage, courseColorsStorageKey, {}, isObject);
     const storedSettings = readStoredSection(localStorage, settingsStorageKey, {}, isObject);
-    const loadedSettings = { ...DEFAULT_USER_SETTINGS, ...storedSettings };
+    const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
+    const loadedSettings = Object.keys(storedSettings).length > 0
+      ? { ...DEFAULT_USER_SETTINGS, ...storedSettings }
+      : { ...DEFAULT_USER_SETTINGS, customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark };
     const loadedChecklists = readStoredSection(localStorage, checklistStorageKey, [], Array.isArray);
     const storedWorkspace = readStoredSection(localStorage, workspaceStorageKey, null, (value) => value === null || isObject(value));
     const loadedWorkspace = repairLoadedWorkspace(storedWorkspace);
@@ -3593,9 +3624,8 @@ function App() {
         skipped.push(`Assignment ${index + 1} was skipped because no title was understood.`);
         return [];
       }
-      const parsedCategory = TASK_CATEGORIES.includes(assignment.category)
-        ? assignment.category
-        : userSettings.defaultCategory || "School";
+      const requestedCategory = String(assignment.category || "").trim();
+      const parsedCategory = requestedCategory || userSettings.defaultCategory || "School";
       let parsedCourse = parsedCategory;
       if (parsedCategory === "School") {
         parsedCourse = String(assignment.course || "Other").trim() || "Other";
@@ -6211,10 +6241,14 @@ function App() {
 
       <label>Category:</label>
       <select value={category} onChange={(e) => setCategory(e.target.value)}>
-        {TASK_CATEGORIES.map((item) => (
+        {categoryChoices.map((item) => (
           <option key={item} value={item}>{item}</option>
         ))}
       </select>
+      <div className="custom-category-row">
+        <input type="text" value={customCategoryName} onChange={(event) => setCustomCategoryName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleAddCustomCategory(); } }} placeholder="Add a custom category" aria-label="Custom category name" />
+        <button type="button" className="btn btn-secondary" onClick={handleAddCustomCategory} disabled={!customCategoryName.trim()}>Add category</button>
+      </div>
 
       {category === "School" && <><div
         className="assignment-course-heading"
@@ -6976,7 +7010,7 @@ function App() {
               <span className="recommended-plan-rank">{index + 1}</span>
               <div className="recommended-plan-content">
                 <strong>{item.task.title}</strong>
-                <div className="recommended-plan-details"><span>{item.task.course}</span><span>{item.dueLabel}</span><span>{item.task.priority} priority</span></div>
+                <div className="recommended-plan-details"><span>{getTaskCourseOrCategory(item.task)}</span><span>{item.dueLabel}</span><span>{item.task.priority} priority</span></div>
                 <div className="recommended-plan-reasons">{item.reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>
                 {renderAssignmentCountdown(item.task, "recommended-countdown")}
               </div>
@@ -7058,7 +7092,7 @@ function App() {
           {items.map(({ task, deadline, overdue }) => (
             <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`}>
               <button type="button" className="reminder-widget-main" onClick={() => handleReminderTaskClick(task)}>
-                <span><strong>{task.title}</strong><small>{task.course}</small></span>
+                <span><strong>{task.title}</strong><small>{getTaskCourseOrCategory(task)}</small></span>
                 <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></span>
               </button>
               {getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>Start</button>}
@@ -7219,15 +7253,15 @@ function App() {
       <div className="task-title-row">
         <strong className="task-title-text">{task.title}</strong>
 
-        {task.course ? (
+        {getTaskCourseOrCategory(task) ? (
           <span
             className="task-course-pill"
             style={{
-              backgroundColor: getCourseColor(task.course),
-              color: getTextColorForCourse(task.course),
+              backgroundColor: getCourseColor(getTaskCourseOrCategory(task)),
+              color: getTextColorForCourse(getTaskCourseOrCategory(task)),
             }}
           >
-            {task.course}
+            {getTaskCourseOrCategory(task)}
           </span>
         ) : null}
 
@@ -7549,7 +7583,7 @@ function App() {
     <ul className="task-list mobile-summary-task-list">
       {mobileSummaryTasks.map((task) => {
         const status = getTaskStatus(task);
-        return <li key={task.id} className={`task-card${getTaskDueBucket(task).startsWith("Overdue") ? " is-overdue" : ""}`}><div><div className="task-title-row"><strong className="task-title-text">{task.title}</strong>{task.course && <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span>}</div><div className="task-details">{formatTaskDetails(task)}</div>{renderAssignmentCountdown(task)}{renderSubtaskProgressLine(task)}</div>{renderTaskActionButtons(task, status)}</li>;
+        return <li key={task.id} className={`task-card${getTaskDueBucket(task).startsWith("Overdue") ? " is-overdue" : ""}`}><div><div className="task-title-row"><strong className="task-title-text">{task.title}</strong><span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span></div><div className="task-details">{formatTaskDetails(task)}</div>{renderAssignmentCountdown(task)}{renderSubtaskProgressLine(task)}</div>{renderTaskActionButtons(task, status)}</li>;
       })}
     </ul>
   );
@@ -7880,11 +7914,11 @@ function App() {
                               <span
                                 className="recommended-plan-course"
                                 style={{
-                                  backgroundColor: getCourseColor(task.course),
-                                  color: getTextColorForCourse(task.course),
+                                  backgroundColor: getCourseColor(getTaskCourseOrCategory(task)),
+                                  color: getTextColorForCourse(getTaskCourseOrCategory(task)),
                                 }}
                               >
-                                {task.course}
+                                {getTaskCourseOrCategory(task)}
                               </span>
                             </div>
 
@@ -8156,7 +8190,7 @@ function App() {
                               <div>
                                 <div className="task-title-row">
                                   <strong className="task-title-text">{task.title}</strong>
-                                  {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                  <span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>
                                   {renderTaskReminderIndicator(task)}
                                 </div>
                                 <div className="task-details">
@@ -8301,7 +8335,7 @@ function App() {
                               <div>
                                 <div className="task-title-row">
                                   <strong className="task-title-text">{task.title}</strong>
-                                  {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                  <span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>
                                   {renderTaskReminderIndicator(task)}
                                 </div>
                                 <span className="in-progress-status-pill">
@@ -8436,7 +8470,7 @@ function App() {
                       <div>
                         <div className="task-title-row">
                           <strong className="task-title-text">{task.title}</strong>
-                          {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                          <span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>
                           {renderTaskReminderIndicator(task)}
                         </div>
                         <div className="task-details">
@@ -8636,7 +8670,7 @@ function App() {
                             <div>
                               <div className="task-title-row">
                                 <strong className="task-title-text">{task.title}</strong>
-                                {task.course ? <span className="task-course-pill" style={{ backgroundColor: getCourseColor(task.course), color: getTextColorForCourse(task.course) }}>{task.course}</span> : null}
+                                <span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>
                                 {renderTaskReminderIndicator(task)}
                               </div>
                               <div className="task-details">
@@ -9612,7 +9646,7 @@ function App() {
                     </SettingsCard>
                     <SettingsCard title="New Assignment Defaults" description="These values prefill new assignments and return after each successful add." className="settings-section-wide">
                       <div className="settings-option-grid assignment-defaults-grid">
-                        <label className="settings-select-row settings-option-card"><span>Category</span><select value={userSettings.defaultCategory || "School"} onChange={(e) => handleAssignmentDefaultChange("defaultCategory", e.target.value)}>{TASK_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                        <label className="settings-select-row settings-option-card"><span>Category</span><select value={userSettings.defaultCategory || "School"} onChange={(e) => handleAssignmentDefaultChange("defaultCategory", e.target.value)}>{categoryChoices.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                         <label className="settings-select-row settings-option-card"><span>Priority</span><select value={userSettings.defaultPriority || "MED"} onChange={(e) => handleAssignmentDefaultChange("defaultPriority", e.target.value)}><option value="LOW">Low</option><option value="MED">Medium</option><option value="HIGH">High</option></select></label>
                         <label className="settings-select-row settings-option-card"><span>Estimated minutes</span><input type="number" min="0" value={userSettings.defaultEstimatedMinutes || ""} placeholder="None" onChange={(e) => handleAssignmentDefaultChange("defaultEstimatedMinutes", e.target.value)} /></label>
                         <label className="settings-select-row settings-option-card"><span>Repeat</span><select value={userSettings.defaultRepeat || "NONE"} onChange={(e) => handleAssignmentDefaultChange("defaultRepeat", e.target.value)}><option value="NONE">Does not repeat</option><option value="DAILY">Daily</option><option value="EVERY_OTHER_WEEKDAY">Every Other Weekday</option><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option></select></label>
@@ -9991,7 +10025,7 @@ function App() {
                       value={getTaskCategory(editingTask)}
                       onChange={(e) => handleEditFieldChange("category", e.target.value)}
                     >
-                      {TASK_CATEGORIES.map((item) => (
+                      {categoryChoices.map((item) => (
                         <option key={item} value={item}>{item}</option>
                       ))}
                     </select>
@@ -10594,6 +10628,7 @@ function App() {
                   {tutorialStep === 2 && <div className="practice-plan"><h3>Recommended Plan of Attack</h3><p>Choose an assignment to mark it complete.</p>{[["biology","Review cell structure","Due tomorrow · High priority"],["english","Literature response","Due Friday · 45 minutes"],["math","Practice problems","Due next week · 20 minutes"]].map(([id,title,detail], index) => <button type="button" className={tutorialPracticeDone.includes(id) ? "done" : ""} key={id} onClick={() => setTutorialPracticeDone((done) => done.includes(id) ? done.filter((item) => item !== id) : [...done,id])}><b>{index + 1}</b><span><strong>{title}</strong><small>{tutorialPracticeDone.includes(id) ? "Completed" : detail}</small></span></button>)}</div>}
                   {tutorialStep === 3 && <div className="practice-calendar"><section><h3>July 2026</h3><div>{Array.from({ length: 28 }, (_, index) => index + 1).map((day) => <button type="button" className={tutorialPracticeDate === day ? "selected" : ""} key={day} onClick={() => setTutorialPracticeDate(day)}>{day}</button>)}</div><p>Selected: July {tutorialPracticeDate}</p></section><section><h3>Study checklist</h3>{["Review notes","Practice problems","Pack materials"].map((item) => <label key={item}><input type="checkbox" checked={tutorialPracticeDone.includes(item)} onChange={() => setTutorialPracticeDone((done) => done.includes(item) ? done.filter((value) => value !== item) : [...done,item])} />{item}</label>)}</section></div>}
                   {tutorialStep === 4 && <div className="practice-workspace"><p className="practice-widget-instruction">Open the <strong>Widgets</strong> tab in GlowDocket to add widgets. Drag a six-dot handle to move a widget, or drag any edge or corner to resize it.</p>{[["plan","Plan of Attack","Biology review"],["calendar","Mini Calendar","3 deadlines"],["checklists","Checklists","1 of 3 complete"]].filter(([id]) => tutorialPracticeHiddenWidget !== id).map(([id,title,detail]) => <div key={id} style={{ left: tutorialWidgetLayout[id].x, top: tutorialWidgetLayout[id].y, width: tutorialWidgetLayout[id].width, height: tutorialWidgetLayout[id].height }}><header><button type="button" className="practice-widget-drag" aria-label={`Move ${title}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id)}>⠿</button><strong>{title}</strong><button type="button" className="practice-widget-menu-button" aria-label={`${title} options`} onClick={() => setTutorialPracticeWidgetMenu((open) => open === id ? "" : id)}>•••</button></header>{tutorialPracticeWidgetMenu === id && <button type="button" className="practice-widget-hide" onClick={() => { setTutorialPracticeHiddenWidget(id); setTutorialPracticeWidgetMenu(""); }}>Hide widget</button>}<span>{detail}</span>{[["top",{top:true}],["right",{right:true}],["bottom",{bottom:true}],["left",{left:true}],["top-left",{top:true,left:true}],["top-right",{top:true,right:true}],["bottom-right",{bottom:true,right:true}],["bottom-left",{bottom:true,left:true}]].map(([edge, edges]) => <button type="button" key={edge} className={`practice-widget-resize is-${edge}`} aria-label={`Resize ${title} from ${edge}`} onPointerDown={(event) => startTutorialWidgetInteraction(event, id, edges)} />)}</div>)}</div>}
+                  {tutorialStep === 5 && <div className="practice-calendar"><section><h3>Your Day Cycle</h3><p>Have different classes on different days? Name each schedule day and choose an anchor date.</p><div>{["A Day", "B Day", "C Day", "D Day"].map((day) => <button type="button" key={day}>{day}</button>)}</div><p>Weekends are skipped automatically.</p></section><section><h3>Today: A Day</h3><p>Biology · English · Study Hall</p><p>Cycle labels can appear directly on your calendar.</p></section></div>}
                 </main>
               </div>
             ) : (<>
@@ -10605,6 +10640,7 @@ function App() {
                 {tutorialStep === 2 && <div className="tutorial-mini-plan"><div><span><strong>Recommended Plan of Attack</strong><small>Best next steps based on your workload</small></span><em>3 tasks · 1h 35m</em></div><ol><li><b>1</b><span><strong>Review cell structure</strong><small>Biology · Due tomorrow · 30 min</small><em><i>High priority</i><i>Due soon</i></em></span></li><li><b>2</b><span><strong>Literature response</strong><small>English · Due Friday · 45 min</small><em><i>2/3 steps done</i></em></span></li></ol></div>}
                 {tutorialStep === 3 && <><div className="tutorial-mini-calendar"><div className="tutorial-mini-calendar-heading"><span>‹</span><strong>July 2026</strong><span>›</span></div><div>{["S","M","T","W","T","F","S","6","7","8","9","10","11","12","13","14","15","16","17","18","19"].map((day, index) => <span className={`${index === 17 ? "selected" : ""}${[10,15,19].includes(index) ? " has-task" : ""}`} key={`${day}-${index}`}>{day}</span>)}</div><small className="tutorial-calendar-legend"><i />Biology</small></div><div className="tutorial-mini-checklist"><div><strong>Study checklist</strong><em>1 of 3</em></div><span className="done">✓ Review notes</span><span>○ Practice problems <small>Due today</small></span><span>○ Pack materials</span><i><b /></i></div></>}
                 {tutorialStep === 4 && <><div className="tutorial-mini-toolbar"><span>Open the Widgets tab to add widgets</span></div><div className="tutorial-mini-widget widget-one"><span>⠿ <i>•••</i></span><strong>Plan of Attack</strong><small>1. Biology review · Due tomorrow</small><small>2. Literature response · Friday</small></div><div className="tutorial-mini-widget widget-two"><span>⠿ <i>•••</i></span><strong>Mini Calendar</strong><small>July · 3 deadlines</small><b>◱</b></div><div className="tutorial-mini-widget widget-three"><span>⠿ <i>•••</i></span><strong>Checklists</strong><small>Study plan · 33%</small></div></>}
+                {tutorialStep === 5 && <><div className="tutorial-mini-calendar"><div className="tutorial-mini-calendar-heading"><span>‹</span><strong>Day Cycle</strong><span>›</span></div><div>{["M","T","W","T","F","A","B","C","D","A","B","C","D","A"].map((day, index) => <span className={index > 4 ? "has-task" : ""} key={`${day}-${index}`}>{day}</span>)}</div><small className="tutorial-calendar-legend"><i />Different classes, right on schedule</small></div><div className="tutorial-mini-checklist"><div><strong>Today: A Day</strong><em>July 14</em></div><span>Biology</span><span>English</span><span>Study Hall</span></div></>}
               </div>
             </div>
             <div className="tutorial-copy">

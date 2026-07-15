@@ -1605,6 +1605,13 @@ button:disabled {
 .school-level-college .hero-card { border-top: 5px solid #8b5cf6; }
 
 .school-cycle-settings { grid-column: 1 / -1; }
+
+.custom-category-row { display: flex; gap: .65rem; align-items: center; }
+.custom-category-row input { flex: 1; min-width: 0; }
+
+@media (max-width: 640px) {
+  .custom-category-row { align-items: stretch; flex-direction: column; }
+}
 .cycle-day-list,
 .cycle-day-add-row {
   display: flex;
