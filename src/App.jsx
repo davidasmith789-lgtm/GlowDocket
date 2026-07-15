@@ -7639,8 +7639,7 @@ function App() {
         {isMobileUi && currentUser && (
           <header className="mobile-app-header">
             <button type="button" className="mobile-app-brand" onClick={() => openMobileTab("dashboard")} aria-label="Open mobile home">
-              <GlowDocketLogo decorative />
-              <div><strong>GlowDocket</strong></div>
+              <div><strong>{currentUser ? `Signed in as ${safeDisplayName}` : "Guest Mode"}</strong></div>
             </button>
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
               {safeDisplayName.charAt(0).toUpperCase()}
@@ -7651,7 +7650,7 @@ function App() {
         <header className="hero-card">
           <div>
             <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
-            <div className="brand-lockup hero-brand"><GlowDocketLogo decorative /><h1 className="app-title">GlowDocket</h1></div>
+            <h1 className="app-title">{currentUser ? `Signed in as ${safeDisplayName}` : "Guest Mode"}</h1>
             {userSettings.showHeaderSubtitle && (
               <p className="hero-subtitle">
                 {schoolLevelCopy.subtitle}
@@ -7659,9 +7658,6 @@ function App() {
             )}
           </div>
 
-          <div className="user-pill">
-            {currentUser ? `Signed in as ${displayName || "GlowDocket user"}` : "Guest Mode"}
-          </div>
         </header>
 
         {copyResult && (

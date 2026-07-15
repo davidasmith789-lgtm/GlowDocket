@@ -75,12 +75,13 @@ test("customizable logo exposes independent theme layers with safe defaults", as
   }
 });
 
-test("logo appears in loading, landing, desktop, mobile, and Color Studio surfaces", async () => {
+test("logo stays on public and customization surfaces but not the signed-in home header", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /brand-lockup-loading[^>]*><GlowDocketLogo/);
   assert.match(app, /brand-lockup welcome-brand[^>]*><GlowDocketLogo/);
-  assert.match(app, /mobile-app-brand[\s\S]{0,300}<GlowDocketLogo decorative/);
-  assert.match(app, /brand-lockup hero-brand[^>]*><GlowDocketLogo/);
+  assert.doesNotMatch(app, /mobile-app-brand[\s\S]{0,300}<GlowDocketLogo decorative/);
+  assert.doesNotMatch(app, /brand-lockup hero-brand[^>]*><GlowDocketLogo/);
+  assert.match(app, /Signed in as \$\{safeDisplayName\}/);
   assert.match(app, /logo-color-preview"><GlowDocketLogo label="Custom logo color preview"/);
   assert.match(app, /icon: "\/glowdocket-icon-192\.png"/);
 });
