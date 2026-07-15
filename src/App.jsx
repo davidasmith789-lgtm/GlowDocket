@@ -37,7 +37,7 @@ import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalRe
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, chooseHydrationState, CLOUD_STATE_SCHEMA_VERSION, collectSyncableState, createCloudSnapshot, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, CLOUD_STATE_SCHEMA_VERSION, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
@@ -2077,18 +2077,19 @@ function App() {
     setSyncStatus("cloud-loading");
     setSyncError("");
     const hydrate = async () => {
+      let cloudRequestAttempted = false;
       try {
         const client = await getSupabaseBrowserClient();
         const local = loadLocalSnapshot(localStorage, currentUser) || readLegacySnapshot(localStorage, currentUser, DEFAULT_USER_SETTINGS);
         const localMeta = loadLocalMeta(localStorage, currentUser);
-        const cloud = await loadCloudSnapshot(client, currentUser);
+        const ensured = await ensureCloudSnapshot(client, currentUser, local, {
+          onRequest: () => { cloudRequestAttempted = true; },
+        });
+        const cloud = ensured.snapshot;
         if (cancelled) return;
         let selected = local;
-        let revision = 0;
-        if (!cloud) {
-          const created = await createCloudSnapshot(client, currentUser, local);
-          revision = Number(created.revision);
-        } else {
+        let revision = cloud.revision;
+        if (!ensured.created) {
           revision = cloud.revision;
           const hydrationChoice = chooseHydrationState(local, localMeta, cloud);
           if (hydrationChoice.conflict) {
@@ -2125,12 +2126,12 @@ function App() {
         if (cancelled) return;
         console.error("Cloud loading failed:", error);
         setSyncError(friendlyCloudSaveError({ offline: !navigator.onLine }));
-        setSyncStatus(navigator.onLine ? "failed" : "offline");
+        setSyncStatus(!navigator.onLine ? "offline" : cloudRequestAttempted ? "failed" : "initializing");
       }
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [currentUser, accountMode]);
+  }, [currentUser, accountMode, syncRetryNonce]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
@@ -2193,6 +2194,12 @@ function App() {
     window.addEventListener("offline", handleOffline);
     return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
   }, [currentUser, accountMode, syncStatus]);
+
+  const retryCloudSync = () => {
+    setSyncError("");
+    setSyncStatus("reconnecting");
+    setSyncRetryNonce((value) => value + 1);
+  };
 
   // Build the one-line details shown beneath task names in several tabs.
   const formatTaskDetails = (task) => {
@@ -7765,7 +7772,7 @@ function App() {
               <span>{displayName || "GlowDocket user"}</span>
               {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && (syncStatus === "conflict" ? <button type="button" className={`cloud-sync-status is-${syncStatus}`} onClick={() => setSyncConflictOpen(true)}>Two versions need review</button> : <span className={`cloud-sync-status is-${syncStatus}`} role="status" aria-live="polite">{{ saved: "All changes saved", saving: "Saving changes…", offline: "Offline — saved on this device", reconnecting: "Back online — reconnecting…", failed: "Online saving paused", "cloud-loading": "Loading your saved planner…", initializing: "Checking your account…" }[syncStatus] || "Preparing your planner…"}</span>)}
               {CLOUD_SYNC_CONFIGURED && accountMode === "local" && <span className="cloud-sync-status">Local profile</span>}
-              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={() => setSyncRetryNonce((value) => value + 1)}>Retry</button>}
+              {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && syncStatus === "failed" && <button type="button" className="btn btn-secondary" onClick={retryCloudSync}>Retry</button>}
               {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && ["failed", "offline"].includes(syncStatus) && syncError && <span className="cloud-sync-error">{syncError}</span>}
               <button className="btn btn-danger sign-out-button" onClick={handleSignOut}>Sign Out</button>
             </div>

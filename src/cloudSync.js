@@ -183,6 +183,25 @@ export async function createCloudSnapshot(client, userId, state) {
   return data;
 }
 
+export async function ensureCloudSnapshot(client, userId, localState, operations = {}) {
+  const load = operations.load || loadCloudSnapshot;
+  const create = operations.create || createCloudSnapshot;
+  const validLocal = validateCloudState(localState);
+  operations.onRequest?.("load");
+  const existing = await load(client, userId);
+  if (existing) return { snapshot: existing, created: false };
+  operations.onRequest?.("create");
+  const created = await create(client, userId, validLocal);
+  return {
+    snapshot: {
+      state: validLocal,
+      revision: Number(created.revision),
+      updatedAt: created.updated_at,
+    },
+    created: true,
+  };
+}
+
 export async function replaceCloudSnapshot(client, userId, state, expectedRevision) {
   const { data, error } = await client.from("taskcabinet_cloud_state").update({ state: validateCloudState(state), schema_version: CLOUD_STATE_SCHEMA_VERSION, revision: expectedRevision + 1, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("revision", expectedRevision).select("revision,updated_at").maybeSingle();
   if (error) throw error;
