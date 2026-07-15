@@ -7427,9 +7427,20 @@ function App() {
     return (
       <div className={`App ${theme} welcome-screen`}>
         <main className="welcome-page">
+          <header className="hero-card">
+            <div>
+              <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
+              <div className="brand-lockup hero-brand"><GlowDocketLogo decorative /><h1 className="app-title">GlowDocket</h1></div>
+              {userSettings.showHeaderSubtitle && (
+                <p className="hero-subtitle">
+                  {schoolLevelCopy.subtitle}
+                </p>
+              )}
+            </div>
+            <div className="user-pill">Guest Mode</div>
+          </header>
           <section className="welcome-hero" aria-labelledby="welcome-title">
             <div className="welcome-hero-copy">
-              <div className="brand-lockup welcome-brand"><GlowDocketLogo decorative /><strong>GlowDocket</strong></div>
               <p className="eyebrow">Your schoolwork, finally in one place</p>
               <h1 id="welcome-title" className="welcome-title">Plan less. Know what to do next.</h1>
               <p>GlowDocket brings assignments, checklists, calendars, reminders, and your own workspace together in a planner that feels like yours.</p>
@@ -7639,7 +7650,8 @@ function App() {
         {isMobileUi && currentUser && (
           <header className="mobile-app-header">
             <button type="button" className="mobile-app-brand" onClick={() => openMobileTab("dashboard")} aria-label="Open mobile home">
-              <div><strong>{currentUser ? `Signed in as ${safeDisplayName}` : "Guest Mode"}</strong></div>
+              <GlowDocketLogo decorative />
+              <div><strong>GlowDocket</strong></div>
             </button>
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
               {safeDisplayName.charAt(0).toUpperCase()}
@@ -7650,7 +7662,7 @@ function App() {
         <header className="hero-card">
           <div>
             <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
-            <h1 className="app-title">{currentUser ? `Signed in as ${safeDisplayName}` : "Guest Mode"}</h1>
+            <div className="brand-lockup hero-brand"><GlowDocketLogo decorative /><h1 className="app-title">GlowDocket</h1></div>
             {userSettings.showHeaderSubtitle && (
               <p className="hero-subtitle">
                 {schoolLevelCopy.subtitle}
@@ -7658,6 +7670,9 @@ function App() {
             )}
           </div>
 
+          <div className="user-pill">
+            {currentUser ? `Signed in as ${displayName || "GlowDocket user"}` : "Guest Mode"}
+          </div>
         </header>
 
         {copyResult && (
