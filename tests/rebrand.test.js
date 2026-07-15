@@ -27,7 +27,7 @@ test("browser and installed-app metadata use GlowDocket", async () => {
 test("public UI and active notification code contain no old product name", async () => {
   const sources = await Promise.all([
     read("../src/App.jsx"), read("../src/reminderUxUtils.js"),
-    read("../api/reminders/_service.js"), read("../api/account/delete.js"),
+    read("../server/services/reminderService.js"), read("../api/account/delete.js"),
   ]);
   for (const source of sources) assert.doesNotMatch(source, /Task[ _-]?Cabinet|TaskAcadia/);
   assert.match(sources[0], /GlowDocket/);

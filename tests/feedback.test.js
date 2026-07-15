@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import handler, { sendNotification } from "../api/feedback.js";
-import { FEEDBACK_CATEGORY_VALUES, FeedbackError, feedbackReleaseId, validateFeedbackInput } from "../api/feedbackUtils.js";
+import { FEEDBACK_CATEGORY_VALUES, FeedbackError, feedbackReleaseId, validateFeedbackInput } from "../server/utils/feedbackUtils.js";
 import { FEEDBACK_MAX_SCREENSHOT_BYTES, feedbackScreenshotPath, validateFeedbackScreenshot } from "../src/feedbackUtils.js";
 
 const userId = "123e4567-e89b-42d3-a456-426614174000";

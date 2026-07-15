@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import process from "node:process";
-import { escapeHtml, FeedbackError, feedbackRateKey, feedbackReleaseId, validateFeedbackInput } from "./feedbackUtils.js";
+import { escapeHtml, FeedbackError, feedbackRateKey, feedbackReleaseId, validateFeedbackInput } from "../server/utils/feedbackUtils.js";
 
 const inFlightUsers = new Set();
 const requestWindows = new Map();

@@ -7,4 +7,4 @@ export {
   rankQuickMatchCandidates,
   rankRecommendedTasks,
   summarizeRecommendationWorkload,
-} from "../api/recommendationUtils.js";
+} from "./recommendationCore.js";

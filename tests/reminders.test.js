@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createOneSignal, createReminderService, idempotencyKeyFor, occurrenceKeyFor, SCHEDULING_HORIZON_MS, signEnrollmentToken, validateReminder, verifyEnrollmentToken } from "../api/reminders/_service.js";
+import { createOneSignal, createReminderService, idempotencyKeyFor, occurrenceKeyFor, SCHEDULING_HORIZON_MS, signEnrollmentToken, validateReminder, verifyEnrollmentToken } from "../server/services/reminderService.js";
 import { buildDesiredReminders, createOpaqueDeviceId, getOccurrenceKey, getPushCleanupStorageKey, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "../src/externalReminderUtils.js";
 import { classifyDeadline, summarizeDeadlineConfidence } from "../src/deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, friendlyReminderError, getAssignmentReminderIndicator, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "../src/reminderUxUtils.js";
