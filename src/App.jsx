@@ -7552,6 +7552,11 @@ function App() {
   if (!currentUser || authMode === "recovery") {
     return (
       <div className={`App ${theme} welcome-screen`}>
+        <div className="welcome-motion-scene" aria-hidden="true">
+          <span className="welcome-orb welcome-orb-one" /><span className="welcome-orb welcome-orb-two" /><span className="welcome-orb welcome-orb-three" />
+          <span className="welcome-laser welcome-laser-one" /><span className="welcome-laser welcome-laser-two" />
+          <div className="welcome-particles">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
+        </div>
         <main className="welcome-page">
           <header className="hero-card">
             <div>
@@ -7567,7 +7572,7 @@ function App() {
           <section className="welcome-hero" aria-labelledby="welcome-title">
             <div className="welcome-hero-copy">
               <p className="eyebrow">Your schoolwork, finally in one place</p>
-              <h1 id="welcome-title" className="welcome-title">Plan less. Know what to do next.</h1>
+              <h1 id="welcome-title" className="welcome-title"><span>Plan less.</span> <span>Know what to do next.</span></h1>
               <p>GlowDocket brings assignments, checklists, calendars, reminders, and your own workspace together in a planner that feels like yours.</p>
               <div className="welcome-actions">
                 <button type="button" className="btn btn-primary" onClick={() => showWelcomeAuth("signup")}>Get Started</button>
@@ -7575,13 +7580,15 @@ function App() {
               </div>
               <div className="welcome-trust"><span aria-hidden="true">&#10003;</span><strong>Local-first by design.</strong> Your planner keeps working on this device, with optional account sync when configured.</div>
             </div>
-            <div className="welcome-preview" aria-label="A preview of GlowDocket's planner">
+            <div className="welcome-preview" aria-label="A preview of GlowDocket's planner"><span className="welcome-preview-shine" aria-hidden="true" />
               <div className="welcome-preview-top"><span>Today</span><strong>3 things to tackle</strong></div>
               <div className="welcome-preview-task"><i className="is-blue" /><span><strong>Finish history outline</strong><small>Recommended next</small></span><b>Today</b></div>
               <div className="welcome-preview-task"><i className="is-purple" /><span><strong>Study biology notes</strong><small>45 minutes</small></span><b>Tomorrow</b></div>
               <div className="welcome-preview-progress"><span style={{ width: "68%" }} /></div>
             </div>
           </section>
+
+          <div className="welcome-energy-rail" aria-hidden="true"><div><span>Assignments organized</span><i /> <span>Deadlines conquered</span><i /> <span>Study plans activated</span><i /> <span>Focus mode engaged</span><i /> <span>GlowDocket energy</span><i /> <span>Assignments organized</span><i /> <span>Deadlines conquered</span><i /> <span>Study plans activated</span></div></div>
 
           <section className="welcome-features" aria-label="What GlowDocket helps with">
             {[
