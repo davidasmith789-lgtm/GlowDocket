@@ -215,6 +215,7 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "calendarText", label: "Calendar text", group: "Calendar" },
   { key: "calendarSelected", label: "Selected date", group: "Calendar" },
   { key: "calendarToday", label: "Today", group: "Calendar" },
+  { key: "calendarDropdownLogo", label: "Calendar Drop Down Logo", group: "Calendar" },
   { key: "checklistSurface", label: "Checklist surface", group: "Checklists" },
   { key: "checklistText", label: "Checklist text", group: "Checklists" },
   { key: "checklistAccent", label: "Checklist accent", group: "Checklists" },
@@ -282,7 +283,7 @@ const THEME_COLOR_DEFAULTS = {
     success: "#16a34a", warning: "#f59e0b", warningText: "#111827",
     danger: "#dc2626", dangerText: "#ffffff", priorityHigh: "#ffebeb",
     link: "#2563eb", calendar: "#ffffff", calendarText: "#111827",
-    calendarSelected: "#2563eb", calendarToday: "#dbeafe",
+    calendarSelected: "#2563eb", calendarToday: "#dbeafe", calendarDropdownLogo: "#111827",
     checklistSurface: "#ffffff", checklistText: "#111827", checklistAccent: "#4f46e5",
     checklistPalette1: "#fff7cc", checklistPalette2: "#dff7e8", checklistPalette3: "#dceeff",
     checklistPalette4: "#f3e4ff", checklistPalette5: "#ffe1e1",
@@ -298,7 +299,7 @@ const THEME_COLOR_DEFAULTS = {
     success: "#22c55e", warning: "#facc15", warningText: "#111827",
     danger: "#ef4444", dangerText: "#ffffff", priorityHigh: "#4a1a1a",
     link: "#60a5fa", calendar: "#111827", calendarText: "#f9fafb",
-    calendarSelected: "#2563eb", calendarToday: "#4b5563",
+    calendarSelected: "#2563eb", calendarToday: "#4b5563", calendarDropdownLogo: "#ffffff",
     checklistSurface: "#151b2e", checklistText: "#f9fafb", checklistAccent: "#818cf8",
     checklistPalette1: "#5a4b1f", checklistPalette2: "#173f32", checklistPalette3: "#173755",
     checklistPalette4: "#3e2854", checklistPalette5: "#512a31",
@@ -445,6 +446,7 @@ const COLOR_CSS_VARIABLES = {
   calendarText: ["--calendar-text"],
   calendarSelected: ["--calendar-selected"],
   calendarToday: ["--calendar-today"],
+  calendarDropdownLogo: ["--calendar-dropdown-logo"],
   checklistSurface: ["--checklist-surface"],
   checklistText: ["--checklist-text"],
   checklistAccent: ["--checklist-accent"],
@@ -6278,15 +6280,35 @@ function App() {
     return (
       <label className="mobile-due-date-field" htmlFor={id}>
         Due date
-        <input
-          id={id}
-          type="date"
-          value={value}
-          onChange={(event) => {
-            const [, selectedMonth = "", selectedDay = ""] = event.target.value.split("-");
-            onChange(selectedMonth, selectedDay);
-          }}
-        />
+        <span className="date-picker-control">
+          <input
+            id={id}
+            type="date"
+            value={value}
+            onChange={(event) => {
+              const [, selectedMonth = "", selectedDay = ""] = event.target.value.split("-");
+              onChange(selectedMonth, selectedDay);
+            }}
+          />
+          <button
+            type="button"
+            className="date-picker-logo-button"
+            aria-label="Open due date calendar"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const input = event.currentTarget.previousElementSibling;
+              try {
+                if (typeof input.showPicker === "function") input.showPicker();
+                else input.click();
+              } catch {
+                input.focus();
+              }
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /></svg>
+          </button>
+        </span>
       </label>
     );
   };
