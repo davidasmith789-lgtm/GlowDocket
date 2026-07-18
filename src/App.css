@@ -6309,18 +6309,66 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
 /* Final mobile panel and task-navigation contract. */
 @media (max-width: 767px) {
+  .mobile-app-main.mobile-add-fullscreen {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  .mobile-app-main.mobile-add-fullscreen > .inline-mobile-fullscreen-header {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 14px max(14px, env(safe-area-inset-left, 0px));
+  }
+  .mobile-app-main.mobile-add-fullscreen > .mobile-add-scroll-body {
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    overflow-x: clip;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    scroll-padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-add-fullscreen .mobile-add-scroll-body .mobile-app-add-screen { margin-top: 0; }
+
   .mobile-app-ui .settings-content.mobile-settings-panel-open {
     position: fixed;
     inset: 0;
+    display: flex;
+    flex-direction: column;
     height: auto;
     max-height: none;
     min-height: 0;
-    padding: env(safe-area-inset-top, 0px) max(14px, env(safe-area-inset-right, 0px)) calc(34px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    padding: 0;
     overflow-x: clip;
-    overflow-y: scroll;
+    overflow-y: hidden;
+  }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-panel-header {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+  }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-scroll-body {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    overflow-x: clip;
+    overflow-y: auto;
     overscroll-behavior-y: contain;
     touch-action: pan-y;
-    scroll-padding-block: calc(86px + env(safe-area-inset-top, 0px)) calc(40px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     -webkit-overflow-scrolling: touch;
   }
   .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid {
@@ -6336,11 +6384,13 @@ html[data-theme="dark"] .sync-conflict-dialog {
     height: auto;
     overflow: visible;
   }
-  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-panel-header { top: calc(-1 * env(safe-area-inset-top, 0px)); }
-  .mobile-app-main:has(> .mobile-app-segmented) { gap: 5px; }
-  .mobile-app-main:has(> .mobile-app-segmented) > .mobile-app-page-heading { padding-bottom: 0; }
-  .mobile-app-main:has(> .mobile-app-segmented) > .mobile-app-page-heading > span { margin-top: 3px; font-size: 0.78rem; line-height: 1.2; }
-  .mobile-app-main:has(> .mobile-app-segmented) > .mobile-app-segmented { gap: 3px; margin-top: 0; padding: 3px; border-radius: 13px; }
-  .mobile-app-main:has(> .mobile-app-segmented) > .mobile-app-segmented button { min-height: 38px; padding: 4px; border-radius: 10px; font-size: 0.73rem; }
-  .mobile-app-main:has(> .mobile-app-segmented) > .mobile-app-segmented button span { min-width: 18px; min-height: 18px; font-size: 0.65rem; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.account-settings-form, .external-push-panel, .reminder-settings-grid, .privacy-data-panel, .accessibility-verification-card) { width: 100%; min-width: 0; max-width: 100%; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .account-settings-form { grid-template-columns: minmax(0, 1fr); }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .password-input-row { width: 100%; min-width: 0; }
+  .mobile-task-page { gap: 5px; }
+  .mobile-task-page > .mobile-app-page-heading { padding-bottom: 0; }
+  .mobile-task-page > .mobile-app-page-heading > span { margin-top: 3px; font-size: 0.78rem; line-height: 1.2; }
+  .mobile-task-page > .mobile-app-segmented { gap: 3px; margin-top: 0; padding: 3px; border-radius: 13px; }
+  .mobile-task-page > .mobile-app-segmented button { min-height: 38px; padding: 4px; border-radius: 10px; font-size: 0.73rem; }
+  .mobile-task-page > .mobile-app-segmented button span { min-width: 18px; min-height: 18px; font-size: 0.65rem; }
 }

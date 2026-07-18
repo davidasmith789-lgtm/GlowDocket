@@ -7843,7 +7843,7 @@ function App() {
         )}
 
         {isMobileUi && currentUser && mobileUsesOwnScreen && (
-          <main className={`mobile-app-main${currentTab === "mobile-add" ? " mobile-add-fullscreen" : ""}`}>
+          <main className={`mobile-app-main${currentTab === "mobile-add" ? " mobile-add-fullscreen" : ""}${mobileTaskTabActive ? " mobile-task-page" : ""}`}>
             {currentTab === "dashboard" && (
               <>
                 {renderMobilePageTitle("Today", `Ready when you are, ${displayName || "student"}.`, dueTodayCount > 0 ? `${dueTodayCount} assignment${dueTodayCount === 1 ? "" : "s"} due today.` : "Nothing is due today.")}
@@ -7884,7 +7884,7 @@ function App() {
             {currentTab === "mobile-add" && (
               <>
                 <header className="mobile-fullscreen-header inline-mobile-fullscreen-header"><div><p>New assignment</p><h2>{schoolLevelCopy.addLabel}</h2><span>Add the basics now and optional details when you need them.</span></div><button type="button" onClick={closeMobileAdd} aria-label="Close Add Assignment">×</button></header>
-                <section className="mobile-app-card mobile-app-add-screen">{renderAddAssignmentForm("mobile")}</section>
+                <div className="mobile-add-scroll-body"><section className="mobile-app-card mobile-app-add-screen">{renderAddAssignmentForm("mobile")}</section></div>
               </>
             )}
 
@@ -8997,6 +8997,7 @@ function App() {
                       <button type="button" onClick={closeMobileSettings} aria-label="Close settings section">×</button>
                     </header>
                   )}
+                  <div className="mobile-settings-scroll-body">
                   <div key={`${settingsSection}-${storageView || "main"}`} className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
                   {!isMobileUi && <div className="settings-onboarding-card">
@@ -10042,6 +10043,7 @@ function App() {
                       )}
                     </section>
                   )}
+                  </div>
                 </div>
               </div>
             </div>
