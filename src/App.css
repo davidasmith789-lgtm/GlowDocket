@@ -149,7 +149,7 @@
   .guided-course-create input[type="color"] { width: 100%; min-height: 46px; }
   .guided-course-error { margin: 0; color: var(--danger-color); font-weight: 700; }
   .mobile-due-date-field { display: grid; grid-column: 1 / -1; gap: 7px; min-width: 0; font-weight: 800; }
-  .mobile-due-date-field input[type="date"] { width: 100%; min-width: 0; min-height: 48px; box-sizing: border-box; color-scheme: light dark; }
+  .mobile-due-date-field input[type="date"] { width: 100%; min-width: 0; box-sizing: border-box; color-scheme: light dark; }
   .creation-related-task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: related-task; }
   .creation-related-task-list li { display: grid; grid-template-columns: 1.5rem 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; counter-increment: related-task; }
   .creation-related-task-list li::before { content: counter(related-task) "."; font-weight: 800; text-align: right; }
