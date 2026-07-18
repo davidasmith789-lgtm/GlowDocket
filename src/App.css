@@ -43,7 +43,7 @@
 /* Mobile system: one viewport, one navigation clearance, and shared drill-in panels. */
 @media (max-width: 767px) {
   :root {
-    --mobile-nav-content-height: 58px;
+    --mobile-nav-content-height: 78px;
     --mobile-nav-safe-height: env(safe-area-inset-bottom, 0px);
     --mobile-nav-clearance: calc(var(--mobile-nav-content-height) + var(--mobile-nav-safe-height));
   }
@@ -156,7 +156,7 @@
 }
 
 @media (max-width: 767px) and (orientation: landscape) {
-  :root { --mobile-nav-content-height: 52px; }
+  :root { --mobile-nav-content-height: 78px; }
   .mobile-app-bottom-nav button { min-height: 46px; height: 46px; grid-template-rows: 24px 13px; }
 }
 

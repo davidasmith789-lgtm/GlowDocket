@@ -1904,7 +1904,6 @@ function App() {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const mobileSettingsScrollRef = useRef(null);
-  const mobileSettingsScrollPositionsRef = useRef({});
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
   const [workspaceMode, setWorkspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
@@ -3144,10 +3143,9 @@ function App() {
     if (!isMobileUi || !mobileSettingsOpen) return undefined;
     const scrollBody = mobileSettingsScrollRef.current;
     if (!scrollBody) return undefined;
-    const targetTop = mobileSettingsScrollPositionsRef.current[settingsSection] || 0;
-    scrollBody.scrollTop = targetTop;
+    scrollBody.scrollTop = 0;
     const frameId = window.requestAnimationFrame(() => {
-      scrollBody.scrollTo({ top: targetTop, behavior: "auto" });
+      scrollBody.scrollTo({ top: 0, behavior: "auto" });
     });
     return () => window.cancelAnimationFrame(frameId);
   }, [isMobileUi, mobileSettingsOpen, settingsSection, storageView]);
@@ -7708,12 +7706,10 @@ function App() {
     else setColorStudioOpen(true);
   };
   const openMobileSettingsSection = (sectionId) => {
-    if (isMobileUi && sectionId !== settingsSection) {
-      mobileSettingsScrollPositionsRef.current[sectionId] = 0;
-    }
     setStorageView(null);
     setSettingsSection(sectionId);
     if (!isMobileUi) return;
+    mobileSettingsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
     window.history.pushState({ taskcabinetMobilePanel: "settings" }, "");
     setMobileSettingsOpen(true);
   };
@@ -9080,13 +9076,7 @@ function App() {
                       <button type="button" onClick={closeMobileSettings} aria-label="Back to settings categories">←</button>
                     </header>
                   )}
-                  <div
-                    ref={mobileSettingsScrollRef}
-                    className="mobile-settings-scroll-body"
-                    onScroll={(event) => {
-                      mobileSettingsScrollPositionsRef.current[settingsSection] = event.currentTarget.scrollTop;
-                    }}
-                  >
+                  <div ref={mobileSettingsScrollRef} className="mobile-settings-scroll-body">
                   <SettingsAccordionProvider value={settingsAccordionValue}>
                   <div key={`${settingsSection}-${storageView || "main"}`} className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
