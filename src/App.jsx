@@ -48,7 +48,7 @@ import GlowDocketLogo from "./GlowDocketLogo.jsx";
 import { PrivacyDataDialog, PrivacyDataPanel } from "./PrivacyDataPanel.jsx";
 import { APP_BUILD_METADATA, createReportMetadata } from "./buildMetadata.js";
 import { FEEDBACK_CATEGORIES, FEEDBACK_MAX_MESSAGE_LENGTH, feedbackScreenshotPath, validateFeedbackScreenshot } from "./feedbackUtils.js";
-import { AssignmentCountdown, MobilePageTitle, PasswordEyeIcon, PersonalizationTip, SettingsAccordionProvider, SettingsCard, SubtaskProgressLine } from "./components/AppDisplayComponents.jsx";
+import { AssignmentCountdown, MobilePageTitle, MobileSettingsPortal, PasswordEyeIcon, PersonalizationTip, SettingsAccordionProvider, SettingsCard, SubtaskProgressLine } from "./components/AppDisplayComponents.jsx";
 import { AssignmentFilterControls, AssignmentFilterToggle } from "./components/AssignmentFilters.jsx";
 import DeferredCalendar from "./components/DeferredCalendar.jsx";
 import FocusSession from "./components/FocusSession.jsx";
@@ -1904,6 +1904,7 @@ function App() {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const mobileSettingsScrollRef = useRef(null);
+  const mobileSettingsListScrollRef = useRef(null);
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
   const [workspaceMode, setWorkspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
@@ -3101,6 +3102,7 @@ function App() {
     const updateMobileViewport = () => {
       const fieldHasFocus = document.activeElement?.matches?.("input, textarea, select");
       const keyboardIsOpen = fieldHasFocus && viewport.height < stableMobileHeight * 0.82;
+      document.documentElement.style.setProperty("--taskcabinet-visible-mobile-height", `${viewport.height}px`);
       if (!keyboardIsOpen) {
         stableMobileHeight = viewport.height;
         document.documentElement.style.setProperty("--taskcabinet-mobile-height", `${stableMobileHeight}px`);
@@ -3113,6 +3115,7 @@ function App() {
       viewport.removeEventListener("resize", updateMobileViewport);
       viewport.removeEventListener("scroll", updateMobileViewport);
       document.documentElement.style.removeProperty("--taskcabinet-mobile-height");
+      document.documentElement.style.removeProperty("--taskcabinet-visible-mobile-height");
     };
   }, [isMobileUi]);
 
@@ -3149,6 +3152,17 @@ function App() {
     });
     return () => window.cancelAnimationFrame(frameId);
   }, [isMobileUi, mobileSettingsOpen, settingsSection, storageView]);
+
+  useLayoutEffect(() => {
+    if (!isMobileUi || mobileSettingsOpen || currentTab !== "settings" || mobileSettingsListScrollRef.current === null) return undefined;
+    const appShell = document.querySelector(".mobile-app-ui .app-shell");
+    if (!appShell) return undefined;
+    const targetTop = mobileSettingsListScrollRef.current;
+    const frameId = window.requestAnimationFrame(() => {
+      appShell.scrollTo({ top: targetTop, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [currentTab, isMobileUi, mobileSettingsOpen]);
 
   useEffect(() => {
     const handleMobileHistory = () => {
@@ -7709,6 +7723,7 @@ function App() {
     setStorageView(null);
     setSettingsSection(sectionId);
     if (!isMobileUi) return;
+    mobileSettingsListScrollRef.current = document.querySelector(".mobile-app-ui .app-shell")?.scrollTop || 0;
     mobileSettingsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
     window.history.pushState({ taskcabinetMobilePanel: "settings" }, "");
     setMobileSettingsOpen(true);
@@ -9069,6 +9084,7 @@ function App() {
                   ))}
                 </nav>}
                 {isMobileUi && mobileSettingsOpen && <button type="button" className="mobile-settings-backdrop" onClick={closeMobileSettings} aria-label="Close settings section" />}
+                <MobileSettingsPortal active={isMobileUi && mobileSettingsOpen}>
                 <div className={`settings-content${isMobileUi && mobileSettingsOpen ? " mobile-settings-panel-open" : ""}`} role={isMobileUi && mobileSettingsOpen ? "dialog" : undefined} aria-modal={isMobileUi && mobileSettingsOpen ? "true" : undefined} aria-label={isMobileUi && mobileSettingsOpen ? selectedMobileSettingsSection.label : undefined}>
                   {isMobileUi && (
                     <header className="mobile-settings-panel-header">
@@ -9076,7 +9092,7 @@ function App() {
                       <button type="button" onClick={closeMobileSettings} aria-label="Back to settings categories">←</button>
                     </header>
                   )}
-                  <div ref={mobileSettingsScrollRef} className="mobile-settings-scroll-body">
+                  <div key={isMobileUi && mobileSettingsOpen ? settingsSection : "desktop-settings"} ref={mobileSettingsScrollRef} className="mobile-settings-scroll-body">
                   <SettingsAccordionProvider value={settingsAccordionValue}>
                   <div key={`${settingsSection}-${storageView || "main"}`} className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
@@ -10126,6 +10142,7 @@ function App() {
                   </SettingsAccordionProvider>
                   </div>
                 </div>
+                </MobileSettingsPortal>
               </div>
             </div>
           )}

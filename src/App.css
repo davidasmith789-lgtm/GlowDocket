@@ -6460,10 +6460,13 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .settings-content.mobile-settings-panel-open {
     position: fixed;
     z-index: 100;
-    inset: 0 0 var(--mobile-nav-clearance) 0;
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
     display: flex;
     width: 100%;
-    height: auto;
+    height: var(--taskcabinet-visible-mobile-height, 100dvh);
     min-height: 0;
     max-height: none;
     flex-direction: column;
@@ -6487,13 +6490,13 @@ html[data-theme="dark"] .sync-conflict-dialog {
     min-width: 0;
     min-height: 0;
     flex: 1 1 auto;
-    padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(var(--mobile-nav-clearance) + 24px) max(14px, env(safe-area-inset-left, 0px));
     overflow-x: clip;
     overflow-y: auto;
     overscroll-behavior-y: contain;
     overflow-anchor: none;
     touch-action: pan-y;
-    scroll-padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(var(--mobile-nav-clearance) + 24px);
     -webkit-overflow-scrolling: touch;
   }
   .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid {

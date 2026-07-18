@@ -1,10 +1,17 @@
 import { createContext, useContext, useState } from "react";
+import { createPortal } from "react-dom";
 
 const SettingsAccordionContext = createContext(null);
 const toSettingsCardId = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 export function SettingsAccordionProvider({ value, children }) {
   return <SettingsAccordionContext.Provider value={value}>{children}</SettingsAccordionContext.Provider>;
+}
+
+export function MobileSettingsPortal({ active, children }) {
+  if (!active || typeof document === "undefined") return children;
+  const mobileAppRoot = document.querySelector(".App.mobile-app-ui");
+  return mobileAppRoot ? createPortal(children, mobileAppRoot) : children;
 }
 
 const stopControlDoubleClick = (event) => event.stopPropagation();
