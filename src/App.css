@@ -953,7 +953,17 @@ textarea {
   min-height: 0;
   padding: 10px 12px;
   box-sizing: border-box;
-  color-scheme: light dark;
+  color-scheme: light;
+}
+html[data-theme="dark"] .mobile-due-date-field input[type="date"] { color-scheme: dark; }
+html[data-theme="dark"] .mobile-due-date-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.6);
+  opacity: 0.95;
+  cursor: pointer;
+}
+html[data-theme="light"] .mobile-due-date-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.8;
 }
 
 input:focus,
