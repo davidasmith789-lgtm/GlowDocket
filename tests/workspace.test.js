@@ -390,6 +390,29 @@ test("collapsed widgets reserve only their compact header footprint", () => {
   assert.ok(moved.y >= 0);
 });
 
+test("custom collapsed label height survives workspace normalization", () => {
+  const saved = createDefaultWorkspaceLayout();
+  const item = saved.desktop.dashboard[0];
+  item.collapsedHeight = 92;
+  saved.collapsed[item.type] = true;
+
+  const normalized = normalizeWorkspaceLayout(saved, {
+    mode: "desktop",
+    canvasWidth: 1680,
+    collapsed: saved.collapsed,
+    preservePositions: true,
+  });
+
+  assert.equal(normalized.desktop.dashboard[0].collapsedHeight, 92);
+});
+
+test("workspace interaction source exposes every collapsed resize edge and pointer capture", async () => {
+  const source = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(source, /\["top", \{ top: true \}\].*\["bottom-left", \{ bottom: true, left: true \}\]/s);
+  assert.match(source, /dragHandle\.setPointerCapture/);
+  assert.match(source, /another widget is blocking this direction/);
+});
+
 test("expanding a widget restores its expanded height", () => {
   const saved = createDefaultWorkspaceLayout();
   saved.desktop.dashboard = [

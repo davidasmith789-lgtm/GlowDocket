@@ -171,7 +171,9 @@ const getExpandedWidgetHeight = (item) => {
 
 const getEffectiveWidgetHeight = (item, collapsed = {}) => {
   const isCollapsed = Boolean(collapsed?.[item.type]);
-  return isCollapsed ? COLLAPSED_WIDGET_HEIGHT : getExpandedWidgetHeight(item);
+  return isCollapsed
+    ? Math.max(COLLAPSED_WIDGET_HEIGHT, finiteNumber(item.collapsedHeight, COLLAPSED_WIDGET_HEIGHT))
+    : getExpandedWidgetHeight(item);
 };
 
 const closeTo = (value, expected, tolerance = 6) => (
