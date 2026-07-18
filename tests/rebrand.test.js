@@ -79,7 +79,7 @@ test("logo appears in loading, public home, signed-in headers, and Color Studio"
   const app = await read("../src/App.jsx");
   assert.match(app, /brand-lockup-loading[^>]*><GlowDocketLogo/);
   assert.doesNotMatch(app, /brand-lockup welcome-brand/);
-  assert.match(app, /welcome-page[\s\S]{0,500}<header className="hero-card">[\s\S]{0,500}<GlowDocketLogo decorative/);
+  assert.match(app, /welcome-page[\s\S]{0,500}<header className="hero-card welcome-top-header">[\s\S]{0,500}<GlowDocketLogo decorative/);
   assert.match(app, /mobile-app-brand[\s\S]{0,300}<GlowDocketLogo decorative/);
   assert.match(app, /brand-lockup hero-brand[^>]*><GlowDocketLogo/);
   assert.match(app, /Signed in as \$\{displayName \|\| "GlowDocket user"\}/);

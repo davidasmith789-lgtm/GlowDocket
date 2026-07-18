@@ -1618,6 +1618,7 @@ function App() {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const [showAuthPasswordConfirm, setShowAuthPasswordConfirm] = useState(false);
   const [authMode, setAuthMode] = useState("signin");
+  const [welcomeAuthOpen, setWelcomeAuthOpen] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
   const [recoveryPassword, setRecoveryPassword] = useState("");
@@ -4937,6 +4938,7 @@ function App() {
   };
 
   const showWelcomeAuth = (mode = "signup") => {
+    setWelcomeAuthOpen(true);
     setAuthMode(mode);
     setAuthError("");
     setAuthNotice("");
@@ -7558,7 +7560,7 @@ function App() {
           <div className="welcome-particles">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
         </div>
         <main className="welcome-page">
-          <header className="hero-card">
+          <header className="hero-card welcome-top-header">
             <div>
               <p className="eyebrow">{schoolLevelCopy.eyebrow}</p>
               <div className="brand-lockup hero-brand"><GlowDocketLogo decorative /><h1 className="app-title">GlowDocket</h1></div>
@@ -7568,6 +7570,7 @@ function App() {
                 </p>
               )}
             </div>
+            <button type="button" className="btn btn-secondary welcome-header-signin" onClick={() => showWelcomeAuth("signin")}>I Already Have an Account</button>
           </header>
           <section className="welcome-hero" aria-labelledby="welcome-title">
             <div className="welcome-hero-copy">
@@ -7575,8 +7578,7 @@ function App() {
               <h1 id="welcome-title" className="welcome-title"><span>Plan less.</span> <span>Know what to do next.</span></h1>
               <p>GlowDocket brings assignments, checklists, calendars, reminders, and your own workspace together in a planner that feels like yours.</p>
               <div className="welcome-actions">
-                <button type="button" className="btn btn-primary" onClick={() => showWelcomeAuth("signup")}>Get Started</button>
-                <button type="button" className="btn btn-secondary" onClick={() => showWelcomeAuth("signin")}>I Already Have an Account</button>
+                <button type="button" className="btn btn-primary welcome-get-started" onClick={() => showWelcomeAuth("signup")}>Get Started</button>
               </div>
               <div className="welcome-trust"><span aria-hidden="true">&#10003;</span><strong>Local-first by design.</strong> Your planner keeps working on this device, with optional account sync when configured.</div>
             </div>
@@ -7600,7 +7602,7 @@ function App() {
             ].map(([title, copy], index) => <article className="welcome-feature-card" key={title}><span aria-hidden="true">{index + 1}</span><h2>{title}</h2><p>{copy}</p></article>)}
           </section>
 
-          <section ref={authPanelRef} id="auth-panel" className="auth-card welcome-auth-card" aria-labelledby="auth-heading">
+          {(welcomeAuthOpen || authMode === "recovery") && <section ref={authPanelRef} id="auth-panel" className="auth-card welcome-auth-card" aria-labelledby="auth-heading">
           <p className="eyebrow">Ready when you are</p>
           <h2 id="auth-heading" className="app-title">{authMode === "forgot" ? "Reset your password" : authMode === "recovery" ? "Choose a new password" : "Open GlowDocket"}</h2>
           {authMode !== "forgot" && authMode !== "recovery" && <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
@@ -7679,7 +7681,7 @@ function App() {
               {CLOUD_SYNC_CONFIGURED ? "Your account data can sync across devices. Attachment files and push-reminder connections still stay on each browser." : "GlowDocket stores only a password verifier. Accounts and assignments stay on this browser, do not sync to other devices, and have no password recovery."}
             </p>
           </div>
-          </section>
+          </section>}
           <footer className="welcome-footer">
             <span>GlowDocket helps you organize the work. You stay in charge of it.</span>
             <button type="button" className="auth-text-button" onClick={() => setPrivacyDialogOpen(true)}>Privacy &amp; Data</button>

@@ -1726,6 +1726,8 @@ button:disabled {
 .welcome-page > .hero-card { position: relative; overflow: hidden; isolation: isolate; animation: welcome-header-drop 700ms var(--motion-ease-out) both, welcome-header-glow 4s 1s ease-in-out infinite alternate; }
 .welcome-page > .hero-card::after { content: ""; position: absolute; z-index: -1; inset: -100% -30%; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.38) 48%, transparent 61%); animation: welcome-header-shimmer 5s 1.4s ease-in-out infinite; }
 .welcome-page .hero-brand .glowdocket-logo { animation: welcome-logo-float 3.2s ease-in-out infinite, welcome-logo-glow 2s ease-in-out infinite alternate; }
+.welcome-top-header { align-items: center; }
+.welcome-header-signin { flex: 0 0 auto; min-height: 46px; padding-inline: 18px; white-space: nowrap; }
 .welcome-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); align-items: center; gap: clamp(36px, 7vw, 90px); min-height: 540px; }
 .welcome-hero-copy { animation: welcome-copy-arrive 520ms var(--motion-ease-out) both; }
 .welcome-title { max-width: 720px; margin: 8px 0 18px; color: var(--text-color); font-size: clamp(2.6rem, 6vw, 5.4rem); line-height: .98; letter-spacing: -.055em; }
@@ -1736,6 +1738,7 @@ button:disabled {
 .welcome-actions .btn:hover { transform: translateY(-5px) scale(1.045); box-shadow: 0 16px 35px color-mix(in srgb, var(--primary-color) 36%, transparent); }
 .welcome-actions .btn-primary { animation: welcome-cta-pulse 2.4s ease-in-out infinite; }
 .welcome-actions .btn::after { content: ""; position: absolute; top: -120%; left: -50%; width: 30%; height: 340%; background: rgba(255,255,255,.42); transform: rotate(24deg); animation: welcome-button-spark 3.8s ease-in-out infinite; }
+.welcome-actions .welcome-get-started { min-width: 190px; min-height: 58px; padding-inline: 32px; border-radius: 16px; font-size: 1.08rem; font-weight: 900; }
 .welcome-trust { display: flex; max-width: 620px; align-items: flex-start; gap: 8px; margin-top: 22px; color: var(--muted-text); font-size: .92rem; line-height: 1.5; }
 .welcome-trust span { display: grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--success-color) 16%, transparent); color: var(--success-color); font-weight: 900; }
 .welcome-preview { position: relative; overflow: hidden; padding: 24px; border: 1px solid color-mix(in srgb, var(--primary-color) 48%, var(--border-color)); border-radius: 26px; background: color-mix(in srgb, var(--card-bg) 82%, transparent); box-shadow: 0 30px 80px color-mix(in srgb, var(--backdrop-color, #111827) 22%, transparent), 0 0 45px color-mix(in srgb, var(--primary-color) 18%, transparent); backdrop-filter: blur(20px); transform: rotate(1.5deg); animation: welcome-preview-arrive 620ms 90ms var(--motion-ease-out) both, welcome-preview-float 5s 800ms ease-in-out infinite; }
@@ -1797,6 +1800,7 @@ button:disabled {
   .welcome-hero { grid-template-columns: 1fr; padding: 48px 0; }
   .welcome-preview { width: min(600px, 100%); transform: none; }
   .welcome-features { grid-template-columns: repeat(2, 1fr); }
+  .welcome-top-header { flex-direction: row; align-items: center; }
 }
 
 @media (max-width: 560px) {
@@ -1804,6 +1808,8 @@ button:disabled {
   .welcome-hero { min-height: 0; gap: 32px; padding: 32px 0 42px; }
   .welcome-title { font-size: clamp(2.45rem, 13vw, 3.5rem); }
   .welcome-actions, .welcome-actions .btn { width: 100%; }
+  .welcome-top-header { align-items: stretch; flex-direction: column; }
+  .welcome-header-signin { width: 100%; white-space: normal; }
   .welcome-features { grid-template-columns: 1fr; padding-bottom: 50px; }
   .welcome-auth-card { padding: 22px 18px; }
 }
