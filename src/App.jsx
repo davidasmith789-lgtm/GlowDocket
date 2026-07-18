@@ -9003,14 +9003,14 @@ function App() {
                   ))}
                 </nav>}
                 {isMobileUi && mobileSettingsOpen && <button type="button" className="mobile-settings-backdrop" onClick={closeMobileSettings} aria-label="Close settings section" />}
-                <div ref={mobileSettingsScrollRef} className={`settings-content${isMobileUi && mobileSettingsOpen ? " mobile-settings-panel-open" : ""}`} role={isMobileUi && mobileSettingsOpen ? "dialog" : undefined} aria-modal={isMobileUi && mobileSettingsOpen ? "true" : undefined} aria-label={isMobileUi && mobileSettingsOpen ? selectedMobileSettingsSection.label : undefined}>
+                <div className={`settings-content${isMobileUi && mobileSettingsOpen ? " mobile-settings-panel-open" : ""}`} role={isMobileUi && mobileSettingsOpen ? "dialog" : undefined} aria-modal={isMobileUi && mobileSettingsOpen ? "true" : undefined} aria-label={isMobileUi && mobileSettingsOpen ? selectedMobileSettingsSection.label : undefined}>
                   {isMobileUi && (
                     <header className="mobile-settings-panel-header">
                       <div><span>Settings</span><h2>{selectedMobileSettingsSection.label}</h2><p>{selectedMobileSettingsSection.description}</p></div>
                       <button type="button" onClick={closeMobileSettings} aria-label="Back to settings categories">←</button>
                     </header>
                   )}
-                  <div className="mobile-settings-scroll-body">
+                  <div ref={mobileSettingsScrollRef} className="mobile-settings-scroll-body">
                   <div key={`${settingsSection}-${storageView || "main"}`} className={`settings-grid${storageView ? " settings-grid-hidden" : ""}${settingsSection === "personalization" ? " settings-grid-personalization" : ""}`}>
                 <section className="settings-section personalization-top-section appearance-settings-section" hidden={settingsSection !== "personalization"}>
                   {!isMobileUi && <div className="settings-onboarding-card">
