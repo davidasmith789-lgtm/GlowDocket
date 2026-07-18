@@ -6270,7 +6270,7 @@ function App() {
     ? bulkImportRowsWithWarnings.filter(({ warnings }) => warnings.length > 0)
     : bulkImportRowsWithWarnings;
 
-  const renderMobileDueDateField = (month, day, onChange, id) => {
+  const renderDueDateField = (month, day, onChange, id) => {
     const today = new Date();
     const value = month && day
       ? `${today.getFullYear()}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
@@ -6382,7 +6382,7 @@ function App() {
           <h3 id="guided-entry-title">{["What is the assignment called?", "Which course is it for?", "When is it due?", "What is its priority?", "Would you like to add notes?", "Would you like to add related tasks to complete?", "Review your assignment"][guidedEntryStep]}</h3>
           {guidedEntryStep === 0 && <label>Assignment name<input autoFocus value={taskName} onChange={(event) => setTaskName(event.target.value)} /></label>}
           {guidedEntryStep === 1 && <div className="guided-course-step"><label>Course<select value={selectedCourse} onChange={(event) => { setSelectedCourse(event.target.value); setGuidedCourseError(""); }}><option value="">Select a course</option>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label><button type="button" className="btn btn-secondary" onClick={() => { setGuidedCourseCreationOpen((open) => !open); setGuidedCourseError(""); }}>+ Create New Course</button>{guidedCourseCreationOpen && <div className="guided-course-create"><label>Course name<input autoFocus value={guidedCourseName} onChange={(event) => { setGuidedCourseName(event.target.value); setGuidedCourseError(""); }} /></label><label>Course color<input type="color" value={guidedCourseColor} onChange={(event) => setGuidedCourseColor(event.target.value)} /></label>{guidedCourseError && <p className="guided-course-error" role="alert">{guidedCourseError}</p>}<div><button type="button" className="btn btn-secondary" onClick={() => { setGuidedCourseCreationOpen(false); setGuidedCourseError(""); }}>Cancel</button><button type="button" className="btn btn-primary" onClick={handleGuidedCourseCreate}>Create course</button></div></div>}</div>}
-          {guidedEntryStep === 2 && <div className="guided-entry-date">{renderMobileDueDateField(dueMonth, dueDay, (month, day) => { setDueMonth(month); setDueDay(day); }, "guided-assignment-due-date")}<label>Time<input value={dueHour} inputMode="numeric" onChange={(event) => setDueHour(event.target.value)} /></label><label>AM/PM<select value={dueAmPm} onChange={(event) => setDueAmPm(event.target.value)}><option>AM</option><option>PM</option></select></label></div>}
+          {guidedEntryStep === 2 && <div className="guided-entry-date">{renderDueDateField(dueMonth, dueDay, (month, day) => { setDueMonth(month); setDueDay(day); }, "guided-assignment-due-date")}<label>Time<input value={dueHour} inputMode="numeric" onChange={(event) => setDueHour(event.target.value)} /></label><label>AM/PM<select value={dueAmPm} onChange={(event) => setDueAmPm(event.target.value)}><option>AM</option><option>PM</option></select></label></div>}
           {guidedEntryStep === 3 && <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="LOW">Low</option><option value="MED">Medium</option><option value="HIGH">High</option></select></label>}
           {guidedEntryStep === 4 && <label>Notes<textarea value={guidedNotes} onChange={(event) => setGuidedNotes(event.target.value)} rows="5" placeholder="Optional notes" /></label>}
           {guidedEntryStep === 5 && <><div className="guided-checklist-add"><input value={newSubtaskText} onChange={(event) => setNewSubtaskText(event.target.value)} placeholder="Related task to complete" /><button type="button" className="btn btn-secondary" onClick={handleAddDraftSubtask} disabled={!newSubtaskText.trim()}>Add</button></div>{draftSubtasks.length > 0 ? <ol className="creation-related-task-list">{draftSubtasks.map((item) => <li key={item.id}><input type="checkbox" checked={false} readOnly tabIndex="-1" aria-hidden="true" /><span>{item.text}</span><button type="button" className="subtask-remove-button" onClick={() => handleRemoveDraftSubtask(item.id)}>Remove</button></li>)}</ol> : <p className="subtask-form-hint">No related tasks added.</p>}</>}
@@ -6460,28 +6460,7 @@ function App() {
         </select>
       )}</>}
 
-      {isMobileUi ? renderMobileDueDateField(dueMonth, dueDay, (month, day) => { setDueMonth(month); setDueDay(day); }, `${formId}-assignment-due-date`) : <><label>Due Date:</label>
-      <div style={{ display: "flex", gap: "8px" }}>
-        <select value={dueMonth} onChange={(e) => setDueMonth(e.target.value)}>
-          <option value="">Month</option>
-          {monthNames.map((month, index) => (
-            <option
-              key={month}
-              value={String(index + 1).padStart(2, "0")}
-            >
-              {month}
-            </option>
-          ))}
-        </select>
-        <select value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
-          <option value="">Day</option>
-          {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => (
-            <option key={day} value={String(day).padStart(2, "0")}>
-              {day}
-            </option>
-          ))}
-        </select>
-      </div></>}
+      {renderDueDateField(dueMonth, dueDay, (month, day) => { setDueMonth(month); setDueDay(day); }, `${formId}-assignment-due-date`)}
 
       <label>Due Time:</label>
       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -10312,49 +10291,7 @@ function App() {
                     </select>
                   </div>
 
-                  {isMobileUi ? renderMobileDueDateField(editingTask.dueMonth, editingTask.dueDay, (month, day) => { handleEditFieldChange("dueMonth", month); handleEditFieldChange("dueDay", day); }, "edit-assignment-due-date") : <><div className="edit-field">
-                    <label htmlFor="edit-assignment-due-month">Due Month</label>
-                    <select
-                      id="edit-assignment-due-month"
-                      value={editingTask.dueMonth || ""}
-                      onChange={(e) =>
-                        handleEditFieldChange("dueMonth", e.target.value)
-                      }
-                    >
-                      <option value="">No month</option>
-                      {monthNames.map((month, index) => (
-                        <option
-                          key={month}
-                          value={String(index + 1).padStart(2, "0")}
-                        >
-                          {month}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="edit-field">
-                    <label htmlFor="edit-assignment-due-day">Due Day</label>
-                    <select
-                      id="edit-assignment-due-day"
-                      value={editingTask.dueDay || ""}
-                      onChange={(e) =>
-                        handleEditFieldChange("dueDay", e.target.value)
-                      }
-                    >
-                      <option value="">No day</option>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                        (day) => (
-                          <option
-                            key={day}
-                            value={String(day).padStart(2, "0")}
-                          >
-                            {day}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  </div></>}
+                  {renderDueDateField(editingTask.dueMonth, editingTask.dueDay, (month, day) => { handleEditFieldChange("dueMonth", month); handleEditFieldChange("dueDay", day); }, "edit-assignment-due-date")}
 
                   <div className="edit-field">
                     <label htmlFor="edit-assignment-due-time">Due Time</label>

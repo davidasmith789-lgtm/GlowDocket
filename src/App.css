@@ -148,28 +148,7 @@
   .guided-course-create > div { display: flex; justify-content: flex-end; gap: 8px; }
   .guided-course-create input[type="color"] { width: 100%; min-height: 46px; }
   .guided-course-error { margin: 0; color: var(--danger-color); font-weight: 700; }
-  .mobile-due-date-field {
-    display: grid;
-    grid-column: 1 / -1;
-    gap: 7px;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-    font-weight: 800;
-  }
-  .mobile-due-date-field input[type="date"] {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    height: 42px;
-    min-height: 0;
-    padding: 10px 12px;
-    box-sizing: border-box;
-    color-scheme: light dark;
-  }
+  .mobile-due-date-field { grid-column: 1 / -1; }
   .creation-related-task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: related-task; }
   .creation-related-task-list li { display: grid; grid-template-columns: 1.5rem 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; counter-increment: related-task; }
   .creation-related-task-list li::before { content: counter(related-task) "."; font-weight: 800; text-align: right; }
@@ -946,6 +925,37 @@ textarea {
   border-radius: 12px;
   padding: 10px 12px;
   font: inherit;
+}
+
+.mobile-due-date-field {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-weight: 800;
+}
+.mobile-due-date-field input[type="date"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 42px;
+  min-height: 0;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  color-scheme: light dark;
+}
+
+@media (min-width: 768px) {
+  .assignment-entry-form > .mobile-due-date-field {
+    grid-template-columns: minmax(110px, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+  }
+  .assignment-entry-form > .mobile-due-date-field input { grid-column: 2; }
 }
 
 input:focus,

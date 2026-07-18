@@ -9,10 +9,13 @@ test("mobile edit remains a full-screen assignment form with accessible fields",
   assert.match(app, /mobile-edit-backdrop/);
   assert.match(app, /mobile-edit-screen/);
   assert.match(app, /mobile-edit-save/);
-  for (const id of ["name", "category", "course", "priority", "due-month", "due-day", "due-time", "due-period", "estimated-minutes", "repeat", "notes"]) {
+  for (const id of ["name", "category", "course", "priority", "due-time", "due-period", "estimated-minutes", "repeat", "notes"]) {
     assert.match(app, new RegExp(`htmlFor="edit-assignment-${id}"`));
     assert.match(app, new RegExp(`id="edit-assignment-${id}"`));
   }
+  assert.match(app, /renderDueDateField\(editingTask\.dueMonth, editingTask\.dueDay/);
+  assert.match(app, /"edit-assignment-due-date"/);
+  assert.match(app, /type="date"/);
 });
 
 test("mobile keyboard, horizontal labels, notes spacing, and trash toast stay hardened", async () => {
