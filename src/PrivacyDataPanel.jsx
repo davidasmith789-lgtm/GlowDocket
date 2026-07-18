@@ -45,7 +45,7 @@ export function PrivacyDataDialog({ open, onClose }) {
           <div><p className="eyebrow">Your choice</p><h2 id="privacy-dialog-title" tabIndex="-1" data-dialog-initial-focus>Privacy &amp; Data</h2></div>
           <button type="button" className="modal-close-button" onClick={onClose} aria-label="Close Privacy and Data">×</button>
         </header>
-        <p className="privacy-dialog-intro">A concise explanation of where GlowDocket keeps data and which features are specific to this device.</p>
+        <p className="privacy-dialog-intro">Where GlowDocket keeps data and which features are specific to this device.</p>
         <PrivacyDataPanel />
       </section>
     </div>
