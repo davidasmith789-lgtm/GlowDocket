@@ -413,6 +413,16 @@ test("workspace interaction source exposes every collapsed resize edge and point
   assert.match(source, /another widget is blocking this direction/);
 });
 
+test("recommended widget scrolls vertically without visible scrollbars or horizontal movement", async () => {
+  const [appSource, cssSource] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(appSource, /instance\.type === "recommended" \? " is-recommended-widget"/);
+  assert.match(cssSource, /\.workspace-widget\.is-recommended-widget \.workspace-widget-body\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;[^}]*scrollbar-width:\s*none;/s);
+  assert.match(cssSource, /\.workspace-widget\.is-recommended-widget \.workspace-widget-body::-webkit-scrollbar\s*\{\s*display:\s*none;/);
+});
+
 test("expanding a widget restores its expanded height", () => {
   const saved = createDefaultWorkspaceLayout();
   saved.desktop.dashboard = [

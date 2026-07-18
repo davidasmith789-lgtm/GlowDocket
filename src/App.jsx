@@ -1387,7 +1387,7 @@ function WorkspaceWidget({
   return (
     <section
       ref={widgetRef}
-      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}${instance.type === "course-colors" ? " uses-fluid-course-colors" : ""}`}
+      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}${instance.type === "recommended" ? " is-recommended-widget" : ""}${instance.type === "course-colors" ? " uses-fluid-course-colors" : ""}`}
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}

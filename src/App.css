@@ -4760,6 +4760,12 @@ html[data-theme="dark"] {
   overflow: auto;
   transition: opacity 180ms ease, padding 220ms ease;
 }
+.workspace-widget.is-recommended-widget .workspace-widget-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.workspace-widget.is-recommended-widget .workspace-widget-body::-webkit-scrollbar { display: none; }
 .workspace-widget.is-small-widget .workspace-widget-body { overflow: hidden; }
 .workspace-widget.has-fixed-overflow .workspace-widget-body { overflow: hidden; }
 .workspace-widget.is-display-only .workspace-widget-body {
