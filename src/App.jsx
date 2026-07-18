@@ -8927,10 +8927,10 @@ function App() {
           )}
 
           {currentTab === "settings" && (
-            <div className="card card-container" style={{ marginTop: "10px" }}>
-              <div className={`settings-layout${storageView ? " settings-storage-focus" : ""}`}>
+            <div className={`card card-container settings-page-shell${isMobileUi ? " mobile-settings-page" : ""}`} style={{ marginTop: "10px" }}>
+              <div className={`settings-layout${storageView ? " settings-storage-focus" : ""}`} data-active-settings-section={settingsSection}>
                 {!storageView && <nav className="settings-sidebar" aria-label="Settings categories">
-                  <p className="eyebrow">Settings</p>
+                  <div className="mobile-settings-list-heading"><p className="eyebrow">Settings</p>{isMobileUi && <><h2>Customize GlowDocket</h2><span>Choose a section to open its options.</span></>}</div>
                   <div className="settings-profile-chip">
                     <span>Preferences for</span>
                     <strong>{displayName || "GlowDocket user"}</strong>
@@ -8990,11 +8990,11 @@ function App() {
                   ))}
                 </nav>}
                 {isMobileUi && mobileSettingsOpen && <button type="button" className="mobile-settings-backdrop" onClick={closeMobileSettings} aria-label="Close settings section" />}
-                <div className={`settings-content${isMobileUi && mobileSettingsOpen ? " mobile-settings-panel-open" : ""}`}>
+                <div className={`settings-content${isMobileUi && mobileSettingsOpen ? " mobile-settings-panel-open" : ""}`} role={isMobileUi && mobileSettingsOpen ? "dialog" : undefined} aria-modal={isMobileUi && mobileSettingsOpen ? "true" : undefined} aria-label={isMobileUi && mobileSettingsOpen ? selectedMobileSettingsSection.label : undefined}>
                   {isMobileUi && (
                     <header className="mobile-settings-panel-header">
                       <div><span>Settings</span><h2>{selectedMobileSettingsSection.label}</h2><p>{selectedMobileSettingsSection.description}</p></div>
-                      <button type="button" onClick={closeMobileSettings} aria-label="Close settings section">×</button>
+                      <button type="button" onClick={closeMobileSettings} aria-label="Back to settings categories">←</button>
                     </header>
                   )}
                   <div className="mobile-settings-scroll-body">
