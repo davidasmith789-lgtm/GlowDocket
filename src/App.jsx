@@ -6291,7 +6291,7 @@ function App() {
       {voiceError && <div className="voice-inline-error" role="alert">{voiceError}</div>}
 
       <div className={`manual-assignment-fields${guidedEntryOpen ? " guided-active" : ""}`}>
-      {isMobileUi && <div className="mobile-add-option-heading"><span>Option 2</span><h3>Add Assignment</h3><p>Enter the assignment details yourself or use the guided mode.</p><button type="button" className="btn btn-secondary" onClick={() => { setGuidedEntryStep(0); setGuidedEntryOpen(true); }}>Guided entry</button></div>}
+      {isMobileUi && <div className="mobile-add-option-heading"><span>Option 2</span><h3>Add Assignment</h3><p>Enter the assignment details yourself or use the guided mode.</p><button type="button" className="btn btn-primary guided-entry-launch" onClick={() => { setGuidedEntryStep(0); setGuidedEntryOpen(true); }}>Guided entry</button></div>}
       {isMobileUi && guidedEntryOpen && (
         <section className="guided-assignment-entry" aria-labelledby="guided-entry-title">
           <div className="guided-entry-progress"><span>Step {guidedEntryStep + 1} of 7</span><progress max="7" value={guidedEntryStep + 1}>{guidedEntryStep + 1}</progress></div>
@@ -9657,7 +9657,7 @@ function App() {
                 )}
 
                 {settingsSection === "calendar" && (
-                  <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide">
+                  <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide" mobileAlwaysOpen>
                     <div className="settings-option-grid">
                       <label className="settings-select-row settings-option-card">
                         <span>Week starts on</span>
@@ -9681,7 +9681,7 @@ function App() {
                 )}
 
                 {settingsSection === "cycle" && (
-                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings">
+                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings" mobileAlwaysOpen>
                     <label className="settings-select-row">
                       <span>Anchor date</span>
                       <input
@@ -9823,7 +9823,7 @@ function App() {
                 )}
 
                 {settingsSection === "privacy" && (
-                  <SettingsCard title="Privacy & Data" description="Understand where GlowDocket keeps information and which features are specific to this device." className="settings-section-wide privacy-settings-card">
+                  <SettingsCard title="Privacy & Data" description="Understand where GlowDocket keeps information and which features are specific to this device." className="settings-section-wide privacy-settings-card" mobileAlwaysOpen>
                     <PrivacyDataPanel />
                   </SettingsCard>
                 )}

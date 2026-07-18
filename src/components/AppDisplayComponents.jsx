@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const stopControlDoubleClick = (event) => event.stopPropagation();
 
@@ -14,15 +14,25 @@ function toggleFromHeaderDoubleClick(event, toggle) {
   toggle();
 }
 
-export function SettingsCard({ title, description, className = "", children }) {
+export function SettingsCard({ title, description, className = "", children, mobileAlwaysOpen = false }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileUi, setIsMobileUi] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    if (!mobileAlwaysOpen || typeof window === "undefined") return undefined;
+    const query = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobileUi(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, [mobileAlwaysOpen]);
+  const expanded = isOpen || (mobileAlwaysOpen && isMobileUi);
   return (
-    <section className={`settings-section ${className}`.trim()}>
+    <section className={`settings-section ${className}${mobileAlwaysOpen ? " mobile-always-open-settings-card" : ""}`.trim()}>
       <div className="settings-collapse-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, () => setIsOpen((open) => !open))} title="Use the button to expand or minimize">
         <h4>{title}</h4>
-        <button type="button" className="settings-collapse-button" onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))} onDoubleClick={stopControlDoubleClick} aria-expanded={isOpen} aria-label={`${isOpen ? "Shrink" : "Enlarge"} ${title}`} title={`${isOpen ? "Shrink" : "Enlarge"} ${title}`}>{isOpen ? "−" : "+"}</button>
+        <button type="button" className="settings-collapse-button" onClick={(event) => toggleFromCollapseButton(event, () => setIsOpen((open) => !open))} onDoubleClick={stopControlDoubleClick} aria-expanded={expanded} aria-label={`${expanded ? "Shrink" : "Enlarge"} ${title}`} title={`${expanded ? "Shrink" : "Enlarge"} ${title}`}>{expanded ? "−" : "+"}</button>
       </div>
-      {isOpen && <div className="settings-collapsible-content">{description && <p className="hint-text settings-card-description">{description}</p>}{children}</div>}
+      {expanded && <div className="settings-collapsible-content">{description && <p className="hint-text settings-card-description">{description}</p>}{children}</div>}
     </section>
   );
 }

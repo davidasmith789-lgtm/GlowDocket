@@ -6328,7 +6328,11 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.settings-section, .settings-section-wide) { grid-column: 1; width: 100%; max-width: 100%; padding: 13px; border-radius: 15px; box-shadow: none; }
   .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.external-push-actions, .account-management-action, .accessibility-audit-heading) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; }
   .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.external-push-actions, .account-management-action, .accessibility-audit-heading) .btn { width: 100%; }
-  .mobile-task-page { gap: 2px; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-scroll-body { height: 0; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-always-open-settings-card > .settings-collapse-header .settings-collapse-button { display: none !important; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-always-open-settings-card > .settings-collapse-header { cursor: default; }
+  .guided-entry-launch { border-color: var(--primary-color) !important; background: var(--primary-color) !important; color: var(--button-primary-color) !important; }
+  .mobile-task-page { gap: 2px; align-content: start; }
   .mobile-task-page > .mobile-app-page-heading > span { margin-top: 1px; }
   .mobile-task-page > .mobile-app-segmented { gap: 0; margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--border-color); border-radius: 0; background: transparent; }
   .mobile-task-page > .mobile-app-segmented button { min-height: 30px; padding: 3px 5px 5px; border-bottom: 2px solid transparent; border-radius: 0; background: transparent !important; box-shadow: none !important; font-size: .7rem; }
