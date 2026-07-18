@@ -9617,7 +9617,7 @@ function App() {
 
                 {settingsSection === "reminders" && (
                   <>
-                    <SettingsCard title="Install GlowDocket" description="Install the planner on this device for an app-like window and offline access.">
+                    <SettingsCard title="Install GlowDocket" description="Install the planner on this device for an app-like window and offline access." mobileAlwaysOpen>
                       {isStandalone ? (
                         <span className="settings-status-pill">Installed</span>
                       ) : installPrompt ? (
