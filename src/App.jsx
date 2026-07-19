@@ -267,6 +267,13 @@ const CELEBRATION_COLOR_FIELDS = [
   { key: "toastText", label: "Message text", fallback: "#ffffff" },
 ];
 
+const getCelebrationColorsForStyle = (savedColors, celebrationId) => {
+  if (!savedColors || typeof savedColors !== "object" || Array.isArray(savedColors)) return {};
+  const styleColors = savedColors[celebrationId];
+  if (styleColors && typeof styleColors === "object" && !Array.isArray(styleColors)) return styleColors;
+  return CELEBRATION_COLOR_FIELDS.some((field) => savedColors[field.key]) ? savedColors : {};
+};
+
 const normalizeHexColor = (colorId) => {
   const match = colorId.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!match) return null;
@@ -3372,7 +3379,9 @@ function App() {
 
   const handleCelebrationColorChange = (key, value) => {
     setUserSettings((previous) => {
-      const updated = { ...previous, celebrationColors: { ...(previous.celebrationColors || {}), [key]: value } };
+      const currentStyleColors = getCelebrationColorsForStyle(previous.celebrationColors, gamification.selectedConfetti);
+      const nestedColors = CELEBRATION_COLOR_FIELDS.some((field) => previous.celebrationColors?.[field.key]) ? {} : (previous.celebrationColors || {});
+      const updated = { ...previous, celebrationColors: { ...nestedColors, [gamification.selectedConfetti]: { ...currentStyleColors, [key]: value } } };
       try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
       catch (error) { console.error("Failed to save celebration colors:", error); }
       return updated;
@@ -4325,7 +4334,8 @@ function App() {
     const nextGamification = { ...gamification, earnedAchievementIds: [...new Set([...gamification.earnedAchievementIds, ...newAchievementIds])] };
     handleAddFieldSettingChange("gamification", nextGamification);
     completionCelebrationSequenceRef.current += 1;
-    setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked ? userSettings.celebrationColors : null });
+    const selectedStyleColors = getCelebrationColorsForStyle(userSettings.celebrationColors, nextGamification.selectedConfetti);
+    setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
     setTasks(updated);
     saveTasksForCurrentUser(updated);
     if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) runImmediateReminderMutation(completedTask.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
@@ -4448,7 +4458,8 @@ function App() {
       const nextGamification = { ...gamification, earnedAchievementIds: [...new Set([...gamification.earnedAchievementIds, ...newAchievementIds])] };
       handleAddFieldSettingChange("gamification", nextGamification);
       completionCelebrationSequenceRef.current += 1;
-      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)), celebrationColors: celebrationStudioProgress.unlocked ? userSettings.celebrationColors : null });
+      const selectedStyleColors = getCelebrationColorsForStyle(userSettings.celebrationColors, nextGamification.selectedConfetti);
+      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
       setTasks(updated);
       saveTasksForCurrentUser(updated);
     } else {
@@ -7999,6 +8010,8 @@ function App() {
   const reminderLeadAlreadyPassedCount = tasks.filter((task) => { const deadline = getEffectiveDeadline(task); return deadline && deadline.getTime() > checklistNow.getTime() && deadline.getTime() - Number(userSettings.reminderMinutes || 60) * 60000 < checklistNow.getTime() && !task.isDeleted && !task.isCompleted; }).length;
   const gamification = normalizeGamification(userSettings.gamification);
   const celebrationStudioProgress = getCelebrationStudioProgress(userSettings.signInDays, isGamificationTestAccount(accountEmail));
+  const selectedCelebrationOption = GAMIFICATION_CONFETTI.find((option) => option.id === gamification.selectedConfetti) || GAMIFICATION_CONFETTI[0];
+  const selectedCelebrationColors = getCelebrationColorsForStyle(userSettings.celebrationColors, selectedCelebrationOption.id);
   const weeklyMomentum = summarizeWeeklyMomentum(tasks, gamification, { now: checklistNow, weekStartsOn: userSettings.calendarWeekStartsOn });
   const gamificationTitle = getGamificationTitle(gamification);
   const earnedAchievements = new Set(gamification.earnedAchievementIds);
@@ -9766,19 +9779,19 @@ function App() {
                   {celebrationStudioProgress.unlocked && (
                     <div className="color-studio-group celebration-color-studio">
                       <div className="settings-collapse-header settings-collapse-subheader">
-                        <h5>Celebrations <span className="studio-unlocked-pill">60-day unlock</span></h5>
+                        <h5>Celebrations <span className="studio-unlocked-pill">60-day unlock</span><span className="studio-celebration-pill">{selectedCelebrationOption.label}</span></h5>
                         <button type="button" className="settings-collapse-button settings-collapse-button-small" onClick={() => setColorGroupsOpen((openGroups) => ({ ...openGroups, celebrations: openGroups.celebrations !== true }))} aria-expanded={colorGroupsOpen.celebrations === true} aria-label={`${colorGroupsOpen.celebrations === true ? "Shrink" : "Enlarge"} Celebrations`}>
                           {colorGroupsOpen.celebrations === true ? "−" : "+"}
                         </button>
                       </div>
                       {colorGroupsOpen.celebrations === true && (
                         <>
-                          <p className="hint-text">Customize the particles and completion message used by every celebration style.</p>
-                          <div className="celebration-palette-preview" aria-hidden="true">{CELEBRATION_COLOR_FIELDS.slice(0, 6).map((field) => <i key={field.key} style={{ backgroundColor: userSettings.celebrationColors?.[field.key] || field.fallback }} />)}</div>
+                          <p className="hint-text">Editing <strong>{selectedCelebrationOption.label}</strong>. Choose another celebration in Cosmetics to give it a separate palette.</p>
+                          <div className="celebration-palette-preview" aria-hidden="true">{CELEBRATION_COLOR_FIELDS.slice(0, 6).map((field) => <i key={field.key} style={{ backgroundColor: selectedCelebrationColors[field.key] || field.fallback }} />)}</div>
                           <div className="color-control-grid">
                             {CELEBRATION_COLOR_FIELDS.map((field) => {
-                              const value = userSettings.celebrationColors?.[field.key] || field.fallback;
-                              const draftKey = `celebration:${field.key}`;
+                              const value = selectedCelebrationColors[field.key] || field.fallback;
+                              const draftKey = `celebration:${selectedCelebrationOption.id}:${field.key}`;
                               return <label className="color-control" key={field.key}><span>{field.label}</span><div><input type="color" value={value} onChange={(event) => { handleCelebrationColorChange(field.key, event.target.value); clearColorTextDraft(draftKey); }} aria-label={`${field.label} color`} /><input type="text" value={colorTextDrafts[draftKey] ?? value.toUpperCase()} onChange={(event) => setColorTextDrafts((drafts) => ({ ...drafts, [draftKey]: event.target.value }))} onBlur={() => commitColorTextDraft(draftKey, value, (color) => handleCelebrationColorChange(field.key, color))} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") clearColorTextDraft(draftKey); }} maxLength={7} spellCheck="false" aria-label={`${field.label} hex color`} /></div></label>;
                             })}
                           </div>

@@ -4686,6 +4686,7 @@ a,
   color: var(--text-color);
 }
 .studio-unlocked-pill { display: inline-flex; margin-left: 7px; padding: 3px 7px; border-radius: 999px; background: color-mix(in srgb, var(--success-color) 16%, var(--surface-alt)); color: var(--success-color); font-size: .66rem; font-weight: 900; vertical-align: middle; }
+.studio-celebration-pill { display: inline-flex; margin-left: 6px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--primary-color) 35%, var(--border-color)); border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-alt)); color: var(--text-color); font-size: .66rem; font-weight: 900; vertical-align: middle; }
 .celebration-palette-preview { display: grid; grid-template-columns: repeat(6, minmax(24px, 1fr)); gap: 5px; margin: 0 0 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); }
 .celebration-palette-preview i { height: 22px; border-radius: 7px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%); }
 .bulk-import-instructions p { margin: 0; color: var(--muted-text); font-size: 0.82rem; line-height: 1.45; }
