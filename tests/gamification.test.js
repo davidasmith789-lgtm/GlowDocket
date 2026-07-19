@@ -96,10 +96,14 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(css, /\.reduce-motion \.completion-confetti/);
   assert.match(app, /Celebration Color Studio/);
   assert.match(app, /celebrationStudioProgress\.unlocked/);
-  assert.match(app, /CELEBRATION_COLOR_FIELDS\.map/);
+  assert.match(app, /selectedCelebrationColorFields\.map/);
   assert.match(app, /getCelebrationColorsForStyle/);
   assert.match(app, /studio-celebration-pill/);
   assert.match(app, /selectedCelebrationOption\.label/);
+  assert.match(app, /CELEBRATION_STYLE_COLOR_FIELDS/);
+  assert.match(app, /stars: \["palette3"\]/);
+  assert.match(app, /ribbons: \["palette1", "palette6"\]/);
+  assert.match(app, /selectedCelebrationColorFields\.map/);
   assert.match(app, /signInDays: normalizeSignInDays\(userSettings\.signInDays\)/);
   assert.match(css, /\.celebration-studio-progress/);
   assert.match(css, /\.completion-celebration\.has-custom-colors/);

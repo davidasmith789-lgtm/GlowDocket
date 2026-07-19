@@ -267,6 +267,24 @@ const CELEBRATION_COLOR_FIELDS = [
   { key: "toastText", label: "Message text", fallback: "#ffffff" },
 ];
 
+const CELEBRATION_STYLE_COLOR_FIELDS = {
+  standard: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
+  stars: ["palette3"],
+  course: ["palette1"],
+  rainbow: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
+  sparkles: ["palette3"],
+  ribbons: ["palette1", "palette6"],
+  prism: ["palette1", "palette2", "palette4", "palette5", "palette6"],
+};
+
+const CELEBRATION_STYLE_COLOR_LABELS = {
+  stars: { palette3: "Star color" },
+  course: { palette1: "Course particle color" },
+  sparkles: { palette3: "Sparkle color" },
+  ribbons: { palette1: "Ribbon color 1", palette6: "Ribbon color 2" },
+  prism: { palette1: "Prism color 1", palette2: "Prism color 2", palette4: "Prism color 3", palette5: "Prism color 4", palette6: "Prism color 5" },
+};
+
 const getCelebrationColorsForStyle = (savedColors, celebrationId) => {
   if (!savedColors || typeof savedColors !== "object" || Array.isArray(savedColors)) return {};
   const styleColors = savedColors[celebrationId];
@@ -8012,6 +8030,13 @@ function App() {
   const celebrationStudioProgress = getCelebrationStudioProgress(userSettings.signInDays, isGamificationTestAccount(accountEmail));
   const selectedCelebrationOption = GAMIFICATION_CONFETTI.find((option) => option.id === gamification.selectedConfetti) || GAMIFICATION_CONFETTI[0];
   const selectedCelebrationColors = getCelebrationColorsForStyle(userSettings.celebrationColors, selectedCelebrationOption.id);
+  const selectedCelebrationColorFields = [
+    ...(CELEBRATION_STYLE_COLOR_FIELDS[selectedCelebrationOption.id] || CELEBRATION_STYLE_COLOR_FIELDS.standard).map((key) => {
+      const field = CELEBRATION_COLOR_FIELDS.find((candidate) => candidate.key === key);
+      return { ...field, label: CELEBRATION_STYLE_COLOR_LABELS[selectedCelebrationOption.id]?.[key] || field.label };
+    }),
+    ...CELEBRATION_COLOR_FIELDS.filter((field) => ["accent", "toastBackground", "toastText"].includes(field.key)),
+  ];
   const weeklyMomentum = summarizeWeeklyMomentum(tasks, gamification, { now: checklistNow, weekStartsOn: userSettings.calendarWeekStartsOn });
   const gamificationTitle = getGamificationTitle(gamification);
   const earnedAchievements = new Set(gamification.earnedAchievementIds);
@@ -9787,9 +9812,9 @@ function App() {
                       {colorGroupsOpen.celebrations === true && (
                         <>
                           <p className="hint-text">Editing <strong>{selectedCelebrationOption.label}</strong>. Choose another celebration in Cosmetics to give it a separate palette.</p>
-                          <div className="celebration-palette-preview" aria-hidden="true">{CELEBRATION_COLOR_FIELDS.slice(0, 6).map((field) => <i key={field.key} style={{ backgroundColor: selectedCelebrationColors[field.key] || field.fallback }} />)}</div>
+                          <div className="celebration-palette-preview" aria-hidden="true">{selectedCelebrationColorFields.filter((field) => field.key.startsWith("palette")).map((field) => <i key={field.key} style={{ backgroundColor: selectedCelebrationColors[field.key] || field.fallback }} />)}</div>
                           <div className="color-control-grid">
-                            {CELEBRATION_COLOR_FIELDS.map((field) => {
+                            {selectedCelebrationColorFields.map((field) => {
                               const value = selectedCelebrationColors[field.key] || field.fallback;
                               const draftKey = `celebration:${selectedCelebrationOption.id}:${field.key}`;
                               return <label className="color-control" key={field.key}><span>{field.label}</span><div><input type="color" value={value} onChange={(event) => { handleCelebrationColorChange(field.key, event.target.value); clearColorTextDraft(draftKey); }} aria-label={`${field.label} color`} /><input type="text" value={colorTextDrafts[draftKey] ?? value.toUpperCase()} onChange={(event) => setColorTextDrafts((drafts) => ({ ...drafts, [draftKey]: event.target.value }))} onBlur={() => commitColorTextDraft(draftKey, value, (color) => handleCelebrationColorChange(field.key, color))} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") clearColorTextDraft(draftKey); }} maxLength={7} spellCheck="false" aria-label={`${field.label} hex color`} /></div></label>;
@@ -11231,7 +11256,7 @@ function App() {
       {completionCelebration && (
         <div
           key={completionCelebration.id}
-          className={`completion-celebration celebration-${completionCelebration.confetti || "standard"}${completionCelebration.celebrationColors ? " has-custom-colors" : ""}`}
+          className={`completion-celebration celebration-${completionCelebration.confetti || "standard"}${completionCelebration.celebrationColors ? " has-custom-colors" : ""}${completionCelebration.celebrationColors?.accent ? " has-custom-toast-accent" : ""}${completionCelebration.celebrationColors?.toastBackground ? " has-custom-toast-background" : ""}${completionCelebration.celebrationColors?.toastText ? " has-custom-toast-text" : ""}`}
           style={completionCelebration.celebrationColors ? { "--celebration-1": completionCelebration.celebrationColors.palette1 || "#f43f5e", "--celebration-2": completionCelebration.celebrationColors.palette2 || "#f59e0b", "--celebration-3": completionCelebration.celebrationColors.palette3 || "#facc15", "--celebration-4": completionCelebration.celebrationColors.palette4 || "#22c55e", "--celebration-5": completionCelebration.celebrationColors.palette5 || "#06b6d4", "--celebration-6": completionCelebration.celebrationColors.palette6 || "#a855f7", "--celebration-accent": completionCelebration.celebrationColors.accent || "#8b5cf6", "--celebration-toast-bg": completionCelebration.celebrationColors.toastBackground || "#111827", "--celebration-toast-text": completionCelebration.celebrationColors.toastText || "#ffffff" } : undefined}
           role="status"
           aria-live="polite"
