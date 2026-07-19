@@ -167,6 +167,177 @@
   .bulk-import-instructions code { padding: 10px; overflow-x: auto; border-radius: 10px; background: var(--card-bg); color: var(--text-color); white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .76rem; }
 }
 
+/* Final mobile surface contract: these rules intentionally own phone-only
+   control rows and scrolling after all legacy responsive layers above. */
+.mobile-course-order-actions { display: none; }
+
+.course-color-selector {
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.course-color-selector::-webkit-color-swatch-wrapper { padding: 0; }
+.course-color-selector::-webkit-color-swatch { border: 0; opacity: 0; }
+.course-color-selector::-moz-color-swatch { border: 0; opacity: 0; }
+
+@media (max-width: 767px) {
+  :root { --mobile-nav-content-height: 70px; }
+
+  .mobile-app-main {
+    padding-bottom: calc(var(--mobile-nav-clearance) + 28px);
+    overflow-x: clip;
+  }
+
+  .App.is-standalone .mobile-app-main {
+    padding-bottom: calc(var(--mobile-nav-clearance) + 34px);
+  }
+
+  .mobile-app-bottom-nav {
+    height: var(--mobile-nav-clearance);
+    padding-top: 3px;
+  }
+
+  .mobile-app-bottom-nav button { height: 52px; min-height: 48px; }
+  .mobile-app-bottom-nav .mobile-app-add-nav { height: 58px; min-height: 54px; }
+
+  .mobile-dashboard-checklists .checklist-gallery-toolbar { display: none; }
+  .mobile-dashboard-checklists .mobile-app-section-heading {
+    display: grid;
+    grid-template-columns: minmax(82px, 1fr) minmax(0, auto);
+    align-items: center;
+  }
+  .mobile-checklist-heading-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, auto));
+    justify-content: end;
+    gap: 5px;
+    min-width: 0;
+  }
+  .mobile-checklist-heading-actions button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 6px 7px;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .mobile-dashboard-checklists .checklist-gallery { margin-top: 4px; }
+  .mobile-dashboard-checklists .checklist-card-open strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-app-ui .portable-course-color-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px minmax(66px, auto);
+    align-items: center;
+    gap: 8px;
+    padding: 9px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 13px;
+    background: var(--surface-alt);
+  }
+  .mobile-app-ui .portable-course-color-row .course-drag-handle { display: none; }
+  .mobile-app-ui .portable-course-color-row > span {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-app-ui .portable-course-color-row .course-color-selector {
+    grid-column: 2;
+    width: 48px;
+    min-width: 48px;
+    height: 44px;
+    padding: 3px;
+    border-color: color-mix(in srgb, var(--course-color, currentColor) 55%, var(--border-color));
+  }
+  .mobile-app-ui .portable-course-color-row > .btn-danger {
+    grid-column: 3;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+  }
+  .mobile-course-order-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .mobile-course-order-actions .btn { width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; }
+
+  .mobile-task-card .task-actions,
+  .mobile-task-card.task-card.expanded .task-actions-in-progress,
+  .mobile-app-card .mobile-task-card .task-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+    margin: 0;
+    padding: 7px;
+  }
+  .mobile-task-card .task-action-pair,
+  .mobile-task-card.task-card.expanded .task-actions-in-progress .task-action-pair { display: contents !important; }
+  .mobile-task-card .task-actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    margin: 0;
+    padding: 8px 6px !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-app-ui .settings-content.mobile-settings-panel-open {
+    z-index: 180;
+    inset: 0;
+    width: 100%;
+    height: var(--taskcabinet-visible-mobile-height, 100dvh);
+    max-height: none;
+    padding: 0;
+    overflow: hidden;
+  }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-scroll-body {
+    min-height: 0;
+    flex: 1 1 auto;
+    padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(36px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    overflow-x: clip;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    scroll-padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid {
+    min-height: max-content;
+    height: auto;
+    max-height: none;
+    padding-bottom: 12px;
+    overflow: visible;
+    align-content: start;
+  }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.settings-section, .settings-section-wide, .settings-collapsible-content, .privacy-data-panel, .privacy-data-summary) {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-dashboard-checklists .mobile-app-section-heading { grid-template-columns: 1fr; }
+  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mobile-app-ui .portable-course-color-row { grid-template-columns: minmax(0, 1fr) 44px minmax(60px, auto); gap: 6px; }
+  .mobile-app-ui .portable-course-color-row .course-color-selector { width: 44px; min-width: 44px; }
+}
+
 @media (max-width: 767px) and (orientation: landscape) {
   :root { --mobile-nav-content-height: 78px; }
   .mobile-app-bottom-nav button { min-height: 46px; height: 46px; grid-template-rows: 24px 13px; }
@@ -6673,4 +6844,48 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-collapse-button {
     display: inline-grid !important;
   }
+}
+
+/* Authoritative end-of-cascade mobile overrides. */
+@media (max-width: 767px) {
+  :root { --mobile-nav-content-height: 70px; }
+  .mobile-app-main { padding-bottom: calc(var(--mobile-nav-clearance) + 28px); overflow-x: clip; }
+  .App.is-standalone .mobile-app-main { padding-bottom: calc(var(--mobile-nav-clearance) + 34px); }
+  .mobile-app-bottom-nav { height: var(--mobile-nav-clearance); padding-top: 3px; }
+  .mobile-app-bottom-nav button { height: 52px; min-height: 48px; }
+  .mobile-app-bottom-nav .mobile-app-add-nav { height: 58px; min-height: 54px; }
+
+  .mobile-dashboard-checklists .checklist-gallery-toolbar { display: none; }
+  .mobile-dashboard-checklists .mobile-app-section-heading { display: grid; grid-template-columns: minmax(82px, 1fr) minmax(0, auto); align-items: center; }
+  .mobile-checklist-heading-actions { display: grid; grid-template-columns: repeat(3, minmax(0, auto)); justify-content: end; gap: 5px; min-width: 0; }
+  .mobile-checklist-heading-actions button { min-width: 0; min-height: 40px; padding: 6px 7px; white-space: normal; line-height: 1.1; }
+  .mobile-dashboard-checklists .checklist-gallery { margin-top: 4px; }
+  .mobile-dashboard-checklists .checklist-card-open strong { min-width: 0; overflow-wrap: anywhere; }
+
+  .mobile-app-ui .portable-course-color-row { display: grid; grid-template-columns: minmax(0, 1fr) 48px minmax(66px, auto); align-items: center; gap: 8px; padding: 9px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 13px; background: var(--surface-alt); }
+  .mobile-app-ui .portable-course-color-row .course-drag-handle { display: none; }
+  .mobile-app-ui .portable-course-color-row > span { grid-column: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-app-ui .portable-course-color-row .course-color-selector { grid-column: 2; width: 48px; min-width: 48px; height: 44px; padding: 3px; }
+  .mobile-app-ui .portable-course-color-row > .btn-danger { grid-column: 3; width: 100%; min-width: 0; min-height: 44px; padding-inline: 8px; }
+  .mobile-course-order-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .mobile-course-order-actions .btn { width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; }
+
+  .mobile-task-card .task-actions,
+  .mobile-task-card.task-card.expanded .task-actions-in-progress,
+  .mobile-app-card .mobile-task-card .task-actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; width: 100%; min-width: 0; gap: 8px; margin: 0; padding: 7px; }
+  .mobile-task-card .task-action-pair,
+  .mobile-task-card.task-card.expanded .task-actions-in-progress .task-action-pair { display: contents !important; }
+  .mobile-task-card .task-actions .btn { width: 100%; min-width: 0; min-height: 46px; margin: 0; padding: 8px 6px !important; white-space: normal; overflow-wrap: anywhere; }
+
+  .mobile-app-ui .settings-content.mobile-settings-panel-open { z-index: 180; inset: 0; width: 100%; height: var(--taskcabinet-visible-mobile-height, 100dvh); max-height: none; padding: 0; overflow: hidden; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-scroll-body { min-height: 0; flex: 1 1 auto; padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(36px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px)); overflow-x: clip; overflow-y: auto; overscroll-behavior-y: contain; touch-action: pan-y; scroll-padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid { min-height: max-content; height: auto; max-height: none; padding-bottom: 12px; overflow: visible; align-content: start; }
+  .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.settings-section, .settings-section-wide, .settings-collapsible-content, .privacy-data-panel, .privacy-data-summary) { min-height: 0; height: auto; max-height: none; overflow: visible; }
+}
+
+@media (max-width: 360px) {
+  .mobile-dashboard-checklists .mobile-app-section-heading { grid-template-columns: 1fr; }
+  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mobile-app-ui .portable-course-color-row { grid-template-columns: minmax(0, 1fr) 44px minmax(60px, auto); gap: 6px; }
+  .mobile-app-ui .portable-course-color-row .course-color-selector { width: 44px; min-width: 44px; }
 }

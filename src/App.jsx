@@ -481,7 +481,7 @@ const SETTINGS_SECTIONS = [
 ];
 
 function getOrderedSettingsSections(savedOrder) {
-  const visibleSections = SETTINGS_SECTIONS.filter((section) => section.id !== "privacy");
+  const visibleSections = SETTINGS_SECTIONS;
   const validIds = new Set(visibleSections.map((section) => section.id));
   const safeOrder = Array.isArray(savedOrder)
     ? savedOrder.filter((id, index, items) => validIds.has(id) && items.indexOf(id) === index)
@@ -7021,7 +7021,7 @@ function App() {
       return (
         <section className="standalone-checklists" aria-label="Standalone checklists">
           <div className="checklist-gallery-toolbar">
-            <div><h2>Checklists</h2><p>Quick lists that stay separate from assignments.</p></div>
+            <div><h2>Checklists</h2>{!isMobileUi && <p>Quick lists that stay separate from assignments.</p>}</div>
             <div className="checklist-gallery-actions">
               {checklists.length > 0 && (
                 <button type="button" className="btn btn-secondary" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>
@@ -7254,7 +7254,7 @@ function App() {
         />
         <button type="submit" className="btn btn-primary" disabled={!newCourseName.trim()}>Add</button>
       </form>
-      {courses.map((course) => <div className={`portable-course-color-row course-reorder-row${draggedCourse === course ? " dragging" : ""}${courseDropTarget?.course === course ? ` drop-${courseDropTarget.position}` : ""}`} key={course} onDragOver={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); setCourseDropTarget({ course, position: event.clientY < bounds.top + bounds.height / 2 ? "before" : "after" }); }} onDrop={(event) => { event.preventDefault(); handleCourseDrop(course, courseDropTarget?.position || "before"); }}><button type="button" className="course-drag-handle" draggable aria-label={`Drag ${course} to reorder`} title="Drag to reorder. Press Alt+Up or Alt+Down to move with the keyboard." onKeyDown={(event) => { if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return; event.preventDefault(); handleCourseMove(course, event.key === "ArrowUp" ? -1 : 1); }} onDragStart={(event) => { setDraggedCourse(course); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", course); }} onDragEnd={() => { setDraggedCourse(null); setCourseDropTarget(null); }}>⋮⋮</button><span style={{ backgroundColor: getCourseColor(course), color: getTextColorForCourse(course) }}>{course}</span><input type="color" value={getCourseColor(course)} onChange={(event) => handleCourseColorChange(course, event.target.value)} aria-label={`Color for ${course}`} /><button type="button" className="btn btn-danger" disabled={course === "Other"} onClick={() => handleDeleteCourse(course)}>Delete</button></div>)}
+      {courses.map((course, index) => <div className={`portable-course-color-row course-reorder-row${draggedCourse === course ? " dragging" : ""}${courseDropTarget?.course === course ? ` drop-${courseDropTarget.position}` : ""}`} key={course} onDragOver={(event) => { event.preventDefault(); const bounds = event.currentTarget.getBoundingClientRect(); setCourseDropTarget({ course, position: event.clientY < bounds.top + bounds.height / 2 ? "before" : "after" }); }} onDrop={(event) => { event.preventDefault(); handleCourseDrop(course, courseDropTarget?.position || "before"); }}><button type="button" className="course-drag-handle" draggable aria-label={`Drag ${course} to reorder`} title="Drag to reorder. Press Alt+Up or Alt+Down to move with the keyboard." onKeyDown={(event) => { if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return; event.preventDefault(); handleCourseMove(course, event.key === "ArrowUp" ? -1 : 1); }} onDragStart={(event) => { setDraggedCourse(course); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", course); }} onDragEnd={() => { setDraggedCourse(null); setCourseDropTarget(null); }}>⋮⋮</button><span style={{ backgroundColor: getCourseColor(course), color: getTextColorForCourse(course) }}>{course}</span><input className="course-color-selector" type="color" value={getCourseColor(course)} style={{ backgroundColor: getCourseColor(course) }} onChange={(event) => handleCourseColorChange(course, event.target.value)} aria-label={`Color for ${course}`} /><button type="button" className="btn btn-danger" disabled={course === "Other"} onClick={() => handleDeleteCourse(course)}>Delete</button><div className="mobile-course-order-actions" aria-label={`Reorder ${course}`}><button type="button" className="btn btn-secondary" disabled={index === 0} onClick={() => handleCourseMove(course, -1)} aria-label={`Move ${course} up`}>↑ Up</button><button type="button" className="btn btn-secondary" disabled={index === courses.length - 1} onClick={() => handleCourseMove(course, 1)} aria-label={`Move ${course} down`}>↓ Down</button></div></div>)}
     </div>
   );
 
@@ -7891,7 +7891,7 @@ function App() {
     </ul>
   );
   return (
-    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}>
+    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}>
       <div className="app-shell">
         {isMobileUi && currentUser && (
           <header className="mobile-app-header">
@@ -8060,8 +8060,8 @@ function App() {
                   <div className="mobile-app-section-heading"><div><h3>Find a quick task</h3></div></div>
                   {renderQuickMatchCard()}
                 </section>
-                <section className="mobile-app-card">
-                  <div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><button type="button" onClick={() => openMobileTab("mobile-tools")}>More tools</button></div>
+                <section className="mobile-app-card mobile-dashboard-checklists">
+                  <div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button><button type="button" onClick={() => openMobileTab("mobile-tools")}>More tools</button></div></div>
                   {renderStandaloneChecklists()}
                 </section>
               </>
@@ -8098,7 +8098,7 @@ function App() {
 
             {currentTab === "mobile-courses" && (
               <>
-                {renderMobilePageTitle("Customize", "Courses and colors", "Course changes are saved to this same account on desktop and mobile.")}
+                {renderMobilePageTitle("", "Courses and Colors", "Course changes are saved to this same account on desktop and mobile.")}
                 <section className="mobile-app-card">{renderCourseColorsWidget()}</section>
               </>
             )}

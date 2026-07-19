@@ -36,3 +36,36 @@ test("assignment dialogs trap focus and restore it to their trigger", async () =
   assert.match(app, /dialogTriggerRef\.current\?\.focus/);
   assert.match(app, /ref=\{activeDialogRef\}[\s\S]{0,180}role="dialog"/);
 });
+
+test("mobile settings expose Privacy and Data in the stable scrolling panel", async () => {
+  const [app, styles] = await Promise.all([read("../src/App.jsx"), read("../src/App.css")]);
+  assert.doesNotMatch(app, /SETTINGS_SECTIONS\.filter\(\(section\) => section\.id !== "privacy"\)/);
+  assert.match(app, /id: "privacy"[\s\S]{0,120}label: "Privacy & Data"/);
+  assert.match(app, /settingsSection === "privacy"/);
+  assert.match(app, /ref=\{mobileSettingsScrollRef\} className="mobile-settings-scroll-body"/);
+  assert.match(styles, /settings-content\.mobile-settings-panel-open \.mobile-settings-scroll-body[\s\S]{0,500}overflow-y: auto/);
+});
+
+test("mobile courses use accessible persisted reorder controls instead of a dead drag handle", async () => {
+  const [app, styles] = await Promise.all([read("../src/App.jsx"), read("../src/App.css")]);
+  assert.match(app, /renderMobilePageTitle\("", "Courses and Colors"/);
+  assert.match(app, /className="mobile-course-order-actions"/);
+  assert.match(app, /aria-label=\{`Move \$\{course\} up`\}/);
+  assert.match(app, /handleCourseMove\(course, -1\)/);
+  assert.match(styles, /portable-course-color-row \.course-drag-handle \{ display: none; \}/);
+  assert.match(styles, /course-color-selector::-(?:webkit|moz)-color-swatch[^{]*\{[^}]*opacity: 0/);
+});
+
+test("mobile dashboard checklist controls share one compact heading row", async () => {
+  const [app, styles] = await Promise.all([read("../src/App.jsx"), read("../src/App.css")]);
+  assert.match(app, /mobile-dashboard-checklists/);
+  assert.match(app, /mobile-checklist-heading-actions/);
+  assert.match(app, /!isMobileUi && <p>Quick lists that stay separate from assignments\.<\/p>/);
+  assert.match(styles, /mobile-checklist-heading-actions[\s\S]{0,220}grid-template-columns: repeat\(3/);
+});
+
+test("mobile assignment actions finish with a stable two-column grid", async () => {
+  const styles = await read("../src/App.css");
+  assert.match(styles, /mobile-task-card \.task-actions[\s\S]{0,260}grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /mobile-task-card \.task-action-pair[\s\S]{0,180}display: contents/);
+});
