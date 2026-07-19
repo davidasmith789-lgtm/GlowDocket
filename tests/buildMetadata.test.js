@@ -25,7 +25,7 @@ test("Vite injects version, commit, environment, build time, and source state", 
   assert.match(config, /environment: process\.env\.VERCEL_ENV/);
   assert.match(config, /buildTimestamp: new Date\(\)\.toISOString\(\)/);
   assert.match(config, /sourceState/);
-  assert.equal(JSON.parse(packageJson).version, "1.0.0");
+  assert.equal(JSON.parse(packageJson).version, "1.0.4");
 });
 
 test("assignment CSV omits build identity while crash diagnostics retain it", async () => {

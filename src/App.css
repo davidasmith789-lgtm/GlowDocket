@@ -1105,10 +1105,14 @@ textarea {
   font: inherit;
 }
 .hero-status-stack { display: grid; justify-items: end; gap: 9px; }
-.momentum-header-summary { position: relative; display: grid; width: min(320px, 100%); grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; padding: 10px 12px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--card-bg) 18%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); }
+.momentum-header-summary { position: relative; display: grid; width: min(390px, 100%); min-height: 104px; grid-template-columns: minmax(0, 1fr) 74px; align-items: center; gap: 8px 16px; padding: 14px 16px 13px; overflow: visible; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 18px; background: color-mix(in srgb, var(--card-bg) 18%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); }
 .momentum-summary-copy { display: grid; min-width: 0; gap: 2px; }
 .momentum-header-summary small { color: inherit; opacity: .86; }
-.momentum-header-summary progress { grid-column: 1 / -1; width: 100%; height: 7px; accent-color: var(--success-color); }
+.momentum-header-summary progress { grid-column: 1 / -1; width: calc(100% - 38px); height: 7px; accent-color: var(--success-color); }
+.momentum-badge-stage { position: relative; display: grid; width: 72px; height: 72px; place-items: center; align-self: center; overflow: visible; }
+.momentum-header-summary .momentum-badge-stage .achievement-medallion { transform: scale(.62); }
+.momentum-header-summary .momentum-badge-stage.badge-twenty-five-completions .achievement-medallion { transform: scale(.67); }
+.momentum-badge-count { position: absolute; right: 10px; bottom: 7px; display: grid; min-width: 24px; height: 21px; padding: 0 6px; place-items: center; border: 1px solid color-mix(in srgb, white 40%, transparent); border-radius: 999px; background: var(--success-color); color: var(--button-primary-color); box-shadow: 0 3px 8px rgb(0 0 0 / 22%); font-size: .7rem; font-style: normal; font-weight: 900; }
 .momentum-earned-badge { --badge-color: var(--warning-color); position: relative; display: grid; width: 42px; height: 42px; place-items: center; align-self: center; border: 1px solid color-mix(in srgb, var(--badge-color) 58%, transparent); border-radius: 50%; background: radial-gradient(circle at 34% 25%, color-mix(in srgb, white 70%, var(--badge-color)) 0 8%, color-mix(in srgb, var(--badge-color) 35%, transparent) 11% 55%, color-mix(in srgb, var(--badge-color) 72%, transparent)); box-shadow: 0 4px 14px color-mix(in srgb, var(--badge-color) 25%, transparent); }
 .momentum-earned-badge b { display: grid; width: 28px; height: 28px; place-items: center; color: color-mix(in srgb, var(--badge-color) 55%, white); }
 .momentum-earned-badge .achievement-emblem { width: 25px; height: 25px; }
@@ -1189,6 +1193,12 @@ textarea {
 .celebration-studio-progress progress { width: 100%; height: 8px; accent-color: var(--primary-color); }
 .celebration-studio-progress em { color: var(--muted-text); font-size: .72rem; font-style: normal; font-weight: 800; text-align: right; }
 .celebration-studio-progress.is-unlocked { border-color: color-mix(in srgb, var(--success-color) 62%, var(--border-color)); background: linear-gradient(135deg, color-mix(in srgb, var(--success-color) 14%, var(--surface-alt)), color-mix(in srgb, var(--primary-color) 9%, var(--surface-alt))); }
+.gamification-rewards > .title-unlock-guide { display: grid; gap: 10px; width: 100%; margin-top: 14px; padding: 15px; border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color)); border-radius: 16px; background: color-mix(in srgb, var(--primary-color) 8%, var(--surface-alt)); }
+.title-unlock-guide > strong { color: var(--text-color); }
+.title-unlock-guide ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.title-unlock-guide li { display: grid; grid-template-columns: minmax(120px, .6fr) minmax(0, 1.4fr); gap: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+.title-unlock-guide li span { color: var(--text-color); font-weight: 850; }
+.title-unlock-guide li small { color: var(--muted-text); line-height: 1.4; }
 
 @media (max-width: 720px) {
   .hero-status-stack { width: 100%; justify-items: stretch; }
@@ -4689,6 +4699,28 @@ a,
 .studio-celebration-pill { display: inline-flex; margin-left: 6px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--primary-color) 35%, var(--border-color)); border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-alt)); color: var(--text-color); font-size: .66rem; font-weight: 900; vertical-align: middle; }
 .celebration-palette-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(32px, 1fr)); gap: 5px; margin: 0 0 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); }
 .celebration-palette-preview i { height: 22px; border-radius: 7px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%); }
+.celebration-studio-preview-row { display: grid; grid-template-columns: minmax(0, 1fr) 180px; align-items: start; gap: 14px; margin-bottom: 12px; }
+.celebration-studio-preview-row > .hint-text { margin: 4px 0; }
+.celebration-color-preview { position: relative; isolation: isolate; width: 180px; height: 126px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary-color) 38%, var(--border-color)); border-radius: 15px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 13%, var(--surface-alt)), var(--surface-color)); box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent); }
+.celebration-color-preview > strong { position: absolute; z-index: 3; right: 7px; bottom: 7px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--primary-color) 30%, var(--border-color)); border-radius: 999px; background: color-mix(in srgb, var(--surface-color) 88%, transparent); color: var(--text-color); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; }
+.celebration-color-preview > div { position: absolute; inset: 0; overflow: hidden; contain: strict; }
+.celebration-color-preview i { position: absolute; top: -16px; left: var(--preview-x); width: 6px; height: 10px; border-radius: 2px; background: var(--preview-color); opacity: 0; will-change: transform; animation: celebration-preview-fall var(--preview-duration) linear var(--preview-delay) infinite; }
+.celebration-color-preview i:nth-child(3n) { width: 5px; height: 5px; border-radius: 50%; }
+.celebration-color-preview.preview-stars i { width: 10px; height: 10px; clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 94%,50% 72%,21% 94%,32% 57%,2% 35%,39% 35%); animation-name: celebration-preview-twinkle; }
+.celebration-color-preview.preview-course i { width: 8px; height: 8px; border-radius: 50%; animation-name: celebration-preview-wave; }
+.celebration-color-preview.preview-rainbow i { border-radius: 999px; animation-duration: calc(var(--preview-duration) - 320ms); animation-name: celebration-preview-sweep; }
+.celebration-color-preview.preview-sparkles i { width: 9px; height: 9px; clip-path: polygon(50% 0,60% 39%,100% 50%,60% 61%,50% 100%,40% 61%,0 50%,40% 39%); animation-name: celebration-preview-twinkle; }
+.celebration-color-preview.preview-ribbons i { width: 4px; height: 18px; border-radius: 999px; animation-name: celebration-preview-ribbon; }
+.celebration-color-preview.preview-prism i { width: 9px; height: 9px; border-radius: 2px; animation-name: celebration-preview-prism; }
+@keyframes celebration-preview-fall { 0% { opacity: 0; transform: translate3d(0,0,0) rotate(0); } 8% { opacity: 1; } 48% { transform: translate3d(var(--preview-drift),62px,0) rotate(190deg); } 92% { opacity: 1; } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * -.5),142px,0) rotate(390deg); } }
+@keyframes celebration-preview-twinkle { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.2); } 18% { opacity: 1; transform: translate3d(var(--preview-drift),22px,0) scale(1.2) rotate(70deg); } 42% { opacity: .25; } 66% { opacity: 1; transform: translate3d(calc(var(--preview-drift) * -.6),88px,0) scale(1.35) rotate(250deg); } 100% { opacity: 0; transform: translate3d(var(--preview-drift),142px,0) scale(.25) rotate(430deg); } }
+@keyframes celebration-preview-wave { 0% { opacity: 0; transform: translate3d(-12px,0,0); } 8% { opacity: 1; } 35% { transform: translate3d(14px,48px,0); } 68% { transform: translate3d(-13px,94px,0); } 100% { opacity: 0; transform: translate3d(12px,142px,0); } }
+@keyframes celebration-preview-sweep { 0% { opacity: 0; transform: translate3d(-18px,0,0) rotate(-60deg); } 8% { opacity: 1; } 40% { transform: translate3d(20px,55px,0) rotate(120deg); } 72% { transform: translate3d(-15px,100px,0) rotate(280deg); } 100% { opacity: 0; transform: translate3d(18px,142px,0) rotate(440deg); } }
+@keyframes celebration-preview-ribbon { 0% { opacity: 0; transform: translate3d(0,0,0) rotateX(0) rotateZ(-20deg); } 8% { opacity: 1; } 35% { transform: translate3d(var(--preview-drift),48px,0) rotateX(280deg) rotateZ(35deg); } 68% { transform: translate3d(calc(var(--preview-drift) * -.7),95px,0) rotateX(580deg) rotateZ(-40deg); } 100% { opacity: 0; transform: translate3d(var(--preview-drift),142px,0) rotateX(850deg) rotateZ(55deg); } }
+@keyframes celebration-preview-prism { 0% { opacity: 0; transform: translate3d(-12px,0,0) rotate(0) scale(.4); } 8% { opacity: 1; } 32% { transform: translate3d(14px,42px,0) rotate(220deg) scale(1.25); } 64% { transform: translate3d(-14px,88px,0) rotate(470deg) scale(.55); } 100% { opacity: 0; transform: translate3d(12px,142px,0) rotate(760deg) scale(1.15); } }
+@media (max-width: 650px) { .celebration-studio-preview-row { grid-template-columns: 1fr; } .celebration-color-preview { width: 100%; } }
+.reduce-motion .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); }
+@media (prefers-reduced-motion: reduce) { .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); } }
 .bulk-import-instructions p { margin: 0; color: var(--muted-text); font-size: 0.82rem; line-height: 1.45; }
 .bulk-import-instructions-heading {
   display: grid;

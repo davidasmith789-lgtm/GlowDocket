@@ -77,7 +77,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /Momentum & Achievements/);
   assert.match(css, /\.completion-celebration\s*\{[\s\S]*?inset: 0;/);
   assert.match(css, /translate3d\(var\(--confetti-drift\), 100vh/);
-  assert.match(app, /momentum-earned-badge/);
+  assert.match(app, /momentum-badge-stage/);
+  assert.match(app, /momentum-badge-count/);
   assert.match(app, /selectedBadge: achievement\.id/);
   assert.match(css, /\.achievement-card\.is-selected/);
   assert.match(app, /<h2 id="gamification-title">Cosmetics<\/h2>/);
@@ -97,6 +98,11 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /Celebration Color Studio/);
   assert.match(app, /celebrationStudioProgress\.unlocked/);
   assert.match(app, /selectedCelebrationColorFields\.map/);
+  assert.match(app, /lockedTitleOptions\.length > 0/);
+  assert.match(app, /How to unlock more titles/);
+  assert.match(app, /CELEBRATION_PREVIEW_PARTICLES\.map/);
+  assert.match(app, />Preview<\/strong>/);
+  assert.match(css, /@keyframes celebration-preview-fall/);
   assert.match(app, /getCelebrationColorsForStyle/);
   assert.match(app, /studio-celebration-pill/);
   assert.match(app, /selectedCelebrationOption\.label/);
