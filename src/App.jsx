@@ -53,9 +53,10 @@ import { AssignmentCountdown, MobilePageTitle, MobileSettingsPortal, PasswordEye
 import { AssignmentFilterControls, AssignmentFilterToggle } from "./components/AssignmentFilters.jsx";
 import DeferredCalendar from "./components/DeferredCalendar.jsx";
 import FocusSession from "./components/FocusSession.jsx";
+import AchievementEmblem from "./components/AchievementEmblem.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
-import { DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getGamificationTitle, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, summarizeWeeklyMomentum } from "./gamificationUtils.js";
+import { CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getGamificationTitle, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "./gamificationUtils.js";
 
 /*
  * GLOWDOCKET APPLICATION MAP
@@ -117,6 +118,8 @@ const DEFAULT_USER_SETTINGS = {
   customCategories: [],
   customColorThemes: [],
   deletedColorThemeIds: [],
+  signInDays: [],
+  celebrationColors: {},
 };
 
 const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
@@ -151,7 +154,7 @@ const COMPLETION_CONFETTI = Array.from({ length: 24 }, (_, index) => ({
   swayBack: `${-14 - ((index * 11) % 28)}px`,
   scale: `${0.78 + (index % 5) * 0.09}`,
   delay: `${(index % 5) * 60}ms`,
-  duration: `${3400 + (index % 4) * 350}ms`,
+  duration: `${2900 + (index % 4) * 350}ms`,
   rotation: `${120 + ((index * 47) % 300)}deg`,
   color: ["var(--primary-color)", "var(--secondary-color)", "var(--success-color)", "var(--warning-color)"][index % 4],
 }));
@@ -250,6 +253,18 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "logoStar", label: "Star", group: "Logo" },
   { key: "logoGlow", label: "Star glow", group: "Logo" },
   { key: "logoSpeedLines", label: "Speed lines", group: "Logo" },
+];
+
+const CELEBRATION_COLOR_FIELDS = [
+  { key: "palette1", label: "Particle color 1", fallback: "#f43f5e" },
+  { key: "palette2", label: "Particle color 2", fallback: "#f59e0b" },
+  { key: "palette3", label: "Particle color 3", fallback: "#facc15" },
+  { key: "palette4", label: "Particle color 4", fallback: "#22c55e" },
+  { key: "palette5", label: "Particle color 5", fallback: "#06b6d4" },
+  { key: "palette6", label: "Particle color 6", fallback: "#a855f7" },
+  { key: "accent", label: "Celebration border", fallback: "#8b5cf6" },
+  { key: "toastBackground", label: "Message background", fallback: "#111827" },
+  { key: "toastText", label: "Message text", fallback: "#ffffff" },
 ];
 
 const normalizeHexColor = (colorId) => {
@@ -1786,6 +1801,19 @@ function App() {
     });
   }, [accountEmail, accountMode, currentUser, settingsStorageKey, userSettings.gamification]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    const today = getLocalSignInDay();
+    setUserSettings((previous) => {
+      const signInDays = normalizeSignInDays(previous.signInDays);
+      if (signInDays.includes(today)) return previous;
+      const updated = { ...previous, signInDays: [...signInDays, today] };
+      try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
+      catch (error) { console.error("Failed to record this sign-in day:", error); }
+      return updated;
+    });
+  }, [currentUser, settingsStorageKey, userSettings.signInDays]);
+
   const [isCustomCourse, setIsCustomCourse] = useState(false);
   const [customCourseName, setCustomCourseName] = useState("");
   const [customCategoryName, setCustomCategoryName] = useState("");
@@ -1942,12 +1970,22 @@ function App() {
   const [completionCelebration, setCompletionCelebration] = useState(null);
   const completionCelebrationSequenceRef = useRef(0);
   const [gamificationOpen, setGamificationOpen] = useState(false);
+  const gamificationScrollTimerRef = useRef(null);
 
   useEffect(() => {
     if (!completionCelebration) return undefined;
-    const timeoutId = window.setTimeout(() => setCompletionCelebration(null), userSettings.reduceMotion ? 3100 : 7600);
+    const timeoutId = window.setTimeout(() => setCompletionCelebration(null), userSettings.reduceMotion ? 3100 : 7100);
     return () => window.clearTimeout(timeoutId);
   }, [completionCelebration, userSettings.reduceMotion]);
+
+  useEffect(() => () => window.clearTimeout(gamificationScrollTimerRef.current), []);
+
+  const handleGamificationScroll = (event) => {
+    const dialog = event.currentTarget;
+    dialog.classList.add("is-scrolling");
+    window.clearTimeout(gamificationScrollTimerRef.current);
+    gamificationScrollTimerRef.current = window.setTimeout(() => dialog.classList.remove("is-scrolling"), 120);
+  };
   const [settingsSection, setSettingsSection] = useState(() => recoveryRequestedOnLoad() ? "storage" : "personalization");
   const [accessibilityAudit, setAccessibilityAudit] = useState(null);
   const [manualAccessibilityChecks, setManualAccessibilityChecks] = useState([]);
@@ -2819,6 +2857,7 @@ function App() {
 
     const resetSettings = {
       ...DEFAULT_USER_SETTINGS,
+      signInDays: normalizeSignInDays(userSettings.signInDays),
       activeColorThemeId: "midnight-neon",
       cycleDayNames: [...DEFAULT_USER_SETTINGS.cycleDayNames],
       courseCycleDays: {},
@@ -3338,6 +3377,15 @@ function App() {
     setTutorialExploredSteps([]);
     setTutorialGateMessage("");
     setTutorialWidgetLayout({ plan: { x: 25, y: 70, width: 330, height: 135 }, calendar: { x: 430, y: 110, width: 285, height: 135 }, checklists: { x: 205, y: 235, width: 280, height: 120 } });
+  };
+
+  const handleCelebrationColorChange = (key, value) => {
+    setUserSettings((previous) => {
+      const updated = { ...previous, celebrationColors: { ...(previous.celebrationColors || {}), [key]: value } };
+      try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
+      catch (error) { console.error("Failed to save celebration colors:", error); }
+      return updated;
+    });
   };
 
   const finishTutorial = () => {
@@ -4286,7 +4334,7 @@ function App() {
     const nextGamification = { ...gamification, earnedAchievementIds: [...new Set([...gamification.earnedAchievementIds, ...newAchievementIds])] };
     handleAddFieldSettingChange("gamification", nextGamification);
     completionCelebrationSequenceRef.current += 1;
-    setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)) });
+    setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked ? userSettings.celebrationColors : null });
     setTasks(updated);
     saveTasksForCurrentUser(updated);
     if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) runImmediateReminderMutation(completedTask.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
@@ -4409,7 +4457,7 @@ function App() {
       const nextGamification = { ...gamification, earnedAchievementIds: [...new Set([...gamification.earnedAchievementIds, ...newAchievementIds])] };
       handleAddFieldSettingChange("gamification", nextGamification);
       completionCelebrationSequenceRef.current += 1;
-      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)) });
+      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)), celebrationColors: celebrationStudioProgress.unlocked ? userSettings.celebrationColors : null });
       setTasks(updated);
       saveTasksForCurrentUser(updated);
     } else {
@@ -7959,6 +8007,7 @@ function App() {
       : "On a computer: open your browser’s address-bar install icon or menu, then choose Install GlowDocket. Chrome and Edge usually show Install app.";
   const reminderLeadAlreadyPassedCount = tasks.filter((task) => { const deadline = getEffectiveDeadline(task); return deadline && deadline.getTime() > checklistNow.getTime() && deadline.getTime() - Number(userSettings.reminderMinutes || 60) * 60000 < checklistNow.getTime() && !task.isDeleted && !task.isCompleted; }).length;
   const gamification = normalizeGamification(userSettings.gamification);
+  const celebrationStudioProgress = getCelebrationStudioProgress(userSettings.signInDays, isGamificationTestAccount(accountEmail));
   const weeklyMomentum = summarizeWeeklyMomentum(tasks, gamification, { now: checklistNow, weekStartsOn: userSettings.calendarWeekStartsOn });
   const gamificationTitle = getGamificationTitle(gamification);
   const earnedAchievements = new Set(gamification.earnedAchievementIds);
@@ -8103,7 +8152,7 @@ function App() {
               <GlowDocketLogo decorative />
               <div><strong>GlowDocket</strong></div>
             </button>
-            {gamification.showHeaderSummary && <button type="button" className="mobile-momentum-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal}. Displayed badge: ${selectedAchievement?.title || "none"}. ${earnedAchievements.size} badges earned. Open achievements.`}><span className="mobile-momentum-badge" aria-hidden="true">{selectedAchievement?.icon || "🏅"}</span><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><small>Momentum</small></button>}
+            {gamification.showHeaderSummary && <button type="button" className="mobile-momentum-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal}. Displayed badge: ${selectedAchievement?.title || "none"}. ${earnedAchievements.size} badges earned. Open achievements.`}><span className="mobile-momentum-badge" aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><small>Momentum</small></button>}
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
               {safeDisplayName.charAt(0).toUpperCase()}
             </button>
@@ -8123,7 +8172,7 @@ function App() {
 
           <div className="hero-status-stack">
             <div className="user-pill">{currentUser ? `Signed in as ${displayName || "GlowDocket user"}` : "Guest Mode"}</div>
-            {gamification.showHeaderSummary && <button type="button" className="momentum-header-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal} assignments, ${weeklyMomentum.productiveDays} productive days, displayed badge ${selectedAchievement?.title || "none"}, ${earnedAchievements.size} badges earned. Open achievements.`}><span className="momentum-summary-copy"><strong>{gamificationTitle.label}</strong><small>{weeklyMomentum.completed}/{weeklyMomentum.goal} this week · {weeklyMomentum.productiveDays} active day{weeklyMomentum.productiveDays === 1 ? "" : "s"}</small></span><span className={`momentum-earned-badge tone-${selectedAchievement?.tone || "gold"}`} title={selectedAchievement ? `Displayed badge: ${selectedAchievement.title}` : "Complete an assignment to earn your first badge"} aria-hidden="true"><b>{selectedAchievement?.icon || "🏅"}</b><em>{earnedAchievements.size}</em></span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></button>}
+            {gamification.showHeaderSummary && <button type="button" className="momentum-header-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal} assignments, ${weeklyMomentum.productiveDays} productive days, displayed badge ${selectedAchievement?.title || "none"}, ${earnedAchievements.size} badges earned. Open achievements.`}><span className="momentum-summary-copy"><strong>{gamificationTitle.label}</strong><small>{weeklyMomentum.completed}/{weeklyMomentum.goal} this week · {weeklyMomentum.productiveDays} active day{weeklyMomentum.productiveDays === 1 ? "" : "s"}</small></span><span className={`momentum-earned-badge tone-${selectedAchievement?.tone || "gold"}`} title={selectedAchievement ? `Displayed badge: ${selectedAchievement.title}` : "Complete an assignment to earn your first badge"} aria-hidden="true"><b><AchievementEmblem id={selectedAchievement?.id} /></b><em>{earnedAchievements.size}</em></span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></button>}
           </div>
         </header>
 
@@ -9723,6 +9772,29 @@ function App() {
                       )}
                     </div>
                   ))}
+                  {celebrationStudioProgress.unlocked && (
+                    <div className="color-studio-group celebration-color-studio">
+                      <div className="settings-collapse-header settings-collapse-subheader">
+                        <h5>Celebrations <span className="studio-unlocked-pill">60-day unlock</span></h5>
+                        <button type="button" className="settings-collapse-button settings-collapse-button-small" onClick={() => setColorGroupsOpen((openGroups) => ({ ...openGroups, celebrations: openGroups.celebrations !== true }))} aria-expanded={colorGroupsOpen.celebrations === true} aria-label={`${colorGroupsOpen.celebrations === true ? "Shrink" : "Enlarge"} Celebrations`}>
+                          {colorGroupsOpen.celebrations === true ? "−" : "+"}
+                        </button>
+                      </div>
+                      {colorGroupsOpen.celebrations === true && (
+                        <>
+                          <p className="hint-text">Customize the particles and completion message used by every celebration style.</p>
+                          <div className="celebration-palette-preview" aria-hidden="true">{CELEBRATION_COLOR_FIELDS.slice(0, 6).map((field) => <i key={field.key} style={{ backgroundColor: userSettings.celebrationColors?.[field.key] || field.fallback }} />)}</div>
+                          <div className="color-control-grid">
+                            {CELEBRATION_COLOR_FIELDS.map((field) => {
+                              const value = userSettings.celebrationColors?.[field.key] || field.fallback;
+                              const draftKey = `celebration:${field.key}`;
+                              return <label className="color-control" key={field.key}><span>{field.label}</span><div><input type="color" value={value} onChange={(event) => { handleCelebrationColorChange(field.key, event.target.value); clearColorTextDraft(draftKey); }} aria-label={`${field.label} color`} /><input type="text" value={colorTextDrafts[draftKey] ?? value.toUpperCase()} onChange={(event) => setColorTextDrafts((drafts) => ({ ...drafts, [draftKey]: event.target.value }))} onBlur={() => commitColorTextDraft(draftKey, value, (color) => handleCelebrationColorChange(field.key, color))} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") clearColorTextDraft(draftKey); }} maxLength={7} spellCheck="false" aria-label={`${field.label} hex color`} /></div></label>;
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="color-studio-group">
                     <div className="settings-collapse-header settings-collapse-subheader">
                       <h5>Course and category badges</h5>
@@ -11130,11 +11202,11 @@ function App() {
       )}
       {gamificationOpen && (
         <div className="gamification-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGamificationOpen(false); }}>
-          <section className="gamification-dialog" role="dialog" aria-modal="true" aria-labelledby="gamification-title" onKeyDown={(event) => { if (event.key === "Escape") setGamificationOpen(false); }}>
+          <section className="gamification-dialog" role="dialog" aria-modal="true" aria-labelledby="gamification-title" onScroll={handleGamificationScroll} onKeyDown={(event) => { if (event.key === "Escape") setGamificationOpen(false); }}>
             <header><div><h2 id="gamification-title">Cosmetics</h2><p>Collect badges, choose your display piece, equip a title, and pick a celebration style.</p></div><button autoFocus type="button" className="gamification-close" onClick={() => setGamificationOpen(false)} aria-label="Close Cosmetics">×</button></header>
             <div className="gamification-week-card"><div><strong>{weeklyMomentum.completed} of {weeklyMomentum.goal}</strong><span>assignments completed this week</span></div><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress><span>{weeklyMomentum.productiveDays} productive day{weeklyMomentum.productiveDays === 1 ? "" : "s"} this week</span><label>Weekly goal<input type="number" min="1" max="50" value={gamification.weeklyGoal} onChange={(event) => updateGamification({ weeklyGoal: event.target.value })} /></label></div>
-            <section><h3>Badges</h3><p className="gamification-section-hint">Choose any earned badge to display in your momentum summary.</p><div className="achievement-grid">{GAMIFICATION_ACHIEVEMENTS.map((achievement) => { const earned = earnedAchievements.has(achievement.id); const selected = gamification.selectedBadge === achievement.id; return <button type="button" key={achievement.id} data-badge={achievement.id} className={`achievement-card badge-${achievement.id} ${earned ? "is-earned" : "is-locked"}${selected ? " is-selected" : ""} tone-${achievement.tone}`} disabled={!earned} aria-pressed={earned ? selected : undefined} onClick={() => updateGamification({ selectedBadge: achievement.id })}><span className="achievement-medallion" aria-hidden="true"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon">{earned ? achievement.icon : "🔒"}</span></span><span className="achievement-ornament">✦</span></span><span className="achievement-card-copy"><strong>{achievement.title}</strong><small>{achievement.description}</small><em>{earned ? selected ? "Displayed" : "Earned" : "Locked"}</em></span></button>; })}</div></section>
-            <section className="gamification-rewards"><h3>Celebration style</h3><div>{GAMIFICATION_CONFETTI.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedConfetti === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedConfetti: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div><h3>Profile title</h3><div>{GAMIFICATION_TITLES.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedTitle === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedTitle: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div></section>
+            <section><h3>Badges</h3><p className="gamification-section-hint">Choose any earned badge to display in your momentum summary.</p><div className="achievement-grid">{GAMIFICATION_ACHIEVEMENTS.map((achievement) => { const earned = earnedAchievements.has(achievement.id); const selected = gamification.selectedBadge === achievement.id; return <button type="button" key={achievement.id} data-badge={achievement.id} className={`achievement-card badge-${achievement.id} ${earned ? "is-earned" : "is-locked"}${selected ? " is-selected" : ""} tone-${achievement.tone}`} disabled={!earned} aria-pressed={earned ? selected : undefined} onClick={() => updateGamification({ selectedBadge: achievement.id })}><span className="achievement-medallion" aria-hidden="true"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={earned ? achievement.id : "locked"} /></span></span><span className="achievement-ornament">✦</span></span><span className="achievement-card-copy"><strong>{achievement.title}</strong><small>{achievement.description}</small><em>{earned ? selected ? "Displayed" : "Earned" : "Locked"}</em></span></button>; })}</div></section>
+            <section className="gamification-rewards"><h3>Celebration style</h3><div>{GAMIFICATION_CONFETTI.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedConfetti === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedConfetti: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div><div className={`celebration-studio-progress${celebrationStudioProgress.unlocked ? " is-unlocked" : ""}`}><span aria-hidden="true">{celebrationStudioProgress.unlocked ? "🎨" : "🔒"}</span><div><strong>{celebrationStudioProgress.unlocked ? "Celebration Color Studio unlocked" : "Celebration Color Studio"}</strong><small>{celebrationStudioProgress.unlocked ? "Your custom celebration palette is available in Full Color Studio." : `Sign in on ${celebrationStudioProgress.remaining} more different day${celebrationStudioProgress.remaining === 1 ? "" : "s"} to unlock custom celebration colors.`}</small><progress max={CELEBRATION_STUDIO_REQUIRED_DAYS} value={celebrationStudioProgress.completed}>{celebrationStudioProgress.completed} of {CELEBRATION_STUDIO_REQUIRED_DAYS} days</progress><em>{celebrationStudioProgress.completed}/{CELEBRATION_STUDIO_REQUIRED_DAYS} days</em></div></div><h3>Profile title</h3><div>{GAMIFICATION_TITLES.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedTitle === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedTitle: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div></section>
           </section>
         </div>
       )}
@@ -11155,12 +11227,13 @@ function App() {
       {completionCelebration && (
         <div
           key={completionCelebration.id}
-          className={`completion-celebration celebration-${completionCelebration.confetti || "standard"}`}
+          className={`completion-celebration celebration-${completionCelebration.confetti || "standard"}${completionCelebration.celebrationColors ? " has-custom-colors" : ""}`}
+          style={completionCelebration.celebrationColors ? { "--celebration-1": completionCelebration.celebrationColors.palette1 || "#f43f5e", "--celebration-2": completionCelebration.celebrationColors.palette2 || "#f59e0b", "--celebration-3": completionCelebration.celebrationColors.palette3 || "#facc15", "--celebration-4": completionCelebration.celebrationColors.palette4 || "#22c55e", "--celebration-5": completionCelebration.celebrationColors.palette5 || "#06b6d4", "--celebration-6": completionCelebration.celebrationColors.palette6 || "#a855f7", "--celebration-accent": completionCelebration.celebrationColors.accent || "#8b5cf6", "--celebration-toast-bg": completionCelebration.celebrationColors.toastBackground || "#111827", "--celebration-toast-text": completionCelebration.celebrationColors.toastText || "#ffffff" } : undefined}
           role="status"
           aria-live="polite"
         >
           <div className={`completion-confetti is-${completionCelebration.confetti || "standard"}`} style={{ "--course-confetti": completionCelebration.courseColor }} aria-hidden="true">
-            {COMPLETION_CONFETTI.map((piece) => <i key={piece.id} style={{ "--confetti-x": piece.x, "--confetti-drift": piece.drift, "--confetti-sway": piece.sway, "--confetti-sway-back": piece.swayBack, "--confetti-scale": piece.scale, "--confetti-delay": piece.delay, "--confetti-duration": piece.duration, "--confetti-rotation": piece.rotation, "--confetti-color": piece.color }} />)}
+            {COMPLETION_CONFETTI.map((piece, index) => <i key={piece.id} style={{ "--confetti-x": piece.x, "--confetti-drift": piece.drift, "--confetti-sway": piece.sway, "--confetti-sway-back": piece.swayBack, "--confetti-scale": piece.scale, "--confetti-delay": piece.delay, "--confetti-duration": piece.duration, "--confetti-rotation": piece.rotation, "--confetti-color": `var(--celebration-${(index % 6) + 1}, ${piece.color})` }} />)}
           </div>
           <div className="completion-celebration-toast"><span aria-hidden="true">✓</span><div><strong>{completionCelebration.achievementIds?.length ? "Achievement unlocked!" : "Nice work!"}</strong><small>{completionCelebration.title} is complete.{completionCelebration.achievementIds?.length ? ` ${completionCelebration.achievementIds.map((id) => GAMIFICATION_ACHIEVEMENTS.find((item) => item.id === id)?.title).filter(Boolean).join(", ")}.` : ""}</small></div></div>
         </div>

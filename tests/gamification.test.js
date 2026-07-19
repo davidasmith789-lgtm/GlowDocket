@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
+import { CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
 
 const completedTask = (id, completedAt, extra = {}) => ({ id, title: id, isCompleted: true, completedAt, ...extra });
 
@@ -55,6 +55,16 @@ test("the exact tester account receives every reward without granting lookalike 
   assert.equal(grantAllGamificationRewards({ ...granted, selectedConfetti: "rainbow" }).selectedConfetti, "rainbow");
 });
 
+test("celebration color studio counts unique sign-in days and unlocks at sixty", () => {
+  assert.equal(CELEBRATION_STUDIO_REQUIRED_DAYS, 60);
+  assert.equal(getLocalSignInDay(new Date(2026, 6, 9, 12)), "2026-07-09");
+  assert.deepEqual(normalizeSignInDays(["2026-07-02", "bad", "2026-07-01", "2026-07-02"]), ["2026-07-01", "2026-07-02"]);
+  const fiftyNineDays = Array.from({ length: 59 }, (_, index) => `2026-${String(1 + Math.floor(index / 28)).padStart(2, "0")}-${String(1 + (index % 28)).padStart(2, "0")}`);
+  assert.deepEqual(getCelebrationStudioProgress(fiftyNineDays), { completed: 59, remaining: 1, unlocked: false });
+  assert.deepEqual(getCelebrationStudioProgress([...fiftyNineDays, "2026-03-04"]), { completed: 60, remaining: 0, unlocked: true });
+  assert.equal(getCelebrationStudioProgress([], true).unlocked, true);
+});
+
 test("completion paths timestamp work, undo clears it, and celebration covers the viewport", async () => {
   const [app, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
@@ -77,8 +87,17 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(css, /\.achievement-rays/);
   assert.match(css, /\.achievement-core/);
   assert.match(app, /data-badge=\{achievement\.id\}/);
-  assert.match(css, /content-visibility: auto/);
+  assert.match(app, /AchievementEmblem id=\{earned \? achievement\.id : "locked"\}/);
+  assert.doesNotMatch(app, /selectedAchievement\?\.icon/);
   assert.match(css, /contain: layout paint style/);
+  assert.match(app, /onScroll=\{handleGamificationScroll\}/);
+  assert.match(css, /\.gamification-dialog\.is-scrolling \.achievement-card/);
   assert.doesNotMatch(css, /\.gamification-backdrop[^}]*backdrop-filter/);
   assert.match(css, /\.reduce-motion \.completion-confetti/);
+  assert.match(app, /Celebration Color Studio/);
+  assert.match(app, /celebrationStudioProgress\.unlocked/);
+  assert.match(app, /CELEBRATION_COLOR_FIELDS\.map/);
+  assert.match(app, /signInDays: normalizeSignInDays\(userSettings\.signInDays\)/);
+  assert.match(css, /\.celebration-studio-progress/);
+  assert.match(css, /\.completion-celebration\.has-custom-colors/);
 });

@@ -25,7 +25,8 @@ test("assignment completion uses accessible dependency-free confetti with reduce
     assert.match(css, new RegExp(`@keyframes ${animationName}`));
   }
   assert.match(app, /celebration-\$\{completionCelebration\.confetti/);
-  assert.match(app, /reduceMotion \? 3100 : 7600/);
+  assert.match(app, /duration: `\$\{2900 \+ \(index % 4\) \* 350\}ms`/);
+  assert.match(app, /reduceMotion \? 3100 : 7100/);
   assert.match(app, /window\.setTimeout\(\(\) => setCompletionCelebration\(null\)/);
   assert.match(css, /will-change: transform/);
   assert.match(css, /94% \{ opacity: 1; \}/);
