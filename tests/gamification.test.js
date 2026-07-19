@@ -90,8 +90,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /AchievementEmblem id=\{earned \? achievement\.id : "locked"\}/);
   assert.doesNotMatch(app, /selectedAchievement\?\.icon/);
   assert.match(css, /contain: layout paint style/);
-  assert.match(app, /onScroll=\{handleGamificationScroll\}/);
-  assert.match(css, /\.gamification-dialog\.is-scrolling \.achievement-card/);
+  assert.doesNotMatch(app, /handleGamificationScroll/);
+  assert.doesNotMatch(css, /\.gamification-dialog\.is-scrolling/);
   assert.doesNotMatch(css, /\.gamification-backdrop[^}]*backdrop-filter/);
   assert.match(css, /\.reduce-motion \.completion-confetti/);
   assert.match(app, /Celebration Color Studio/);

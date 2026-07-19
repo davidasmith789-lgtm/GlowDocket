@@ -1970,7 +1970,6 @@ function App() {
   const [completionCelebration, setCompletionCelebration] = useState(null);
   const completionCelebrationSequenceRef = useRef(0);
   const [gamificationOpen, setGamificationOpen] = useState(false);
-  const gamificationScrollTimerRef = useRef(null);
 
   useEffect(() => {
     if (!completionCelebration) return undefined;
@@ -1978,14 +1977,6 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, [completionCelebration, userSettings.reduceMotion]);
 
-  useEffect(() => () => window.clearTimeout(gamificationScrollTimerRef.current), []);
-
-  const handleGamificationScroll = (event) => {
-    const dialog = event.currentTarget;
-    dialog.classList.add("is-scrolling");
-    window.clearTimeout(gamificationScrollTimerRef.current);
-    gamificationScrollTimerRef.current = window.setTimeout(() => dialog.classList.remove("is-scrolling"), 120);
-  };
   const [settingsSection, setSettingsSection] = useState(() => recoveryRequestedOnLoad() ? "storage" : "personalization");
   const [accessibilityAudit, setAccessibilityAudit] = useState(null);
   const [manualAccessibilityChecks, setManualAccessibilityChecks] = useState([]);
@@ -11202,7 +11193,7 @@ function App() {
       )}
       {gamificationOpen && (
         <div className="gamification-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGamificationOpen(false); }}>
-          <section className="gamification-dialog" role="dialog" aria-modal="true" aria-labelledby="gamification-title" onScroll={handleGamificationScroll} onKeyDown={(event) => { if (event.key === "Escape") setGamificationOpen(false); }}>
+          <section className="gamification-dialog" role="dialog" aria-modal="true" aria-labelledby="gamification-title" onKeyDown={(event) => { if (event.key === "Escape") setGamificationOpen(false); }}>
             <header><div><h2 id="gamification-title">Cosmetics</h2><p>Collect badges, choose your display piece, equip a title, and pick a celebration style.</p></div><button autoFocus type="button" className="gamification-close" onClick={() => setGamificationOpen(false)} aria-label="Close Cosmetics">×</button></header>
             <div className="gamification-week-card"><div><strong>{weeklyMomentum.completed} of {weeklyMomentum.goal}</strong><span>assignments completed this week</span></div><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress><span>{weeklyMomentum.productiveDays} productive day{weeklyMomentum.productiveDays === 1 ? "" : "s"} this week</span><label>Weekly goal<input type="number" min="1" max="50" value={gamification.weeklyGoal} onChange={(event) => updateGamification({ weeklyGoal: event.target.value })} /></label></div>
             <section><h3>Badges</h3><p className="gamification-section-hint">Choose any earned badge to display in your momentum summary.</p><div className="achievement-grid">{GAMIFICATION_ACHIEVEMENTS.map((achievement) => { const earned = earnedAchievements.has(achievement.id); const selected = gamification.selectedBadge === achievement.id; return <button type="button" key={achievement.id} data-badge={achievement.id} className={`achievement-card badge-${achievement.id} ${earned ? "is-earned" : "is-locked"}${selected ? " is-selected" : ""} tone-${achievement.tone}`} disabled={!earned} aria-pressed={earned ? selected : undefined} onClick={() => updateGamification({ selectedBadge: achievement.id })}><span className="achievement-medallion" aria-hidden="true"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={earned ? achievement.id : "locked"} /></span></span><span className="achievement-ornament">✦</span></span><span className="achievement-card-copy"><strong>{achievement.title}</strong><small>{achievement.description}</small><em>{earned ? selected ? "Displayed" : "Earned" : "Locked"}</em></span></button>; })}</div></section>
