@@ -48,31 +48,31 @@ const OLD_DEFAULT_DASHBOARD_MARKERS = [
 
 export const DEFAULT_DESKTOP_LAYOUT = {
   dashboard: [
-    { type: "recommended", width: 631, height: 460, xRatio: 0.2356991525, desktopY: 4.5, zIndex: 337 },
-    { type: "quick-match", width: 499, height: 459, xRatio: 0.5852754237, desktopY: 0, zIndex: 340 },
-    { type: "mini-calendar", width: 409, height: 428, xRatio: 0, desktopY: 492.5, zIndex: 349 },
-    { type: "stat-active", width: 240, height: 145, xRatio: 0.8728813559, desktopY: 491.5, zIndex: 336 },
-    { type: "stat-today", width: 240, height: 145, xRatio: 0.8728813559, desktopY: 0, zIndex: 331 },
-    { type: "stat-overdue", width: 240, height: 145, xRatio: 0.8728813559, desktopY: 165.5, zIndex: 332 },
-    { type: "stat-workload", width: 240, height: 145, xRatio: 0.8728813559, desktopY: 328.5, zIndex: 335 },
-    { type: "reminders", width: 529.5, height: 390, xRatio: 0.2399364407, desktopY: 506.5, zIndex: 353 },
-    { type: "course-overview", width: 539, height: 430, xRatio: 0.5541785289, desktopY: 490, zIndex: 355 },
-    { type: "checklists", width: 409.5, height: 463, xRatio: 0, desktopY: 0, zIndex: 31 },
-    { type: "add-assignment", width: 783, height: 620, xRatio: 0.2714512712, desktopY: 938, zIndex: 356 },
+    { type: "recommended", width: 540, height: 430, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 337 },
+    { type: "quick-match", width: 540, height: 430, desktopX: 558, xRatio: 558 / 1680, desktopY: 0, zIndex: 340 },
+    { type: "mini-calendar", width: 540, height: 430, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 0, zIndex: 349 },
+    { type: "stat-active", width: 396, height: 145, desktopX: 0, xRatio: 0, desktopY: 448, zIndex: 336 },
+    { type: "stat-today", width: 396, height: 145, desktopX: 414, xRatio: 414 / 1680, desktopY: 448, zIndex: 331 },
+    { type: "stat-overdue", width: 396, height: 145, desktopX: 828, xRatio: 828 / 1680, desktopY: 448, zIndex: 332 },
+    { type: "stat-workload", width: 396, height: 145, desktopX: 1242, xRatio: 1242 / 1680, desktopY: 448, zIndex: 335 },
+    { type: "reminders", width: 540, height: 440, desktopX: 0, xRatio: 0, desktopY: 611, zIndex: 353 },
+    { type: "course-overview", width: 540, height: 440, desktopX: 558, xRatio: 558 / 1680, desktopY: 611, zIndex: 355 },
+    { type: "checklists", width: 540, height: 440, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 611, zIndex: 31 },
+    { type: "add-assignment", width: 1098, height: 620, desktopX: 0, xRatio: 0, desktopY: 1069, zIndex: 356 },
   ],
   todo: [
-    { type: "todo-master", width: 761, height: 618, xRatio: 0.2942266949, desktopY: 11, zIndex: 358 },
-    { type: "course-colors", width: 269, height: 487, xRatio: 0, desktopY: 0, zIndex: 322 },
-    { type: "add-assignment", width: 783, height: 618.5, xRatio: 0, desktopY: 1141, zIndex: 326 },
-    { type: "reminders", width: 276.5, height: 385, xRatio: 0.8196504237, desktopY: 12.5, zIndex: 357 },
+    { type: "todo-master", width: 844, height: 650, desktopX: 418, xRatio: 418 / 1680, desktopY: 0, zIndex: 358 },
+    { type: "course-colors", width: 400, height: 500, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 322 },
+    { type: "add-assignment", width: 844, height: 620, desktopX: 418, xRatio: 418 / 1680, desktopY: 668, zIndex: 326 },
+    { type: "reminders", width: 376, height: 380, desktopX: 1280, xRatio: 1280 / 1680, desktopY: 0, zIndex: 357 },
   ],
   inProgress: [
-    { type: "in-progress-master", width: 691, height: 673.5, xRatio: 0.2738347458, desktopY: 24, zIndex: 359 },
-    { type: "checklists", width: 397.5, height: 520, xRatio: 0, desktopY: 0, zIndex: 31 },
+    { type: "in-progress-master", width: 1138, height: 680, desktopX: 518, xRatio: 518 / 1680, desktopY: 0, zIndex: 359 },
+    { type: "checklists", width: 500, height: 520, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 31 },
   ],
   completed: [
-    { type: "completed-master", width: 783, height: 587.5, xRatio: 0.2936970339, desktopY: 49, zIndex: 360 },
-    { type: "checklists", width: 473, height: 520, xRatio: 0.0071504237, desktopY: 33, zIndex: 202 },
+    { type: "completed-master", width: 1138, height: 620, desktopX: 518, xRatio: 518 / 1680, desktopY: 0, zIndex: 360 },
+    { type: "checklists", width: 500, height: 520, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 202 },
   ],
   settings: [{ type: "course-colors", width: 418.5, height: 460, xRatio: 0.0775353033, desktopY: 830.5, hidden: true, zIndex: 45 }],
 };
@@ -504,7 +504,7 @@ export function createDefaultWorkspaceLayout() {
     desktop: makeMode("desktop"),
     chromebook: makeMode("chromebook"),
     mobile: makeMode("mobile"),
-    collapsed: { "add-assignment": true },
+    collapsed: {},
     locked: { desktop: true, chromebook: false, mobile: false },
   };
 }
@@ -564,7 +564,6 @@ export function normalizeWorkspaceLayout(value, options = {}) {
 
       if (shouldRunOldLayoutMigration) {
         value[mode][tab] = defaults[mode][tab];
-        defaults[mode][tab].forEach((item) => existingTypes.add(item.type));
         continue;
       }
 

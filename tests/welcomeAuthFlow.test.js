@@ -53,7 +53,13 @@ test("password recovery, session restoration, and guest access remain reachable"
 test("mobile account modal keeps internal scrolling and safe-area clearance", async () => {
   const styles = await read("../src/App.css");
   assert.match(styles, /\.welcome-auth-backdrop \{[^}]*position: fixed;[^}]*overflow: auto;[^}]*overscroll-behavior: contain;/);
-  assert.match(styles, /\.welcome-auth-card \{[^}]*max-height:[^}]*overflow-y: auto;/);
+  assert.match(styles, /\.auth-card\.welcome-auth-card \{[^}]*max-height:[^}]*overflow-y: auto;/);
   assert.match(styles, /@media \(max-width: 560px\)[\s\S]*\.welcome-auth-backdrop \{[^}]*env\(safe-area-inset-top\)[^}]*env\(safe-area-inset-bottom\)/);
-  assert.match(styles, /\.welcome-auth-card \{[^}]*max-height: 100dvh;[^}]*min-height: 100%;/);
+  assert.match(styles, /\.auth-card\.welcome-auth-card \{[^}]*max-height: 100dvh;[^}]*min-height: 100%;/);
+});
+
+test("desktop account panel uses the available screen instead of a short cutoff", async () => {
+  const styles = await read("../src/App.css");
+  assert.match(styles, /\.auth-card\.welcome-auth-card \{[^}]*width: min\(100%, 680px\);[^}]*max-height: calc\(100dvh - 24px\);/);
+  assert.match(styles, /\.welcome-auth-card \.card-form \{ gap: 8px; \}/);
 });

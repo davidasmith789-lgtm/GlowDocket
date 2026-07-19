@@ -222,6 +222,21 @@ test("default desktop and mobile workspace layouts do not overlap", () => {
   assert.deepEqual(findWidgetOverlaps(layout.mobile.dashboard), []);
 });
 
+test("new widget defaults are expanded and follow an intentional desktop grid", () => {
+  const layout = createDefaultWorkspaceLayout();
+  assert.deepEqual(layout.collapsed, {});
+  assert.deepEqual(findWidgetOverlaps(layout.desktop.dashboard), []);
+  assert.deepEqual(findWidgetOverlaps(layout.desktop.todo), []);
+  assert.deepEqual(findWidgetOverlaps(layout.desktop.inProgress), []);
+  assert.deepEqual(findWidgetOverlaps(layout.desktop.completed), []);
+
+  const dashboard = layout.desktop.dashboard;
+  const topRow = ["recommended", "quick-match", "mini-calendar"].map((type) => dashboard.find((item) => item.type === type));
+  assert.ok(topRow.every((item) => item.y === 0 && item.height === 430));
+  const statRow = dashboard.filter((item) => item.type.startsWith("stat-"));
+  assert.ok(statRow.every((item) => item.y === 448 && item.height === 145));
+});
+
 test("Chromebook widgets use an independent compact workspace", () => {
   const layout = createDefaultWorkspaceLayout();
   assert.ok(layout.chromebook);
@@ -480,8 +495,8 @@ test("normalization repairs a mini calendar saved at collapsed height", () => {
   });
   const repaired = normalized.desktop.dashboard.find((item) => item.type === "mini-calendar");
 
-  assert.equal(repaired.height, 428);
-  assert.equal(repaired.expandedHeight, 428);
+  assert.equal(repaired.height, 430);
+  assert.equal(repaired.expandedHeight, 430);
 });
 
 test("collapsed normalization preserves a widget's expanded size", () => {
@@ -556,8 +571,8 @@ test("expanding legacy collapsed widgets restores a usable default height", () =
   const expanded = setWidgetCollapsedState(saved, "desktop", "legacy-calendar", false);
   const calendar = expanded.desktop.dashboard[0];
 
-  assert.equal(calendar.height, 428);
-  assert.equal(calendar.expandedHeight, 428);
+  assert.equal(calendar.height, 430);
+  assert.equal(calendar.expandedHeight, 430);
 });
 
 test("collapsing and expanding a widget preserves its size and nearby widgets", () => {
