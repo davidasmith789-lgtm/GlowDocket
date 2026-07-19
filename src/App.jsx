@@ -1682,6 +1682,8 @@ function App() {
   const cloudLastSavedFingerprintRef = useRef("");
   const intentionalSignOutRef = useRef(false);
   const authPanelRef = useRef(null);
+  const authTriggerRef = useRef(null);
+  const authSubmitPendingRef = useRef(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
   const closePrivacyDialog = useCallback(() => setPrivacyDialogOpen(false), []);
 
@@ -4830,6 +4832,7 @@ function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    if (authSubmitPendingRef.current) return;
     const trimmedName = signInName.trim();
     const normalizedName = trimmedName.toLowerCase();
     setAuthError("");
@@ -4843,6 +4846,7 @@ function App() {
       return;
     }
 
+    authSubmitPendingRef.current = true;
     setAuthBusy(true);
     try {
       if (CLOUD_SYNC_CONFIGURED) {
@@ -4936,6 +4940,7 @@ function App() {
       console.error("Account error:", error);
       setAuthError(CLOUD_SYNC_CONFIGURED ? friendlyAccountError(error, { offline: !navigator.onLine }) : "This browser could not save or verify the local account.");
     } finally {
+      authSubmitPendingRef.current = false;
       setAuthBusy(false);
     }
   };
@@ -5026,15 +5031,44 @@ function App() {
   };
 
   const showWelcomeAuth = (mode = "signup") => {
+    if (!welcomeAuthOpen) authTriggerRef.current = document.activeElement;
     setWelcomeAuthOpen(true);
     setAuthMode(mode);
     setAuthError("");
     setAuthNotice("");
     window.requestAnimationFrame(() => {
-      authPanelRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
       window.setTimeout(() => document.getElementById(mode === "recovery" ? "recovery-password" : "auth-username")?.focus(), 120);
     });
   };
+
+  const closeWelcomeAuth = useCallback(() => {
+    setWelcomeAuthOpen(false);
+    setAuthError("");
+    setAuthNotice("");
+    window.requestAnimationFrame(() => authTriggerRef.current?.focus?.());
+  }, []);
+
+  useEffect(() => {
+    if (!welcomeAuthOpen && authMode !== "recovery") return undefined;
+    const panel = authPanelRef.current;
+    if (!panel) return undefined;
+    const handleAuthPanelKeyDown = (event) => {
+      if (event.key === "Escape" && authMode !== "recovery" && !authBusy) {
+        event.preventDefault();
+        closeWelcomeAuth();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const controls = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')];
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleAuthPanelKeyDown);
+    return () => document.removeEventListener("keydown", handleAuthPanelKeyDown);
+  }, [welcomeAuthOpen, authMode, authBusy, closeWelcomeAuth]);
 
   const handleForgotPassword = async (event) => {
     event.preventDefault();
@@ -7736,9 +7770,9 @@ function App() {
             ].map(([title, copy], index) => <article className="welcome-feature-card" key={title}><span aria-hidden="true">{index + 1}</span><h2>{title}</h2><p>{copy}</p></article>)}
           </section>
 
-          {(welcomeAuthOpen || authMode === "recovery") && <section ref={authPanelRef} id="auth-panel" className="auth-card welcome-auth-card" aria-labelledby="auth-heading">
-          <p className="eyebrow">Ready when you are</p>
-          <h2 id="auth-heading" className="app-title">{authMode === "forgot" ? "Reset your password" : authMode === "recovery" ? "Choose a new password" : "Open GlowDocket"}</h2>
+          {(welcomeAuthOpen || authMode === "recovery") && <div className="welcome-auth-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && authMode !== "recovery" && !authBusy) closeWelcomeAuth(); }}>
+          <section ref={authPanelRef} id="auth-panel" className="auth-card welcome-auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-heading">
+          <div className="welcome-auth-heading"><div><p className="eyebrow">Ready when you are</p><h2 id="auth-heading" className="app-title">{authMode === "forgot" ? "Reset your password" : authMode === "recovery" ? "Choose a new password" : authMode === "signup" ? "Create Account" : "Sign In"}</h2></div>{authMode !== "recovery" && <button type="button" className="welcome-auth-close" onClick={closeWelcomeAuth} disabled={authBusy} aria-label="Close account panel">×</button>}</div>
           {authMode !== "forgot" && authMode !== "recovery" && <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
             <button type="button" role="tab" aria-selected={authMode === "signin"} className={`tab-button ${authMode === "signin" ? "active" : ""}`} onClick={() => showWelcomeAuth("signin")}>Sign In</button>
             <button type="button" role="tab" aria-selected={authMode === "signup"} className={`tab-button ${authMode === "signup" ? "active" : ""}`} onClick={() => showWelcomeAuth("signup")}>Create Account</button>
@@ -7815,7 +7849,7 @@ function App() {
               {CLOUD_SYNC_CONFIGURED ? "Your account data can sync across devices. Attachment files and push-reminder connections still stay on each browser." : "GlowDocket stores only a password verifier. Accounts and assignments stay on this browser, do not sync to other devices, and have no password recovery."}
             </p>
           </div>
-          </section>}
+          </section></div>}
           <footer className="welcome-footer">
             <span>GlowDocket helps you organize the work. You stay in charge of it.</span>
             <button type="button" className="auth-text-button" onClick={() => setPrivacyDialogOpen(true)}>Privacy &amp; Data</button>
