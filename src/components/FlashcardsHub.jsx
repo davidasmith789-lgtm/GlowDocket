@@ -542,12 +542,21 @@ export default function FlashcardsHub({
             {p.is_starred ? "★ Starred" : "☆ Star"}
           </button>
           {flipped ? (
-            <div className="flash-ratings">
-              {RATINGS.map((r, i) => (
-                <button key={r} onClick={() => rate(r)}>
-                  {i + 1} · {r}
-                </button>
-              ))}
+            <div className="flash-review-actions">
+              <div className="flash-ratings" aria-label="Rate your confidence">
+                {RATINGS.map((r, i) => (
+                  <button key={r} onClick={() => rate(r)}>
+                    {i + 1} · {r}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="btn btn-primary flash-next-card"
+                onClick={() => rate("Good")}
+              >
+                Next <span aria-hidden="true">→</span>
+                <small>Counts as Good</small>
+              </button>
             </div>
           ) : (
             <button
@@ -1049,8 +1058,18 @@ export default function FlashcardsHub({
         ) : (
           <div className="flash-grid">
             {decks.map((d) => (
-              <article key={d.id}>
-                <div>
+              <article
+                className="flash-deck-tile"
+                key={d.id}
+                onClick={(event) => {
+                  if (
+                    event.target.closest("button, input, select, textarea, a")
+                  )
+                    return;
+                  openDeck(d, "study");
+                }}
+              >
+                <div className="flash-deck-meta">
                   <span>{d.course_name}</span>
                   <b>
                     {d.owner_id === userId ? "Your Deck" : "GlowDocket Student"}
@@ -1113,12 +1132,16 @@ export default function FlashcardsHub({
                 )}
                 <footer>
                   <button
-                    onClick={() =>
-                      openDeck(d, section === "mine" ? "edit" : "study")
-                    }
+                    className="btn btn-primary flash-study-deck-button"
+                    onClick={() => openDeck(d, "study")}
                   >
-                    {section === "mine" ? "Open Deck" : "Study Deck"}
+                    Study this deck
                   </button>
+                  {section === "mine" && (
+                    <button onClick={() => openDeck(d, "edit")}>
+                      Edit Deck
+                    </button>
+                  )}
                   {section === "shared" && (
                     <>
                       <button

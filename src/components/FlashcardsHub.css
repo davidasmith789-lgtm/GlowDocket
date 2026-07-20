@@ -1,9 +1,19 @@
 .flash-page,
-.flash-editor {
+.flash-editor,
+.flash-setup,
+.flash-study,
+.flash-summary {
   width: min(1200px, 100%);
   margin: auto;
   padding: 24px;
   color: var(--text-color);
+}
+.flash-page :is(h1, h2, h3, p, small, strong, b, label, summary),
+.flash-editor :is(h1, h2, h3, p, small, strong, b, label, summary),
+.flash-setup :is(h1, h2, h3, p, small, strong, b, label),
+.flash-study :is(h1, h2, h3, p, small, strong, b, label, summary),
+.flash-summary :is(h1, h2, h3, p, small, strong, b, label) {
+  color: inherit;
 }
 .flash-page > header,
 .flash-editor > header,
@@ -89,12 +99,56 @@
   background: var(--card-bg);
   box-shadow: var(--shadow);
 }
-.flash-grid article > div {
+.flash-deck-meta {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.flash-deck-meta > * {
+  min-width: 0;
 }
 .flash-grid article h2 {
   overflow-wrap: anywhere;
+}
+.flash-deck-tile {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  color: var(--text-color);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+.flash-deck-tile:hover,
+.flash-deck-tile:focus-visible {
+  border-color: var(--primary-color);
+  box-shadow: 0 12px 30px
+    color-mix(in srgb, var(--primary-color) 22%, transparent);
+  transform: translateY(-2px);
+  outline: none;
+}
+.flash-deck-tile > :is(h2, p, small) {
+  margin: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.flash-deck-tile h2 {
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+}
+.flash-deck-tile footer {
+  align-self: end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+.flash-study-deck-button {
+  min-width: 150px;
+  font-size: 1rem;
+  font-weight: 850;
 }
 .flash-notice {
   display: flex;
@@ -180,6 +234,11 @@
   gap: 15px;
   font-size: 1.25rem;
   white-space: pre-wrap;
+  color: var(--text-color);
+  background: var(--card-bg);
+  border: 2px solid var(--primary-color);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 .flash-card strong {
   font-size: clamp(1.5rem, 5vw, 2.5rem);
@@ -191,6 +250,29 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+}
+.flash-review-actions {
+  display: grid;
+  gap: 16px;
+  width: min(800px, 100%);
+  margin: 18px auto 0;
+}
+.flash-ratings button {
+  flex: 1 1 130px;
+}
+.flash-next-card {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+.flash-next-card small {
+  font-size: 0.75rem;
+  font-weight: 650;
+  opacity: 0.82;
 }
 .flash-summary {
   padding: 50px;
@@ -242,6 +324,13 @@
   .flash-ratings button {
     flex: 1 1 40%;
   }
+  .flash-deck-tile footer > button,
+  .flash-study-deck-button {
+    width: 100%;
+  }
+  .flash-next-card {
+    flex-wrap: wrap;
+  }
 }
 .flash-setup {
   display: grid;
@@ -271,7 +360,7 @@
 .flash-progress-details {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 10px;
 }
 .flash-progress-details {
   margin: 10px 0;
@@ -281,6 +370,26 @@
   border-radius: 8px;
   background: var(--surface-alt);
   font-size: 0.78rem;
+  color: var(--text-color);
+  line-height: 1.3;
+}
+.flash-page :is(button, input, select, textarea),
+.flash-editor :is(button, input, select, textarea),
+.flash-setup :is(button, input, select, textarea),
+.flash-study :is(button, input, select, textarea),
+.flash-summary button {
+  font: inherit;
+}
+.flash-study > header > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.flash-study > header :is(b, span) {
+  overflow-wrap: anywhere;
+}
+.flash-summary > button {
+  margin: 6px;
 }
 .flash-shared-actions {
   width: 100%;

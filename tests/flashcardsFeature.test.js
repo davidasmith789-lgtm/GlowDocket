@@ -68,6 +68,14 @@ test("study remains confidence-based without queues or card due dates", () => {
   );
 });
 
+test("deck tiles open study setup and Next records Good", () => {
+  assert.match(hub, /className="flash-deck-tile"/);
+  assert.match(hub, /openDeck\(d, "study"\)/);
+  assert.match(hub, /Study this deck/);
+  assert.match(hub, /onClick=\{\(\) => rate\("Good"\)\}/);
+  assert.match(hub, /Counts as Good/);
+});
+
 test("Flashcards includes no uploads, paid AI, or service-role secret", () => {
   const all = `${sql}\n${hub}\n${community}\n${assignment}`;
   assert.doesNotMatch(
