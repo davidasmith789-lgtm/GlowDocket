@@ -74,6 +74,10 @@ test("deck tiles open study setup and Next records Good", () => {
   assert.match(hub, /Study this deck/);
   assert.match(hub, /onClick=\{\(\) => rate\("Good"\)\}/);
   assert.match(hub, /Counts as Good/);
+  assert.match(hub, /e\.key === "ArrowLeft"/);
+  assert.match(hub, /e\.key === "ArrowRight"/);
+  assert.match(hub, /flash-card-navigation/);
+  assert.match(hub, /study\.index \+ 1.*study\.cards\.length/s);
 });
 
 test("Flashcards includes no uploads, paid AI, or service-role secret", () => {

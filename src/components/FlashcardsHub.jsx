@@ -322,6 +322,16 @@ export default function FlashcardsHub({
     setSummary(null);
     setFlipped(false);
   };
+  const moveStudyCard = (direction) => {
+    if (!study) return;
+    const nextIndex = Math.min(
+      study.cards.length - 1,
+      Math.max(0, study.index + direction),
+    );
+    if (nextIndex === study.index) return;
+    setStudy({ ...study, index: nextIndex });
+    setFlipped(false);
+  };
   const toggleStar = async (card) => {
     const old = Boolean(progress[card.id]?.is_starred);
     setProgress((x) => ({
@@ -414,6 +424,12 @@ export default function FlashcardsHub({
       if (e.key === " ") {
         e.preventDefault();
         setFlipped((x) => !x);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        moveStudyCard(-1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        moveStudyCard(1);
       } else if (flipped && /[1-4]/.test(e.key))
         rate(RATINGS[Number(e.key) - 1]);
       else if (e.key.toLowerCase() === "s") {
@@ -520,18 +536,48 @@ export default function FlashcardsHub({
             </button>
           </header>
           <progress value={study.index} max={study.cards.length} />
-          <p>
-            {study.index + 1} of {study.cards.length}
-          </p>
           <button
-            className={`flash-card ${flipped ? "flipped" : ""}`}
+            className={`flash-card ${flipped ? "is-flipped" : ""}`}
             onClick={() => setFlipped((x) => !x)}
             aria-label={`${flipped ? "Card back" : "Card front"}. Tap to flip.`}
           >
-            <small>{flipped ? "Back" : "Front"}</small>
-            <strong>{flipped ? card.back : card.front}</strong>
-            {flipped && card.explanation && <span>{card.explanation}</span>}
+            <span className="flash-card-inner">
+              <span className="flash-card-face flash-card-front">
+                <small>Front</small>
+                <strong>{card.front}</strong>
+              </span>
+              <span className="flash-card-face flash-card-back">
+                <small>Back</small>
+                <strong>{card.back}</strong>
+                {card.explanation && <span>{card.explanation}</span>}
+              </span>
+            </span>
           </button>
+          <div
+            className="flash-card-navigation"
+            aria-label="Flashcard navigation"
+          >
+            <button
+              onClick={() => moveStudyCard(-1)}
+              disabled={study.index === 0}
+              aria-label="Previous flashcard"
+            >
+              ←
+            </button>
+            <strong aria-live="polite">
+              {study.index + 1} / {study.cards.length}
+            </strong>
+            <button
+              onClick={() => moveStudyCard(1)}
+              disabled={study.index === study.cards.length - 1}
+              aria-label="Next flashcard"
+            >
+              →
+            </button>
+          </div>
+          <p className="flash-keyboard-hint">
+            Use ← and → to move · Space to flip
+          </p>
           {!flipped && card.hint && (
             <details>
               <summary>Show hint</summary>
