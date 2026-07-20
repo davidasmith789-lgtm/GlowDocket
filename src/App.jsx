@@ -1834,7 +1834,7 @@ function App() {
   }, [accountEmail, accountMode, currentUser, settingsStorageKey, userSettings.gamification]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || currentUser === "guest") return;
     const today = getLocalSignInDay();
     setUserSettings((previous) => {
       const signInDays = normalizeSignInDays(previous.signInDays);
@@ -5115,6 +5115,8 @@ function App() {
     cloudLastSavedFingerprintRef.current = "";
     setSyncConflict(null);
     setSyncConflictOpen(false);
+    setAccountEmail("");
+    setAccountEmailVerified(false);
     setCurrentUser("");
     setAccountMode("signed-out");
     setCurrentTab("dashboard");
@@ -6618,6 +6620,8 @@ function App() {
     setWelcomeAuthOpen(false);
     setAuthError("");
     setAuthNotice("");
+    setAccountEmail("");
+    setAccountEmailVerified(false);
     setDisplayName("Guest");
     setAccountMode("local");
     setCurrentUser("guest");
@@ -8034,7 +8038,7 @@ function App() {
       : "On a computer: open your browser’s address-bar install icon or menu, then choose Install GlowDocket. Chrome and Edge usually show Install app.";
   const reminderLeadAlreadyPassedCount = tasks.filter((task) => { const deadline = getEffectiveDeadline(task); return deadline && deadline.getTime() > checklistNow.getTime() && deadline.getTime() - Number(userSettings.reminderMinutes || 60) * 60000 < checklistNow.getTime() && !task.isDeleted && !task.isCompleted; }).length;
   const gamification = normalizeGamification(userSettings.gamification);
-  const celebrationStudioProgress = getCelebrationStudioProgress(userSettings.signInDays, isGamificationTestAccount(accountEmail));
+  const celebrationStudioProgress = getCelebrationStudioProgress(currentUser && currentUser !== "guest" ? userSettings.signInDays : [], accountMode === "cloud" && currentUser !== "guest" && isGamificationTestAccount(accountEmail));
   const selectedCelebrationOption = GAMIFICATION_CONFETTI.find((option) => option.id === gamification.selectedConfetti) || GAMIFICATION_CONFETTI[0];
   const selectedCelebrationColors = getCelebrationColorsForStyle(userSettings.celebrationColors, selectedCelebrationOption.id);
   const selectedCelebrationColorFields = [

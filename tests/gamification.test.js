@@ -97,6 +97,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(css, /\.reduce-motion \.completion-confetti/);
   assert.match(app, /Celebration Color Studio/);
   assert.match(app, /celebrationStudioProgress\.unlocked/);
+  assert.match(app, /currentUser !== "guest" \? userSettings\.signInDays : \[\]/);
+  assert.match(app, /if \(!currentUser \|\| currentUser === "guest"\) return/);
   assert.match(app, /selectedCelebrationColorFields\.map/);
   assert.match(app, /lockedTitleOptions\.length > 0/);
   assert.match(app, /How to unlock more titles/);
