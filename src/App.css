@@ -6524,7 +6524,11 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .completion-firework > b { position: absolute; z-index: 2; width: 9px; height: 9px; border: 2px solid white; border-radius: 50%; background: var(--celebration-3, #facc15); box-shadow: 0 0 12px var(--celebration-3, #facc15); opacity: 0; transform: translate(-50%, -50%) scale(.2); animation: completion-firework-core 500ms ease-out var(--burst-delay) both; }
 .completion-firework > i { position: absolute; top: -1px; left: 0; width: clamp(34px, 5.5vw, 86px); height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--burst-color), color-mix(in srgb, var(--burst-color) 70%, white), transparent); opacity: 0; transform: rotate(var(--burst-angle)) translateX(0) scaleX(.05); transform-origin: 0 50%; will-change: transform, opacity; animation: completion-firework-ray 500ms cubic-bezier(.12,.62,.28,1) var(--burst-delay) both; }
 .completion-gold-ripple { position: absolute; inset: 0; overflow: hidden; contain: strict; pointer-events: none; perspective: 900px; }
-.completion-gold-ripple > i { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 8vmin; height: 8vmin; border: clamp(2px, .42vmin, 6px) solid var(--celebration-3, #d4a72c); border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--celebration-3, #d4a72c) 68%, transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--celebration-3, #d4a72c) 42%, transparent)); transform: translate(-50%,-50%) scale(.08) rotateX(50deg); animation: completion-gold-ripple 1120ms cubic-bezier(.12,.58,.22,1) var(--ripple-delay) both; }
+.completion-gold-ripple-ring { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.completion-gold-ripple-ring ellipse { vector-effect: non-scaling-stroke; fill: none; opacity: 0; transform: none; animation: completion-gold-ripple-vector 1120ms cubic-bezier(.12,.58,.22,1) var(--ripple-delay) both; }
+.ripple-vector-core { stroke: var(--celebration-3, #d4a72c); stroke-width: clamp(2px, .42vmin, 6px); }
+.ripple-vector-halo { stroke: color-mix(in srgb, var(--celebration-3, #d4a72c) 38%, transparent); stroke-width: clamp(7px, 1vmin, 14px); }
+.ripple-vector-halo-outer { stroke: color-mix(in srgb, var(--celebration-3, #d4a72c) 16%, transparent); stroke-width: clamp(14px, 2vmin, 28px); }
 .gold-ripple-flash { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 16vmin; height: 16vmin; border-radius: 50%; background: radial-gradient(circle, #fff4c2 0 3%, var(--celebration-3, #d4a72c) 5% 10%, color-mix(in srgb, var(--celebration-3, #d4a72c) 34%, transparent) 20%, transparent 62%); opacity: 0; transform: translate(-50%,-50%) scale(.15); animation: completion-gold-ripple-flash 1180ms cubic-bezier(.14,.58,.22,1) both; }
 .gold-ripple-speed-lines { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 1px; height: 1px; }
 .gold-ripple-speed-lines b { position: absolute; left: 0; top: -1px; width: clamp(60px, 16vw, 270px); height: clamp(1px, .18vw, 3px); border-radius: 999px; background: linear-gradient(90deg, transparent, var(--celebration-3, #d4a72c) 32%, #f5df91 64%, transparent); opacity: 0; transform: rotate(var(--line-angle)) translateX(3vmin) scaleX(.05); transform-origin: 0 50%; animation: completion-gold-speed-line 980ms cubic-bezier(.12,.62,.22,1) var(--line-delay) both; }
@@ -7102,6 +7106,32 @@ html[data-theme="dark"] .sync-conflict-dialog {
   86% { opacity: .04; filter: none; transform: translate(-50%,-50%) scale(19.25) rotateX(3.3deg); }
   88% { opacity: .016; transform: translate(-50%,-50%) scale(20.6) rotateX(2.6deg); }
   90%, 100% { opacity: 0; filter: none; transform: translate(-50%,-50%) scale(22) rotateX(2deg); }
+}
+
+@keyframes completion-gold-ripple-vector {
+  0% { opacity: 0; rx: .32vmin; ry: .15vmin; }
+  3% { opacity: .14; rx: .4vmin; ry: .2vmin; }
+  6% { opacity: .32; rx: .56vmin; ry: .3vmin; }
+  10% { opacity: .58; rx: .88vmin; ry: .51vmin; }
+  14% { opacity: .78; rx: 1.4vmin; ry: .88vmin; }
+  19% { opacity: .88; rx: 2.32vmin; ry: 1.58vmin; }
+  24% { opacity: .92; rx: 3.6vmin; ry: 2.68vmin; }
+  30% { opacity: .92; rx: 5.6vmin; ry: 4.47vmin; }
+  36% { opacity: .9; rx: 8.4vmin; ry: 7.12vmin; }
+  43% { opacity: .84; rx: 12.4vmin; ry: 11vmin; }
+  50% { opacity: .76; rx: 18vmin; ry: 16.7vmin; }
+  57% { opacity: .67; rx: 24.8vmin; ry: 23.6vmin; }
+  64% { opacity: .58; rx: 33.6vmin; ry: 32.6vmin; }
+  68% { opacity: .51; rx: 39.4vmin; ry: 38.6vmin; }
+  71% { opacity: .44; rx: 44.4vmin; ry: 43.7vmin; }
+  74% { opacity: .35; rx: 49.8vmin; ry: 49.2vmin; }
+  77% { opacity: .26; rx: 56vmin; ry: 55.5vmin; }
+  80% { opacity: .18; rx: 62.4vmin; ry: 62vmin; }
+  82% { opacity: .12; rx: 67.2vmin; ry: 66.9vmin; }
+  84% { opacity: .075; rx: 72vmin; ry: 71.8vmin; }
+  86% { opacity: .04; rx: 77vmin; ry: 76.8vmin; }
+  88% { opacity: .016; rx: 82.4vmin; ry: 82.3vmin; }
+  90%, 100% { opacity: 0; rx: 88vmin; ry: 88vmin; }
 }
 
 @keyframes completion-gold-ripple-flash {
