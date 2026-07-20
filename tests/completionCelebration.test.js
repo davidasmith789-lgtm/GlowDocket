@@ -18,8 +18,9 @@ test("assignment completion uses accessible dependency-free confetti with reduce
   assert.match(app, /Array\.from\(\{ length: 7 \}/);
   assert.match(app, /<CompletionRippleCanvas/);
   assert.match(rippleCanvas, /window\.requestAnimationFrame/);
-  assert.match(rippleCanvas, /MAX_CANVAS_PIXELS = 4_000_000/);
-  assert.match(rippleCanvas, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_DEVICE_PIXEL_RATIO, Math\.max\(1, pixelBudgetRatio\)\)/);
+  assert.match(rippleCanvas, /MIN_SUPERSAMPLE_RATIO = 1\.5/);
+  assert.match(rippleCanvas, /MAX_CANVAS_PIXELS = 8_000_000/);
+  assert.match(rippleCanvas, /Math\.min\(preferredPixelRatio, MAX_DEVICE_PIXEL_RATIO, Math\.max\(1, pixelBudgetRatio\)\)/);
   assert.match(rippleCanvas, /desynchronized: true/);
   assert.match(rippleCanvas, /RIPPLE_FRAME_SAMPLES/);
   assert.match(rippleCanvas, /context\.ellipse/);
