@@ -30,6 +30,7 @@
 .flash-editor h1,
 .flash-editor h2,
 .flash-study {
+  display: block;
   color: var(--text-color);
 }
 .flash-page > header h1 {
@@ -263,7 +264,13 @@
   text-align: left;
 }
 .flash-study progress {
+  display: block;
   width: min(800px, 100%);
+  margin-inline: auto;
+}
+.flash-study-progress {
+  height: 12px;
+  margin: -10px auto 18px;
 }
 .flash-card {
   width: min(800px, 100%);
@@ -403,6 +410,43 @@
   }
   .flash-page > header {
     display: grid;
+    gap: 6px;
+  }
+  .flash-page > header p {
+    margin: 4px 0 0;
+    line-height: 1.45;
+  }
+  .flash-page > nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 16px 0 10px;
+  }
+  .flash-page > nav button {
+    width: 100%;
+    padding-inline: 8px;
+  }
+  .flash-group-tabs {
+    grid-template-columns: 1fr !important;
+  }
+  .flash-toolbar {
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--card-bg);
+  }
+  .flash-grid {
+    gap: 12px;
+  }
+  .flash-grid article {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .flash-deck-meta {
+    align-items: center;
+  }
+  .flash-progress-details {
+    gap: 6px;
   }
   .flash-toolbar,
   .flash-deck-fields,
@@ -435,14 +479,14 @@
     grid-template-columns: 1fr;
   }
   .flash-study {
-    padding: 14px;
+    padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
   }
   .flash-study > header {
     align-items: flex-start;
   }
   .flash-card {
-    height: clamp(290px, 52vh, 430px);
-    margin: 20px auto;
+    height: clamp(270px, 48vh, 390px);
+    margin: 16px auto;
   }
   .flash-card-face {
     padding: 48px 20px 24px;
@@ -451,6 +495,10 @@
   .flash-card-navigation {
     margin-top: 0;
     gap: 10px;
+  }
+  .flash-study-progress {
+    height: 10px;
+    margin: -4px auto 14px;
   }
   .flash-ratings button {
     flex: 1 1 40%;

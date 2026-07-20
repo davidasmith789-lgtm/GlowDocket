@@ -527,7 +527,6 @@ export default function FlashcardsHub({
               Exit Study Session
             </button>
           </header>
-          <progress value={study.index} max={study.cards.length} />
           <button
             className={`flash-card ${flipped ? "is-flipped" : ""}`}
             onClick={() => setFlipped((x) => !x)}
@@ -545,6 +544,12 @@ export default function FlashcardsHub({
               </span>
             </span>
           </button>
+          <progress
+            className="flash-study-progress"
+            value={study.index + 1}
+            max={study.cards.length}
+            aria-label={`Study progress: card ${study.index + 1} of ${study.cards.length}`}
+          />
           <div
             className="flash-card-navigation"
             aria-label="Flashcard navigation"
@@ -987,14 +992,16 @@ export default function FlashcardsHub({
               daily card deadlines.
             </p>
           </div>
-          <div className="flash-header-actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => setEditor(blankDeck())}
-            >
-              Create Deck
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="flash-header-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => setEditor(blankDeck())}
+              >
+                Create Deck
+              </button>
+            </div>
+          )}
         </header>
         {rewardSummary && (
           <p className="flash-xp-status">
@@ -1174,26 +1181,31 @@ export default function FlashcardsHub({
                   >
                     Study this deck
                   </button>
-                  {section === "mine" && (
+                  {section === "mine" && !isMobile && (
                     <button onClick={() => openDeck(d, "edit")}>
                       Edit Deck
                     </button>
                   )}
                   {section === "shared" && (
                     <>
-                      <button
-                        onClick={async () => {
-                          const c = await getSupabaseBrowserClient();
-                          const { error } = await c.rpc("copy_flashcard_deck", {
-                            source_id: d.id,
-                          });
-                          setNotice(
-                            error ? error.message : "Copied to My Decks.",
-                          );
-                        }}
-                      >
-                        Copy to My Decks
-                      </button>
+                      {!isMobile && (
+                        <button
+                          onClick={async () => {
+                            const c = await getSupabaseBrowserClient();
+                            const { error } = await c.rpc(
+                              "copy_flashcard_deck",
+                              {
+                                source_id: d.id,
+                              },
+                            );
+                            setNotice(
+                              error ? error.message : "Copied to My Decks.",
+                            );
+                          }}
+                        >
+                          Copy to My Decks
+                        </button>
+                      )}
                       <FlashcardSharedActions
                         deck={d}
                         userId={userId}

@@ -87,6 +87,19 @@ test("deck tiles open study setup and Next records Good", () => {
   assert.match(hub, /study\.index \+ 1.*study\.cards\.length/s);
 });
 
+test("study progress follows the card and mobile is browse-and-study only", () => {
+  assert.match(
+    hub,
+    /className={`flash-card[\s\S]*className="flash-study-progress"/,
+  );
+  assert.match(
+    hub,
+    /\{!isMobile && \(\s*<div className="flash-header-actions">/,
+  );
+  assert.match(hub, /section === "mine" && !isMobile/);
+  assert.match(hub, /!isMobile && \([\s\S]*Copy to My Decks/);
+});
+
 test("Flashcards includes no uploads, paid AI, or service-role secret", () => {
   const all = `${sql}\n${hub}\n${community}\n${assignment}`;
   assert.doesNotMatch(
