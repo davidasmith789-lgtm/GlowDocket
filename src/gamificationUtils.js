@@ -48,6 +48,14 @@ export const GAMIFICATION_CONFETTI = Object.freeze([
   { id: "sparkles", label: "Focus Sparkles", requirement: "focus-finish" },
   { id: "ribbons", label: "Victory Ribbons", requirement: "related-tasks" },
   { id: "prism", label: "Prismatic Party", requirement: "twenty-five-completions" },
+  { id: "meteors", label: "Meteor Shower", requirement: "high-priority" },
+  { id: "bubbles", label: "Victory Bubbles", requirement: "quick-win" },
+  { id: "leaves", label: "Ahead-of-Time Leaves", requirement: "ahead-of-schedule" },
+  { id: "snow", label: "Study Snowfall", requirement: "course-five" },
+  { id: "fireworks", label: "Overachiever Fireworks", requirement: "double-weekly-goal" },
+  { id: "hearts", label: "Momentum Hearts", requirement: "five-completions" },
+  { id: "pixels", label: "Deep Work Pixels", requirement: "deep-work" },
+  { id: "crowns", label: "Warrior Crowns", requirement: "five-productive-days" },
 ]);
 
 export const GAMIFICATION_TEST_ACCOUNT = "purplxr@gmail.com";

@@ -1199,6 +1199,16 @@ textarea {
 .title-unlock-guide li { display: grid; grid-template-columns: minmax(120px, .6fr) minmax(0, 1.4fr); gap: 10px; padding-top: 8px; border-top: 1px solid var(--border-color); }
 .title-unlock-guide li span { color: var(--text-color); font-weight: 850; }
 .title-unlock-guide li small { color: var(--muted-text); line-height: 1.4; }
+.gamification-rewards > .cosmetic-unlock-guide { width: 100%; margin-top: 12px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color)); border-radius: 16px; background: color-mix(in srgb, var(--primary-color) 8%, var(--surface-alt)); }
+.cosmetic-unlock-guide summary { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; color: var(--text-color); cursor: pointer; font-weight: 850; list-style: none; }
+.cosmetic-unlock-guide summary::-webkit-details-marker { display: none; }
+.cosmetic-unlock-guide summary::after { order: 2; content: "+"; color: var(--primary-color); font-size: 1.2rem; }
+.cosmetic-unlock-guide[open] summary::after { content: "−"; }
+.cosmetic-unlock-guide summary span { display: grid; min-width: 24px; height: 22px; margin-left: auto; place-items: center; border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 16%, var(--surface-color)); color: var(--primary-color); font-size: .7rem; }
+.cosmetic-unlock-guide ul { display: grid; gap: 0; margin: 0; padding: 0 15px 13px; list-style: none; }
+.cosmetic-unlock-guide li { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(0, 1.3fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--border-color); }
+.cosmetic-unlock-guide li span { color: var(--text-color); font-weight: 850; }
+.cosmetic-unlock-guide li small { color: var(--muted-text); line-height: 1.4; }
 
 @media (max-width: 720px) {
   .hero-status-stack { width: 100%; justify-items: stretch; }
@@ -1209,6 +1219,7 @@ textarea {
   .achievement-grid { grid-template-columns: 1fr; }
   .gamification-week-card { grid-template-columns: 1fr; }
   .gamification-week-card progress { grid-column: auto; }
+  .cosmetic-unlock-guide li { grid-template-columns: 1fr; gap: 3px; }
 }
 
 @keyframes cosmetics-sheen { 0%, 35% { background-position: 120% 0, 0 0; } 70%, 100% { background-position: -120% 0, 0 0; } }
@@ -4712,6 +4723,14 @@ a,
 .celebration-color-preview.preview-sparkles i { width: 9px; height: 9px; clip-path: polygon(50% 0,60% 39%,100% 50%,60% 61%,50% 100%,40% 61%,0 50%,40% 39%); animation-name: celebration-preview-twinkle; }
 .celebration-color-preview.preview-ribbons i { width: 4px; height: 18px; border-radius: 999px; animation-name: celebration-preview-ribbon; }
 .celebration-color-preview.preview-prism i { width: 9px; height: 9px; border-radius: 2px; animation-name: celebration-preview-prism; }
+.celebration-color-preview.preview-meteors i { width: 4px; height: 16px; border-radius: 999px; background: linear-gradient(transparent, var(--preview-color)); animation-duration: calc(var(--preview-duration) - 350ms); animation-name: celebration-preview-sweep; }
+.celebration-color-preview.preview-bubbles i { width: 11px; height: 11px; border: 2px solid var(--preview-color); border-radius: 50%; background: transparent; animation-name: celebration-preview-twinkle; }
+.celebration-color-preview.preview-leaves i { width: 8px; height: 14px; border-radius: 90% 10% 80% 20%; animation-name: celebration-preview-wave; }
+.celebration-color-preview.preview-snow i { width: 10px; height: 10px; clip-path: polygon(44% 0,56% 0,56% 38%,89% 19%,95% 29%,62% 48%,95% 67%,89% 77%,56% 58%,56% 100%,44% 100%,44% 58%,11% 77%,5% 67%,38% 48%,5% 29%,11% 19%,44% 38%); animation-name: celebration-preview-twinkle; }
+.celebration-color-preview.preview-fireworks i { width: 8px; height: 8px; border-radius: 50% 0 50% 50%; animation-duration: calc(var(--preview-duration) - 280ms); animation-name: celebration-preview-prism; }
+.celebration-color-preview.preview-hearts i { width: 11px; height: 10px; clip-path: polygon(50% 92%,8% 50%,4% 30%,12% 12%,30% 5%,50% 21%,70% 5%,88% 12%,96% 30%,92% 50%); animation-name: celebration-preview-twinkle; }
+.celebration-color-preview.preview-pixels i { width: 8px; height: 8px; border-radius: 0; animation-timing-function: steps(10, end); }
+.celebration-color-preview.preview-crowns i { width: 13px; height: 11px; border-radius: 1px; clip-path: polygon(0 15%,25% 48%,50% 0,75% 48%,100% 15%,87% 100%,13% 100%); animation-name: celebration-preview-twinkle; }
 @keyframes celebration-preview-fall { 0% { opacity: 0; transform: translate3d(0,0,0) rotate(0); } 8% { opacity: 1; } 48% { transform: translate3d(var(--preview-drift),62px,0) rotate(190deg); } 92% { opacity: 1; } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * -.5),142px,0) rotate(390deg); } }
 @keyframes celebration-preview-twinkle { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.2); } 18% { opacity: 1; transform: translate3d(var(--preview-drift),22px,0) scale(1.2) rotate(70deg); } 42% { opacity: .25; } 66% { opacity: 1; transform: translate3d(calc(var(--preview-drift) * -.6),88px,0) scale(1.35) rotate(250deg); } 100% { opacity: 0; transform: translate3d(var(--preview-drift),142px,0) scale(.25) rotate(430deg); } }
 @keyframes celebration-preview-wave { 0% { opacity: 0; transform: translate3d(-12px,0,0); } 8% { opacity: 1; } 35% { transform: translate3d(14px,48px,0); } 68% { transform: translate3d(-13px,94px,0); } 100% { opacity: 0; transform: translate3d(12px,142px,0); } }
@@ -6520,6 +6539,19 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .completion-confetti.is-ribbons i:nth-child(even) { animation-name: completion-ribbon-flutter-reverse; }
 .completion-confetti.is-prism i { width: 12px; height: 12px; border-radius: 3px; background: conic-gradient(from 45deg, var(--celebration-1, #f43f5e), var(--celebration-2, #f59e0b), var(--celebration-4, #22c55e), var(--celebration-5, #06b6d4), var(--celebration-6, #6366f1), var(--celebration-1, #f43f5e)); animation-name: completion-prism-helix; animation-duration: calc(var(--confetti-duration) + 250ms); animation-timing-function: cubic-bezier(.3,.55,.4,1); }
 .completion-confetti.is-prism i:nth-child(even) { animation-name: completion-prism-helix-reverse; animation-delay: calc(var(--confetti-delay) + 180ms); }
+.completion-confetti.is-meteors i { width: 5px; height: 20px; border-radius: 999px 999px 3px 3px; background: linear-gradient(transparent, var(--celebration-1, #fb7185)); animation-name: completion-rainbow-sweep; animation-duration: calc(var(--confetti-duration) - 650ms); }
+.completion-confetti.is-meteors i:nth-child(even) { background: linear-gradient(transparent, var(--celebration-2, #fbbf24)); }
+.completion-confetti.is-bubbles i { width: 14px; height: 14px; border: 2px solid var(--celebration-5, #67e8f9); border-radius: 50%; background: transparent; animation-name: completion-sparkle-float; animation-duration: calc(var(--confetti-duration) + 900ms); }
+.completion-confetti.is-bubbles i:nth-child(even) { border-color: var(--celebration-6, #c084fc); }
+.completion-confetti.is-leaves i { width: 10px; height: 17px; border-radius: 90% 10% 80% 20%; background: var(--celebration-4, #22c55e); animation-name: completion-course-wave; animation-duration: calc(var(--confetti-duration) + 450ms); }
+.completion-confetti.is-leaves i:nth-child(even) { background: var(--celebration-2, #f59e0b); animation-name: completion-course-wave-reverse; }
+.completion-confetti.is-snow i { width: 12px; height: 12px; background: var(--celebration-5, #bae6fd); clip-path: polygon(44% 0,56% 0,56% 38%,89% 19%,95% 29%,62% 48%,95% 67%,89% 77%,56% 58%,56% 100%,44% 100%,44% 58%,11% 77%,5% 67%,38% 48%,5% 29%,11% 19%,44% 38%); animation-name: completion-stars-fall; animation-duration: calc(var(--confetti-duration) + 1200ms); }
+.completion-confetti.is-snow i:nth-child(even) { background: var(--celebration-3, #f8fafc); }
+.completion-confetti.is-fireworks i { width: 10px; height: 10px; border-radius: 50% 0 50% 50%; animation-name: completion-prism-helix; animation-duration: calc(var(--confetti-duration) - 500ms); }
+.completion-confetti.is-fireworks i:nth-child(even) { animation-name: completion-prism-helix-reverse; }
+.completion-confetti.is-hearts i { width: 13px; height: 12px; border-radius: 3px; background: var(--celebration-1, #fb7185); clip-path: polygon(50% 92%,8% 50%,4% 30%,12% 12%,30% 5%,50% 21%,70% 5%,88% 12%,96% 30%,92% 50%); animation-name: completion-sparkle-float; }
+.completion-confetti.is-pixels i { width: 10px; height: 10px; border-radius: 0; animation-name: completion-confetti-fall; animation-timing-function: steps(12, end); }
+.completion-confetti.is-crowns i { width: 16px; height: 13px; border-radius: 2px; background: linear-gradient(var(--celebration-3, #fde68a), var(--celebration-2, #f59e0b)); clip-path: polygon(0 15%,25% 48%,50% 0,75% 48%,100% 15%,87% 100%,13% 100%); animation-name: completion-stars-fall; }
 
 .celebration-stars .completion-celebration-toast { border-color: #fbbf24; background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 22%, var(--surface-color)), color-mix(in srgb, #fff7c2 8%, var(--surface-color))); box-shadow: 0 18px 48px color-mix(in srgb, #fbbf24 28%, transparent); }
 .celebration-course .completion-celebration-toast { border-color: var(--course-confetti, var(--primary-color)); background: linear-gradient(135deg, color-mix(in srgb, var(--course-confetti, var(--primary-color)) 20%, var(--surface-color)), var(--surface-color)); }
@@ -6527,6 +6559,14 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .celebration-sparkles .completion-celebration-toast { border-color: #fde68a; background: radial-gradient(circle at 12% 25%, color-mix(in srgb, #fde68a 28%, var(--surface-color)), var(--surface-color) 48%); box-shadow: 0 18px 52px color-mix(in srgb, #fde68a 30%, transparent); }
 .celebration-ribbons .completion-celebration-toast { border-color: #ec4899; background: linear-gradient(135deg, color-mix(in srgb, #ec4899 18%, var(--surface-color)), color-mix(in srgb, #8b5cf6 15%, var(--surface-color))); }
 .celebration-prism .completion-celebration-toast { border-color: #06b6d4; background: conic-gradient(from 110deg at 90% 0%, color-mix(in srgb, #ec4899 14%, var(--surface-color)), color-mix(in srgb, #06b6d4 14%, var(--surface-color)), color-mix(in srgb, #eab308 12%, var(--surface-color)), color-mix(in srgb, #ec4899 14%, var(--surface-color))); box-shadow: 0 18px 54px color-mix(in srgb, #8b5cf6 28%, transparent); }
+.celebration-meteors .completion-celebration-toast { border-color: #fb7185; background: linear-gradient(135deg, color-mix(in srgb, #fb7185 18%, var(--surface-color)), color-mix(in srgb, #fbbf24 10%, var(--surface-color))); }
+.celebration-bubbles .completion-celebration-toast { border-color: #67e8f9; background: radial-gradient(circle at 90% 10%, color-mix(in srgb, #c084fc 18%, var(--surface-color)), color-mix(in srgb, #67e8f9 10%, var(--surface-color))); }
+.celebration-leaves .completion-celebration-toast { border-color: #22c55e; background: linear-gradient(135deg, color-mix(in srgb, #22c55e 16%, var(--surface-color)), color-mix(in srgb, #f59e0b 10%, var(--surface-color))); }
+.celebration-snow .completion-celebration-toast { border-color: #7dd3fc; background: linear-gradient(145deg, color-mix(in srgb, #e0f2fe 18%, var(--surface-color)), color-mix(in srgb, #7dd3fc 9%, var(--surface-color))); }
+.celebration-fireworks .completion-celebration-toast { border-color: #f43f5e; background: linear-gradient(115deg, color-mix(in srgb, #f43f5e 13%, var(--surface-color)), color-mix(in srgb, #facc15 12%, var(--surface-color)), color-mix(in srgb, #8b5cf6 13%, var(--surface-color))); }
+.celebration-hearts .completion-celebration-toast { border-color: #fb7185; background: radial-gradient(circle at 15% 20%, color-mix(in srgb, #fb7185 22%, var(--surface-color)), var(--surface-color) 52%); }
+.celebration-pixels .completion-celebration-toast { border-color: #60a5fa; background: linear-gradient(135deg, color-mix(in srgb, #60a5fa 15%, var(--surface-color)), color-mix(in srgb, #a78bfa 12%, var(--surface-color))); }
+.celebration-crowns .completion-celebration-toast { border-color: #fbbf24; background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 20%, var(--surface-color)), color-mix(in srgb, #f59e0b 8%, var(--surface-color))); }
 .completion-celebration.has-custom-colors .completion-confetti.is-course i { background: var(--celebration-1); }
 .completion-celebration.has-custom-toast-accent .completion-celebration-toast { border-color: var(--celebration-accent); box-shadow: 0 18px 48px color-mix(in srgb, var(--celebration-accent) 28%, transparent); }
 .completion-celebration.has-custom-toast-background .completion-celebration-toast { background: var(--celebration-toast-bg); }

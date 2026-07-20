@@ -282,6 +282,14 @@ const CELEBRATION_STYLE_COLOR_FIELDS = {
   sparkles: ["palette3"],
   ribbons: ["palette1", "palette6"],
   prism: ["palette1", "palette2", "palette4", "palette5", "palette6"],
+  meteors: ["palette1", "palette2"],
+  bubbles: ["palette5", "palette6"],
+  leaves: ["palette2", "palette4"],
+  snow: ["palette3", "palette5"],
+  fireworks: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
+  hearts: ["palette1"],
+  pixels: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
+  crowns: ["palette2", "palette3"],
 };
 
 const CELEBRATION_STYLE_COLOR_LABELS = {
@@ -290,6 +298,13 @@ const CELEBRATION_STYLE_COLOR_LABELS = {
   sparkles: { palette3: "Sparkle color" },
   ribbons: { palette1: "Ribbon color 1", palette6: "Ribbon color 2" },
   prism: { palette1: "Prism color 1", palette2: "Prism color 2", palette4: "Prism color 3", palette5: "Prism color 4", palette6: "Prism color 5" },
+  meteors: { palette1: "Meteor color 1", palette2: "Meteor color 2" },
+  bubbles: { palette5: "Bubble color 1", palette6: "Bubble color 2" },
+  leaves: { palette2: "Leaf color 1", palette4: "Leaf color 2" },
+  snow: { palette3: "Snow color 1", palette5: "Snow color 2" },
+  fireworks: { palette1: "Firework color 1", palette2: "Firework color 2", palette3: "Firework color 3", palette4: "Firework color 4", palette5: "Firework color 5", palette6: "Firework color 6" },
+  hearts: { palette1: "Heart color" },
+  crowns: { palette2: "Crown color", palette3: "Crown jewel" },
 };
 
 const getCelebrationColorsForStyle = (savedColors, celebrationId) => {
@@ -8054,6 +8069,7 @@ function App() {
   const earnedAchievements = new Set(gamification.earnedAchievementIds);
   const selectedAchievement = GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === gamification.selectedBadge);
   const lockedTitleOptions = GAMIFICATION_TITLES.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
+  const lockedCelebrationOptions = GAMIFICATION_CONFETTI.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
   const updateGamification = (changes) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...gamification, ...changes }));
   const mobileOwnedTabs = ["dashboard", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses"];
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
@@ -11248,7 +11264,15 @@ function App() {
             <header><div><h2 id="gamification-title">Cosmetics</h2><p>Collect badges, choose your display piece, equip a title, and pick a celebration style.</p></div><button autoFocus type="button" className="gamification-close" onClick={() => setGamificationOpen(false)} aria-label="Close Cosmetics">×</button></header>
             <div className="gamification-week-card"><div><strong>{weeklyMomentum.completed} of {weeklyMomentum.goal}</strong><span>assignments completed this week</span></div><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress><span>{weeklyMomentum.productiveDays} productive day{weeklyMomentum.productiveDays === 1 ? "" : "s"} this week</span><label>Weekly goal<input type="number" min="1" max="50" value={gamification.weeklyGoal} onChange={(event) => updateGamification({ weeklyGoal: event.target.value })} /></label></div>
             <section><h3>Badges</h3><p className="gamification-section-hint">Choose any earned badge to display in your momentum summary.</p><div className="achievement-grid">{GAMIFICATION_ACHIEVEMENTS.map((achievement) => { const earned = earnedAchievements.has(achievement.id); const selected = gamification.selectedBadge === achievement.id; return <button type="button" key={achievement.id} data-badge={achievement.id} className={`achievement-card badge-${achievement.id} ${earned ? "is-earned" : "is-locked"}${selected ? " is-selected" : ""} tone-${achievement.tone}`} disabled={!earned} aria-pressed={earned ? selected : undefined} onClick={() => updateGamification({ selectedBadge: achievement.id })}><span className="achievement-medallion" aria-hidden="true"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={earned ? achievement.id : "locked"} /></span></span><span className="achievement-ornament">✦</span></span><span className="achievement-card-copy"><strong>{achievement.title}</strong><small>{achievement.description}</small><em>{earned ? selected ? "Displayed" : "Earned" : "Locked"}</em></span></button>; })}</div></section>
-            <section className="gamification-rewards"><h3>Celebration style</h3><div>{GAMIFICATION_CONFETTI.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedConfetti === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedConfetti: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div><div className={`celebration-studio-progress${celebrationStudioProgress.unlocked ? " is-unlocked" : ""}`}><span aria-hidden="true">{celebrationStudioProgress.unlocked ? "🎨" : "🔒"}</span><div><strong>{celebrationStudioProgress.unlocked ? "Celebration Color Studio unlocked" : "Celebration Color Studio"}</strong><small>{celebrationStudioProgress.unlocked ? "Your custom celebration palette is available in Full Color Studio." : `Sign in on ${celebrationStudioProgress.remaining} more different day${celebrationStudioProgress.remaining === 1 ? "" : "s"} to unlock custom celebration colors.`}</small><progress max={CELEBRATION_STUDIO_REQUIRED_DAYS} value={celebrationStudioProgress.completed}>{celebrationStudioProgress.completed} of {CELEBRATION_STUDIO_REQUIRED_DAYS} days</progress><em>{celebrationStudioProgress.completed}/{CELEBRATION_STUDIO_REQUIRED_DAYS} days</em></div></div><h3>Profile title</h3><div>{GAMIFICATION_TITLES.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedTitle === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedTitle: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div>{lockedTitleOptions.length > 0 && <div className="title-unlock-guide"><strong>How to unlock more titles</strong><ul>{lockedTitleOptions.map((option) => <li key={option.id}><span>{option.label}</span><small>{option.achievement?.description || "Complete its matching achievement."}</small></li>)}</ul></div>}</section>
+            <section className="gamification-rewards">
+              <h3>Celebration style</h3>
+              <div>{GAMIFICATION_CONFETTI.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedConfetti === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedConfetti: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div>
+              {lockedCelebrationOptions.length > 0 && <details className="cosmetic-unlock-guide"><summary>How to unlock more celebrations <span>{lockedCelebrationOptions.length}</span></summary><ul>{lockedCelebrationOptions.map((option) => <li key={option.id}><span>{option.label}</span><small>{option.achievement?.description || "Complete its matching achievement."}</small></li>)}</ul></details>}
+              <div className={`celebration-studio-progress${celebrationStudioProgress.unlocked ? " is-unlocked" : ""}`}><span aria-hidden="true">{celebrationStudioProgress.unlocked ? "🎨" : "🔒"}</span><div><strong>{celebrationStudioProgress.unlocked ? "Celebration Color Studio unlocked" : "Celebration Color Studio"}</strong><small>{celebrationStudioProgress.unlocked ? "Your custom celebration palette is available in Full Color Studio." : `Sign in on ${celebrationStudioProgress.remaining} more different day${celebrationStudioProgress.remaining === 1 ? "" : "s"} to unlock custom celebration colors.`}</small><progress max={CELEBRATION_STUDIO_REQUIRED_DAYS} value={celebrationStudioProgress.completed}>{celebrationStudioProgress.completed} of {CELEBRATION_STUDIO_REQUIRED_DAYS} days</progress><em>{celebrationStudioProgress.completed}/{CELEBRATION_STUDIO_REQUIRED_DAYS} days</em></div></div>
+              <h3>Profile title</h3>
+              <div>{GAMIFICATION_TITLES.map((option) => { const unlocked = !option.requirement || earnedAchievements.has(option.requirement); return <button type="button" key={option.id} className={gamification.selectedTitle === option.id ? "is-selected" : ""} disabled={!unlocked} onClick={() => updateGamification({ selectedTitle: option.id })}>{option.label}{!unlocked ? " 🔒" : ""}</button>; })}</div>
+              {lockedTitleOptions.length > 0 && <details className="cosmetic-unlock-guide"><summary>How to unlock more titles <span>{lockedTitleOptions.length}</span></summary><ul>{lockedTitleOptions.map((option) => <li key={option.id}><span>{option.label}</span><small>{option.achievement?.description || "Complete its matching achievement."}</small></li>)}</ul></details>}
+            </section>
           </section>
         </div>
       )}
