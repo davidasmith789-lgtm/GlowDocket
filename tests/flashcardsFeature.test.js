@@ -45,6 +45,16 @@ test("the exact developer account can delete any Community post through server a
   assert.match(communityHub, /selected\.author_id === userId \|\| isModerator/);
 });
 
+test("Community deletion uses an explicit server-authorized RPC", () => {
+  const migration = read("supabase/migrations/202607200007_reliable_community_post_deletion.sql");
+  const hub = read("src/components/CommunityHub.jsx");
+  assert.match(migration, /security definer/i);
+  assert.match(migration, /is_community_moderator\(auth\.uid\(\)\)/i);
+  assert.match(migration, /get diagnostics deleted_count = row_count/i);
+  assert.match(hub, /rpc\("delete_community_post"/);
+  assert.match(hub, /if \(!deleted\) throw new Error/);
+});
+
 test("moderation uses Community moderator authorization", () => {
   assert.match(sql, /is_community_moderator\(auth\.uid\(\)\)/i);
   assert.match(sql, /flashcard_moderation_queue/);

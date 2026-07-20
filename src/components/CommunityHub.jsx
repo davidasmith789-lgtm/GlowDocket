@@ -337,14 +337,15 @@ export default function CommunityHub({ userId, isMobile = false }) {
       return;
     try {
       const client = await getSupabaseBrowserClient();
-      const { error } = await client
-        .from("community_posts")
-        .delete()
-        .eq("id", post.id);
+      const { data: deleted, error } = await client.rpc("delete_community_post", {
+        target_post_id: post.id,
+      });
       if (error) throw error;
+      if (!deleted) throw new Error("The post was not deleted.");
       closeDialog();
       setNotice("Post deleted.");
-      load();
+      setPosts((rows) => rows.filter((row) => row.id !== post.id));
+      await load();
     } catch (error) {
       setNotice(messageFor(error, "The post could not be deleted."));
     }
