@@ -8278,7 +8278,7 @@ function App() {
               <GlowDocketLogo decorative />
               <div><strong>GlowDocket</strong></div>
             </button>
-            {gamification.showHeaderSummary && <button type="button" className="mobile-momentum-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal}. Displayed badge: ${selectedAchievement?.title || "none"}. ${earnedAchievements.size} badges earned. Open achievements.`}><span className="mobile-momentum-badge" aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><small>Momentum</small></button>}
+            {gamification.showHeaderSummary && <button type="button" className="mobile-momentum-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal}. Displayed badge: ${selectedAchievement?.title || "none"}. ${earnedAchievements.size} badges earned. Open achievements.`}><span className={`mobile-momentum-badge badge-${selectedAchievement?.id || "empty"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><small>Momentum</small></button>}
             <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
               {safeDisplayName.charAt(0).toUpperCase()}
             </button>

@@ -129,6 +129,10 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(css, /\.achievement-card\.is-selected/);
   assert.match(css, /content-visibility: auto/);
   assert.match(css, /\.adaptive-low-motion \.gamification-dialog \.badge-first-completion\.is-mastery-animated/);
+  assert.match(css, /\.adaptive-low-motion \.badge-flash-first-deck\.is-mastery-animated/);
+  assert.match(css, /\.mobile-momentum-badge\.badge-flash-first-deck\.is-mastery-animated/);
+  assert.match(css, /animation-delay: 0s !important/);
+  assert.match(app, /mobile-momentum-badge badge-\$\{selectedAchievement\?\.id/);
   assert.match(app, /<h2 id="gamification-title">Cosmetics<\/h2>/);
   assert.doesNotMatch(app, /Gentle Momentum/);
   assert.match(css, /\.gamification-dialog h2[\s\S]*color: var\(--text-color\) !important/);

@@ -1248,6 +1248,33 @@ textarea {
   .badge-flash-community-creator.is-mastery-animated .achievement-rays { animation: flash-mastery-network 2.8s ease-in-out infinite; }
 }
 
+/* Flashcard mastery begins as soon as a badge renders, including mobile Cosmetics. */
+.badge-flash-first-deck.is-mastery-animated .achievement-medallion::before { animation: flash-mastery-deck 2.6s ease-in-out 0s infinite; }
+.badge-flash-first-session.is-mastery-animated .achievement-icon { animation: flash-mastery-page 1.8s ease-in-out 0s infinite; transform-origin: left center; }
+.badge-flash-25-cards.is-mastery-animated .achievement-rays { animation: flash-mastery-spark-stack 2.2s steps(6, end) 0s infinite; }
+.badge-flash-100-cards.is-mastery-animated .achievement-core { animation: flash-mastery-century 3.4s linear 0s infinite; }
+.badge-flash-500-cards.is-mastery-animated .achievement-medallion { animation: flash-mastery-superstar 2s ease-in-out 0s infinite; }
+.badge-flash-three-days.is-mastery-animated .achievement-ornament { animation: flash-mastery-calendar 2.4s ease-in-out 0s infinite; }
+.badge-flash-seven-day-streak.is-mastery-animated .achievement-icon { animation: flash-mastery-streak 1.25s ease-in-out 0s infinite alternate; }
+.badge-flash-before-target.is-mastery-animated .achievement-rays { animation: flash-mastery-clock 1.6s cubic-bezier(.2,.8,.2,1) 0s infinite; }
+.badge-flash-first-shared.is-mastery-animated .achievement-core { animation: flash-mastery-orbit 3s ease-in-out 0s infinite; }
+.badge-flash-first-helpful.is-mastery-animated .achievement-medallion::after { animation: flash-mastery-thumbs-up 1.7s ease-in-out 0s infinite; }
+.badge-flash-ten-helpful.is-mastery-animated .achievement-ornament { animation: flash-mastery-medal 2.1s cubic-bezier(.4,0,.2,1) 0s infinite; }
+.badge-flash-community-creator.is-mastery-animated .achievement-rays { animation: flash-mastery-network 2.8s ease-in-out 0s infinite; }
+.mobile-momentum-badge[class*="badge-flash-"] .achievement-emblem { transform-origin: center; }
+.mobile-momentum-badge.badge-flash-first-deck.is-mastery-animated .achievement-emblem { animation: flash-mastery-deck 2.6s ease-in-out 0s infinite; }
+.mobile-momentum-badge.badge-flash-first-session.is-mastery-animated .achievement-emblem { animation: flash-mastery-page 1.8s ease-in-out 0s infinite; transform-origin: left center; }
+.mobile-momentum-badge.badge-flash-25-cards.is-mastery-animated .achievement-emblem { animation: flash-mastery-spark-stack 2.2s steps(6, end) 0s infinite; }
+.mobile-momentum-badge.badge-flash-100-cards.is-mastery-animated .achievement-emblem { animation: flash-mastery-century 3.4s linear 0s infinite; }
+.mobile-momentum-badge.badge-flash-500-cards.is-mastery-animated .achievement-emblem { animation: flash-mastery-superstar 2s ease-in-out 0s infinite; }
+.mobile-momentum-badge.badge-flash-three-days.is-mastery-animated .achievement-emblem { animation: flash-mastery-calendar 2.4s ease-in-out 0s infinite; }
+.mobile-momentum-badge.badge-flash-seven-day-streak.is-mastery-animated .achievement-emblem { animation: flash-mastery-streak 1.25s ease-in-out 0s infinite alternate; }
+.mobile-momentum-badge.badge-flash-before-target.is-mastery-animated .achievement-emblem { animation: flash-mastery-clock 1.6s cubic-bezier(.2,.8,.2,1) 0s infinite; }
+.mobile-momentum-badge.badge-flash-first-shared.is-mastery-animated .achievement-emblem { animation: flash-mastery-orbit 3s ease-in-out 0s infinite; }
+.mobile-momentum-badge.badge-flash-first-helpful.is-mastery-animated .achievement-emblem { animation: flash-mastery-thumbs-up 1.7s ease-in-out 0s infinite; }
+.mobile-momentum-badge.badge-flash-ten-helpful.is-mastery-animated .achievement-emblem { animation: flash-mastery-medal 2.1s cubic-bezier(.4,0,.2,1) 0s infinite; }
+.mobile-momentum-badge.badge-flash-community-creator.is-mastery-animated .achievement-emblem { animation: flash-mastery-network 2.8s ease-in-out 0s infinite; }
+
 @keyframes mastery-starburst { 0%,100% { transform: rotate(0) scale(1); filter: brightness(1); } 50% { transform: rotate(18deg) scale(1.08); filter: brightness(1.45); } }
 @keyframes mastery-rocket { 0%,100% { transform: translate3d(0,2px,0) rotate(-3deg); } 45% { transform: translate3d(5px,-8px,0) rotate(7deg); } 60% { transform: translate3d(-2px,-5px,0) rotate(2deg); } }
 @keyframes mastery-neon-ring { to { transform: rotate(360deg); filter: hue-rotate(360deg); } }
@@ -7234,16 +7261,50 @@ html[data-theme="dark"] .sync-conflict-dialog {
 .adaptive-low-motion .gamification-dialog .badge-related-tasks.is-mastery-animated .achievement-rays { animation-duration: 2.2s !important; animation-iteration-count: infinite !important; }
 .adaptive-low-motion .gamification-dialog .badge-focus-finish.is-mastery-animated .achievement-core { animation-duration: 2s !important; animation-iteration-count: infinite !important; }
 
+/* User-enabled Flashcard mastery is exempt from automatic lag reduction everywhere. */
+.adaptive-low-motion .badge-flash-first-deck.is-mastery-animated .achievement-medallion::before,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-first-deck.is-mastery-animated .achievement-emblem { animation-duration: 2.6s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-first-session.is-mastery-animated .achievement-icon,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-first-session.is-mastery-animated .achievement-emblem { animation-duration: 1.8s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-25-cards.is-mastery-animated .achievement-rays,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-25-cards.is-mastery-animated .achievement-emblem { animation-duration: 2.2s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-100-cards.is-mastery-animated .achievement-core,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-100-cards.is-mastery-animated .achievement-emblem { animation-duration: 3.4s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-500-cards.is-mastery-animated .achievement-medallion,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-500-cards.is-mastery-animated .achievement-emblem { animation-duration: 2s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-three-days.is-mastery-animated .achievement-ornament,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-three-days.is-mastery-animated .achievement-emblem { animation-duration: 2.4s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-seven-day-streak.is-mastery-animated .achievement-icon,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-seven-day-streak.is-mastery-animated .achievement-emblem { animation-duration: 1.25s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-before-target.is-mastery-animated .achievement-rays,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-before-target.is-mastery-animated .achievement-emblem { animation-duration: 1.6s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-first-shared.is-mastery-animated .achievement-core,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-first-shared.is-mastery-animated .achievement-emblem { animation-duration: 3s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-first-helpful.is-mastery-animated .achievement-medallion::after,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-first-helpful.is-mastery-animated .achievement-emblem { animation-duration: 1.7s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-ten-helpful.is-mastery-animated .achievement-ornament,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-ten-helpful.is-mastery-animated .achievement-emblem { animation-duration: 2.1s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+.adaptive-low-motion .badge-flash-community-creator.is-mastery-animated .achievement-rays,
+.adaptive-low-motion .mobile-momentum-badge.badge-flash-community-creator.is-mastery-animated .achievement-emblem { animation-duration: 2.8s !important; animation-delay: 0s !important; animation-iteration-count: infinite !important; animation-play-state: running !important; }
+
 .App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
 .App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::before,
-.App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after {
+.App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after,
+.App.reduce-motion .momentum-badge-stage.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
+.App.reduce-motion .momentum-badge-stage.is-mastery-animated .achievement-medallion::before,
+.App.reduce-motion .momentum-badge-stage.is-mastery-animated .achievement-medallion::after,
+.App.reduce-motion .mobile-momentum-badge.is-mastery-animated .achievement-emblem {
   animation-duration: .01ms !important;
   animation-iteration-count: 1 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .gamification-dialog .achievement-card.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
   .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::before,
-  .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after {
+  .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after,
+  .momentum-badge-stage.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
+  .momentum-badge-stage.is-mastery-animated .achievement-medallion::before,
+  .momentum-badge-stage.is-mastery-animated .achievement-medallion::after,
+  .mobile-momentum-badge.is-mastery-animated .achievement-emblem {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
   }
