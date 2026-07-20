@@ -40,7 +40,7 @@ test("expanded reward collection includes elaborate badges, titles, and celebrat
   assert.ok(GAMIFICATION_CONFETTI.length >= 15);
   assert.equal(GAMIFICATION_CONFETTI[0].id, "none");
   assert.equal(DEFAULT_GAMIFICATION.selectedConfetti, "standard");
-  for (const id of ["meteors", "bubbles", "leaves", "snow", "fireworks", "hearts", "pixels", "crowns"]) assert.ok(GAMIFICATION_CONFETTI.some((option) => option.id === id));
+  for (const id of ["meteors", "bubbles", "leaves", "snow", "fireworks", "gold-ripple", "hearts", "pixels", "crowns"]) assert.ok(GAMIFICATION_CONFETTI.some((option) => option.id === id));
   const tasks = Array.from({ length: 25 }, (_, index) => completedTask(`task-${index}`, `2026-07-${String(1 + (index % 24)).padStart(2, "0")}T12:00:00`, { course: "Biology" }));
   const unlocked = getNewAchievementIds(tasks, DEFAULT_GAMIFICATION, { completedEarly: true, estimatedMinutes: 20 }, { now: new Date(2026, 6, 24) });
   for (const id of ["ten-completions", "twenty-five-completions", "ahead-of-schedule", "quick-win", "course-five"]) assert.ok(unlocked.includes(id));

@@ -309,6 +309,7 @@ const CELEBRATION_STYLE_COLOR_FIELDS = {
   leaves: ["palette2", "palette4"],
   snow: ["palette3", "palette5"],
   fireworks: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
+  "gold-ripple": ["palette3"],
   hearts: ["palette1"],
   pixels: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
   crowns: ["palette2", "palette3"],
@@ -325,6 +326,7 @@ const CELEBRATION_STYLE_COLOR_LABELS = {
   leaves: { palette2: "Leaf color 1", palette4: "Leaf color 2" },
   snow: { palette3: "Snow color 1", palette5: "Snow color 2" },
   fireworks: { palette1: "Firework color 1", palette2: "Firework color 2", palette3: "Firework color 3", palette4: "Firework color 4", palette5: "Firework color 5", palette6: "Firework color 6" },
+  "gold-ripple": { palette3: "Ripple energy color" },
   hearts: { palette1: "Heart color" },
   crowns: { palette2: "Crown color", palette3: "Crown jewel" },
 };
@@ -11320,7 +11322,7 @@ function App() {
           role="status"
           aria-live="polite"
         >
-          {completionCelebration.confetti === "fireworks" ? <div className="completion-fireworks" aria-hidden="true">{getFireworkBursts(completionCelebration.id).map((burst) => <span className="completion-firework" key={burst.id} style={{ "--burst-x": `${burst.x}%`, "--burst-y": `${burst.y}%`, "--burst-delay": `${burst.delay}ms` }}><b />{Array.from({ length: 12 }, (_, lineIndex) => <i key={lineIndex} style={{ "--burst-angle": `${lineIndex * 30}deg`, "--burst-color": `var(--celebration-${(burst.id + lineIndex) % 6 + 1}, ${["#f43f5e", "#f59e0b", "#facc15", "#22c55e", "#06b6d4", "#a855f7"][(burst.id + lineIndex) % 6]})` }} />)}</span>)}</div> : <div className={`completion-confetti is-${completionCelebration.confetti || "standard"}`} style={{ "--course-confetti": completionCelebration.courseColor }} aria-hidden="true">
+          {completionCelebration.confetti === "fireworks" ? <div className="completion-fireworks" aria-hidden="true">{getFireworkBursts(completionCelebration.id).map((burst) => <span className="completion-firework" key={burst.id} style={{ "--burst-x": `${burst.x}%`, "--burst-y": `${burst.y}%`, "--burst-delay": `${burst.delay}ms` }}><b />{Array.from({ length: 12 }, (_, lineIndex) => <i key={lineIndex} style={{ "--burst-angle": `${lineIndex * 30}deg`, "--burst-color": `var(--celebration-${(burst.id + lineIndex) % 6 + 1}, ${["#f43f5e", "#f59e0b", "#facc15", "#22c55e", "#06b6d4", "#a855f7"][(burst.id + lineIndex) % 6]})` }} />)}</span>)}</div> : completionCelebration.confetti === "gold-ripple" ? <div className="completion-gold-ripple" aria-hidden="true"><span className="gold-ripple-flash" />{Array.from({ length: 7 }, (_, index) => <i key={index} style={{ "--ripple-delay": `${index * 95}ms` }} />)}<div className="gold-ripple-speed-lines">{Array.from({ length: 24 }, (_, index) => <b key={index} style={{ "--line-angle": `${index * 15}deg`, "--line-delay": `${(index % 4) * 45}ms` }} />)}</div></div> : <div className={`completion-confetti is-${completionCelebration.confetti || "standard"}`} style={{ "--course-confetti": completionCelebration.courseColor }} aria-hidden="true">
             {(completionCelebration.confetti === "meteors" ? METEOR_SHOWER_PARTICLES : COMPLETION_CONFETTI).map((piece, index) => <i key={piece.id} style={{ "--confetti-x": piece.x, "--confetti-drift": piece.drift, "--confetti-sway": piece.sway, "--confetti-sway-back": piece.swayBack, "--confetti-scale": piece.scale, "--confetti-delay": piece.delay, "--confetti-duration": piece.duration, "--confetti-rotation": piece.rotation, "--confetti-color": `var(--celebration-${(index % 6) + 1}, ${piece.color})` }} />)}
           </div>}
           <div className="completion-celebration-toast"><span aria-hidden="true">✓</span><div><strong>{completionCelebration.achievementIds?.length ? "Achievement unlocked!" : "Nice work!"}</strong><small>{completionCelebration.title} is complete.{completionCelebration.achievementIds?.length ? ` ${completionCelebration.achievementIds.map((id) => GAMIFICATION_ACHIEVEMENTS.find((item) => item.id === id)?.title).filter(Boolean).join(", ")}.` : ""}</small></div></div>
