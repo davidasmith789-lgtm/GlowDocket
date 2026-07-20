@@ -116,10 +116,8 @@ test("study progress follows the card and personal decks offer study or edit", (
     hub,
     /className={`flash-card[\s\S]*className="flash-study-progress"/,
   );
-  assert.match(
-    hub,
-    /\{!isMobile && \(\s*<div className="flash-header-actions">/,
-  );
+  assert.match(hub, /<div className="flash-header-actions">[\s\S]{0,250}Create Deck/);
+  assert.doesNotMatch(hub, /\{!isMobile && \(\s*<div className="flash-header-actions">/);
   assert.match(hub, /section === "mine" && \(/);
   assert.doesNotMatch(hub, /New \{d\.new_count\}|Learning \{d\.learning_count\}|Familiar \{d\.familiar_count\}|Strong \{d\.strong_count\}|\{d\.total_sessions\} sessions/);
   assert.match(hub, /!isMobile && \([\s\S]*Copy to My Decks/);
@@ -131,6 +129,14 @@ test("study progress follows the card and personal decks offer study or edit", (
     hubStyles,
     /progress::-webkit-progress-value[\s\S]*var\(--primary-color\)/,
   );
+});
+
+test("mobile Community search starts closed and expands on demand", () => {
+  assert.match(communityHub, /useState\(false\)[\s\S]{0,300}mobileSearchOpen|mobileSearchOpen[\s\S]{0,100}useState\(false\)/);
+  assert.match(communityHub, /className="community-search-toggle"/);
+  assert.match(communityHub, /aria-expanded=\{mobileSearchOpen\}/);
+  assert.match(communityHub, /\{\(!isMobile \|\| mobileSearchOpen\) && <div className="community-toolbar"/);
+  assert.match(hubStyles, /\.flash-header-actions,[\s\S]{0,100}\.flash-header-actions button[\s\S]{0,50}width: 100%/);
 });
 
 test("Full Color Studio exposes Community and Flashcards feature colors", () => {

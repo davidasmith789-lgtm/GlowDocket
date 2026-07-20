@@ -1058,16 +1058,14 @@ export default function FlashcardsHub({
               daily card deadlines.
             </p>
           </div>
-          {!isMobile && (
-            <div className="flash-header-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => setEditor(blankDeck())}
-              >
-                Create Deck
-              </button>
-            </div>
-          )}
+          <div className="flash-header-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => setEditor(blankDeck())}
+            >
+              Create Deck
+            </button>
+          </div>
         </header>
         {rewardSummary && (
           <p className="flash-xp-status">

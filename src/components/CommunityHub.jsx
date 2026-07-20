@@ -60,6 +60,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [query, setQuery] = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [type, setType] = useState("");
   const [sort, setSort] = useState("helpful");
@@ -470,7 +471,19 @@ export default function CommunityHub({ userId, isMobile = false }) {
           </button>
         </div>
       )}
-      <div className="community-toolbar">
+      {isMobile && (
+        <button
+          type="button"
+          className="community-search-toggle"
+          aria-expanded={mobileSearchOpen}
+          aria-controls="community-search-filters"
+          onClick={() => setMobileSearchOpen((open) => !open)}
+        >
+          <span><strong>Search & filters</strong><small>Find courses, post types, and saved posts</small></span>
+          <b aria-hidden="true">{mobileSearchOpen ? "−" : "+"}</b>
+        </button>
+      )}
+      {(!isMobile || mobileSearchOpen) && <div className="community-toolbar" id="community-search-filters">
         <label>
           <span>Search courses and posts</span>
           <input
@@ -510,7 +523,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
             Moderator Queue
           </button>
         )}
-      </div>
+      </div>}
       {moderating && (
         <section className="community-moderator">
           <header>
