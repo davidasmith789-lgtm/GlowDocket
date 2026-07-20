@@ -77,8 +77,9 @@ test("study remains confidence-based without queues or card due dates", () => {
   );
 });
 
-test("deck tiles open study setup and Next records Good", () => {
+test("deck tiles open full personal decks while Study starts study setup", () => {
   assert.match(hub, /className="flash-deck-tile"/);
+  assert.match(hub, /openDeck\(d, section === "mine" \? "edit" : "study"\)/);
   assert.match(hub, /openDeck\(d, "study"\)/);
   assert.match(hub, /Study this deck/);
   assert.match(hub, /onClick=\{\(\) => rate\("Good"\)\}/);
@@ -89,6 +90,7 @@ test("deck tiles open study setup and Next records Good", () => {
   assert.match(hub, /e\.key === "ArrowRight"/);
   assert.match(hub, /flash-card-navigation/);
   assert.match(hub, /study\.index \+ 1.*study\.cards\.length/s);
+  assert.match(hubStyles, /\.flash-study \+ \.flash-modal\s*\{\s*background: transparent;/);
 });
 
 test("study progress follows the card and personal decks offer study or edit", () => {

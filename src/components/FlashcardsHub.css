@@ -100,7 +100,7 @@
 }
 .flash-page > header p {
   max-width: 62ch;
-  margin-bottom: 0;
+  margin: clamp(16px, 2.5vw, 24px) 0 0;
   color: var(--muted-text, var(--text-color));
   line-height: 1.6;
 }
@@ -419,6 +419,9 @@
   border: 1px solid var(--border-color);
   text-align: center;
 }
+.flash-study + .flash-modal {
+  background: transparent;
+}
 .flash-confirm-dialog h2,
 .flash-confirm-dialog p {
   color: var(--text-color) !important;
@@ -657,7 +660,7 @@
     border-radius: 20px;
   }
   .flash-page > header p {
-    margin: 4px 0 0;
+    margin: 16px 0 0;
     line-height: 1.45;
   }
   .flash-page > nav {

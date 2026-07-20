@@ -1128,7 +1128,7 @@ export default function FlashcardsHub({
                     event.target.closest("button, input, select, textarea, a")
                   )
                     return;
-                  openDeck(d, "study");
+                  openDeck(d, section === "mine" ? "edit" : "study");
                 }}
               >
                 <div className="flash-deck-meta">
