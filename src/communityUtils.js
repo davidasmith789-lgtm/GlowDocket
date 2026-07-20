@@ -2,6 +2,22 @@ export const COMMUNITY_POST_TYPES = ["Course Advice", "Study Guide", "Concept Ex
 export const COMMUNITY_REPORT_REASONS = ["Cheating or answer key", "Copyrighted material", "Personal information", "Harassment or harmful content", "Spam", "Other"];
 export const COMMUNITY_LIMITS = { course: 100, title: 140, body: 10000, tags: 8, tag: 30 };
 
+export function normalizeCommunityLinks(links) {
+  return (Array.isArray(links) ? links : []).map((link) => ({
+    name: String(link?.name || "").trim().slice(0, 80),
+    url: String(link?.url || "").trim().slice(0, 2000),
+  })).filter((link) => link.name || link.url).slice(0, 5);
+}
+
+export function isSafeCommunityLink(value) {
+  try {
+    const url = new URL(String(value));
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function parseCommunityTags(value) {
   return [...new Set(String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean))].slice(0, COMMUNITY_LIMITS.tags);
 }
@@ -13,6 +29,8 @@ export function validateCommunityPost(post, confirmed = false) {
   if (!String(post.title || "").trim() || String(post.title).length > COMMUNITY_LIMITS.title) return "Enter a title within 140 characters.";
   if (!String(post.body || "").trim() || String(post.body).length > COMMUNITY_LIMITS.body) return "Enter post text within 10,000 characters.";
   if (tags.length > COMMUNITY_LIMITS.tags || tags.some((tag) => tag.length > COMMUNITY_LIMITS.tag)) return "Use no more than eight tags, each within 30 characters.";
+  const links = normalizeCommunityLinks(post.links);
+  if (links.some((link) => !link.name || !isSafeCommunityLink(link.url))) return "Give every link a name and a valid http or https address.";
   if (!confirmed) return "Confirm the community sharing agreement.";
   return "";
 }

@@ -7,6 +7,7 @@ import {
   COMMUNITY_REPORT_REASONS,
   communityBodyBlocks,
   getCommunityFormattingMarker,
+  normalizeCommunityLinks,
   parseCommunityTags,
   validateCommunityPost,
 } from "../communityUtils.js";
@@ -18,6 +19,7 @@ const EMPTY = {
   title: "",
   body: "",
   tags: "",
+  links: [],
 };
 const PAGE_SIZE = 20;
 const messageFor = (error, fallback) =>
@@ -203,7 +205,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
       .catch(() => setCourseOptions([]));
   }, [formMode]);
   const openEdit = (post) => {
-    setDraft({ ...post, tags: (post.topic_tags || []).join(", ") });
+    setDraft({ ...post, tags: "", links: normalizeCommunityLinks(post.links) });
     setConfirmed(true);
     setSelected(null);
     setFormMode("edit");
@@ -211,6 +213,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
   const submit = async (event) => {
     event.preventDefault();
     const topic_tags = parseCommunityTags(draft.tags);
+    const links = normalizeCommunityLinks(draft.links);
     const errorText = validateCommunityPost(
       { ...draft, topic_tags },
       confirmed,
@@ -228,6 +231,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
             title: draft.title.trim(),
             body: draft.body,
             topic_tags,
+            links,
           })
           .eq("id", draft.id);
         if (error) throw error;
@@ -238,6 +242,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
           new_title: draft.title.trim(),
           new_body: draft.body,
           new_topic_tags: topic_tags,
+          new_links: links,
         });
         if (error) throw error;
         setRemainingPosts((count) => Math.max(0, Number(count ?? 3) - 1));
@@ -599,9 +604,9 @@ export default function CommunityHub({ userId, isMobile = false }) {
                 <h2>{post.title}</h2>
                 <Body text={post.body} preview />
               </div>
-              <div className="community-tags">
-                {(post.topic_tags || []).map((tag) => (
-                  <span key={tag}>#{tag}</span>
+              <div className="community-links">
+                {normalizeCommunityLinks(post.links).map((link) => (
+                  <a key={`${link.name}-${link.url}`} href={link.url} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>{link.name}</a>
                 ))}
               </div>
               <div className="community-card-footer">
@@ -749,16 +754,17 @@ export default function CommunityHub({ userId, isMobile = false }) {
                       }
                     />
                   </div>
-                  <label className="wide">
-                    Topic tags <small>Comma separated; up to 8</small>
-                    <input
-                      value={draft.tags}
-                      onChange={(e) =>
-                        setDraft({ ...draft, tags: e.target.value })
-                      }
-                      placeholder="algebra, exam prep"
-                    />
-                  </label>
+                  <fieldset className="wide community-link-editor">
+                    <legend>Links <small>Optional; show a name instead of the full address</small></legend>
+                    {draft.links.map((link, index) => (
+                      <div className="community-link-row" key={index}>
+                        <input aria-label={`Link ${index + 1} name`} placeholder="Link name" maxLength="80" value={link.name} onChange={(event) => setDraft({ ...draft, links: draft.links.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) })} />
+                        <input aria-label={`Link ${index + 1} URL`} placeholder="https://example.com" type="url" maxLength="2000" value={link.url} onChange={(event) => setDraft({ ...draft, links: draft.links.map((item, itemIndex) => itemIndex === index ? { ...item, url: event.target.value } : item) })} />
+                        <button type="button" aria-label={`Remove link ${index + 1}`} onClick={() => setDraft({ ...draft, links: draft.links.filter((_, itemIndex) => itemIndex !== index) })}>Remove</button>
+                      </div>
+                    ))}
+                    {draft.links.length < 5 && <button type="button" className="community-add-link" onClick={() => setDraft({ ...draft, links: [...draft.links, { name: "", url: "" }] })}>Add link</button>}
+                  </fieldset>
                 </div>
                 <section className="community-preview">
                   <h3>Preview</h3>
@@ -884,9 +890,9 @@ export default function CommunityHub({ userId, isMobile = false }) {
                     onMessage={setNotice}
                   />
                 )}
-                <div className="community-tags">
-                  {(selected.topic_tags || []).map((tag) => (
-                    <span key={tag}>#{tag}</span>
+                <div className="community-links">
+                  {normalizeCommunityLinks(selected.links).map((link) => (
+                    <a key={`${link.name}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">{link.name}</a>
                   ))}
                 </div>
                 <p className="community-detail-byline">

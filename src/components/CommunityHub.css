@@ -545,8 +545,84 @@
   margin: 18px 0 10px;
   font-size: clamp(1.18rem, 2vw, 1.42rem);
   line-height: 1.25;
-  text-align: center;
+  text-align: left;
 }
+.community-body :is(ul, ol) {
+  margin: 10px 0 10px 1.35rem;
+  padding: 0;
+  text-align: left;
+}
+.community-body li {
+  margin: 5px 0;
+  padding-left: .25rem;
+  line-height: 1.6;
+}
+.community-body p {
+  line-height: 1.65;
+  text-align: left;
+}
+.community-form-grid textarea#community-body {
+  min-height: 310px;
+  padding: 24px clamp(18px, 5vw, 54px);
+  border-radius: 4px;
+  background: color-mix(in srgb, #fff 96%, var(--primary-color));
+  color: #172033;
+  font-family: Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  box-shadow: 0 8px 24px #0002;
+  resize: vertical;
+}
+.community-link-editor {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+}
+.community-link-editor legend {
+  padding: 0 7px;
+  font-weight: 800;
+}
+.community-link-editor legend small {
+  color: var(--muted-text);
+  font-weight: 500;
+}
+.community-link-row {
+  display: grid;
+  grid-template-columns: minmax(120px, .7fr) minmax(180px, 1.3fr) auto;
+  gap: 8px;
+}
+.community-link-row button,
+.community-add-link {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-color);
+  background: var(--surface-alt);
+}
+.community-add-link { justify-self: start; }
+.community-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.community-links a {
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 32%, var(--border-color));
+  border-radius: 999px;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-alt));
+  font-size: .8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.community-links a:hover { text-decoration: underline; }
 .community-body.is-preview {
   color: color-mix(in srgb, var(--text-color) 82%, var(--muted-text));
   line-height: 1.6;
@@ -624,6 +700,9 @@
   .community-card:hover { transform: none; }
   .community-detail-header { position: relative; padding-top: 44px; }
   .community-detail-header > button { position: absolute; top: 0; right: 0; }
+  .community-link-row { grid-template-columns: 1fr; }
+  .community-link-row button { width: 100%; }
+  .community-form-grid textarea#community-body { padding: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .community-card,

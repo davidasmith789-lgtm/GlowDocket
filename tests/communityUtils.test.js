@@ -5,6 +5,8 @@ import {
   COMMUNITY_POST_TYPES,
   communityBodyBlocks,
   getCommunityFormattingMarker,
+  isSafeCommunityLink,
+  normalizeCommunityLinks,
   parseCommunityTags,
   validateCommunityPost,
 } from "../src/communityUtils.js";
@@ -110,4 +112,17 @@ test("Community posts use styled course and category pills", () => {
   assert.match(hub, /community-card-footer/);
   assert.match(styles, /\.community-card::before/);
   assert.match(styles, /backdrop-filter: blur\(8px\)/);
+});
+
+test("Community replaces tags with safe named links and document-style lists", () => {
+  assert.deepEqual(normalizeCommunityLinks([{ name: " Notes ", url: "https://example.com/notes" }]), [{ name: "Notes", url: "https://example.com/notes" }]);
+  assert.equal(isSafeCommunityLink("https://example.com"), true);
+  assert.equal(isSafeCommunityLink("javascript:alert(1)"), false);
+  const hub = readFileSync(new URL("../src/components/CommunityHub.jsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../src/components/CommunityHub.css", import.meta.url), "utf8");
+  assert.match(hub, /Link name/);
+  assert.match(hub, /href=\{link\.url\}/);
+  assert.doesNotMatch(hub, /Topic tags/);
+  assert.match(styles, /\.community-body :is\(ul, ol\)/);
+  assert.match(styles, /textarea#community-body/);
 });
