@@ -3,10 +3,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 test("assignment completion uses accessible dependency-free confetti with reduced-motion fallbacks", async () => {
-  const [app, css, rippleCanvas, packageJson] = await Promise.all([
+  const [app, css, rippleCanvas, adaptiveMotion, packageJson] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
     readFile(new URL("../src/components/CompletionRippleCanvas.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/adaptiveMotion.js", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
@@ -23,12 +24,19 @@ test("assignment completion uses accessible dependency-free confetti with reduce
   assert.match(rippleCanvas, /Math\.min\(preferredPixelRatio, MAX_DEVICE_PIXEL_RATIO, Math\.max\(1, pixelBudgetRatio\)\)/);
   assert.match(rippleCanvas, /desynchronized: true/);
   assert.match(rippleCanvas, /RIPPLE_FRAME_SAMPLES/);
+  assert.match(rippleCanvas, /LOW_MOTION_MAX_CANVAS_PIXELS = 2_000_000/);
+  assert.match(rippleCanvas, /adaptive-low-motion/);
   assert.match(rippleCanvas, /context\.ellipse/);
   assert.match(rippleCanvas, /RIPPLE_COUNT = 7/);
   assert.match(rippleCanvas, /RIPPLE_STAGGER_MS = 95/);
   assert.match(rippleCanvas, /RIPPLE_DURATION_MS = 1120/);
   assert.match(rippleCanvas, /prefers-reduced-motion: reduce/);
   assert.match(app, /event\.clientX/);
+  assert.match(app, /startAdaptiveMotionMonitor/);
+  assert.match(adaptiveMotion, /LOW_FPS_THRESHOLD = 44/);
+  assert.match(adaptiveMotion, /RECOVERY_FPS_THRESHOLD = 54/);
+  assert.match(adaptiveMotion, /classList\.add\(LOW_MOTION_CLASS\)/);
+  assert.match(css, /\.adaptive-low-motion \.App/);
   assert.doesNotMatch(app, /completion-gold-ripple-ring/);
   assert.match(app, /Array\.from\(\{ length: 12 \}/);
   assert.match(css, /@keyframes completion-confetti-fall/);

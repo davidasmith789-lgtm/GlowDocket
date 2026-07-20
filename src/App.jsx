@@ -57,6 +57,7 @@ import AchievementEmblem from "./components/AchievementEmblem.jsx";
 import CompletionRippleCanvas from "./components/CompletionRippleCanvas.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
+import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
 import { CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getGamificationTitle, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "./gamificationUtils.js";
 
 /*
@@ -1726,6 +1727,8 @@ function parseLocalVoiceAssignments(transcript, courses, defaults) {
  * returned JSX with the current page and updates only the necessary elements.
  */
 function App() {
+  useEffect(() => startAdaptiveMotionMonitor(), []);
+
   // ---------------------------------------------------------------------------
   // USER PROFILE AND STORAGE NAMESPACES
   // ---------------------------------------------------------------------------

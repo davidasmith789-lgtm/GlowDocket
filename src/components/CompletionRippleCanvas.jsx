@@ -6,6 +6,7 @@ const RIPPLE_DURATION_MS = 1120;
 const MAX_DEVICE_PIXEL_RATIO = 2;
 const MIN_SUPERSAMPLE_RATIO = 1.5;
 const MAX_CANVAS_PIXELS = 8_000_000;
+const LOW_MOTION_MAX_CANVAS_PIXELS = 2_000_000;
 const GOLD_FALLBACK = "#d4a72c";
 
 const RIPPLE_FRAMES = [
@@ -71,8 +72,10 @@ export default function CompletionRippleCanvas({ originX, originY, color = GOLD_
     const resizeCanvas = () => {
       viewportWidth = window.innerWidth;
       viewportHeight = window.innerHeight;
-      const pixelBudgetRatio = Math.sqrt(MAX_CANVAS_PIXELS / Math.max(1, viewportWidth * viewportHeight));
-      const preferredPixelRatio = Math.max(window.devicePixelRatio || 1, MIN_SUPERSAMPLE_RATIO);
+      const adaptiveLowMotion = document.documentElement.classList.contains("adaptive-low-motion");
+      const pixelBudget = adaptiveLowMotion ? LOW_MOTION_MAX_CANVAS_PIXELS : MAX_CANVAS_PIXELS;
+      const pixelBudgetRatio = Math.sqrt(pixelBudget / Math.max(1, viewportWidth * viewportHeight));
+      const preferredPixelRatio = adaptiveLowMotion ? 1 : Math.max(window.devicePixelRatio || 1, MIN_SUPERSAMPLE_RATIO);
       const pixelRatio = Math.min(preferredPixelRatio, MAX_DEVICE_PIXEL_RATIO, Math.max(1, pixelBudgetRatio));
       canvas.width = Math.max(1, Math.round(viewportWidth * pixelRatio));
       canvas.height = Math.max(1, Math.round(viewportHeight * pixelRatio));
@@ -101,14 +104,16 @@ export default function CompletionRippleCanvas({ originX, originY, color = GOLD_
       context.strokeStyle = color || GOLD_FALLBACK;
       context.lineCap = "round";
 
-      for (let index = 0; index < RIPPLE_COUNT; index += 1) {
+      const adaptiveLowMotion = document.documentElement.classList.contains("adaptive-low-motion");
+      const rippleIndexes = adaptiveLowMotion ? [0, 2, 4, 6] : [0, 1, 2, 3, 4, 5, 6];
+      for (const index of rippleIndexes) {
         const localElapsed = elapsed - index * RIPPLE_STAGGER_MS;
         if (localElapsed < 0 || localElapsed > RIPPLE_DURATION_MS) continue;
         const frame = RIPPLE_FRAME_SAMPLES[Math.min(RIPPLE_DURATION_MS, Math.round(localElapsed))];
         if (frame.opacity <= 0) continue;
         const radiusX = viewportMinimum * frame.radiusX / 100;
         const radiusY = viewportMinimum * frame.radiusY / 100;
-        drawStroke(radiusX, radiusY, frame.opacity * 0.3, clamp(viewportMinimum * 0.014, 10, 20));
+        if (!adaptiveLowMotion) drawStroke(radiusX, radiusY, frame.opacity * 0.3, clamp(viewportMinimum * 0.014, 10, 20));
         drawStroke(radiusX, radiusY, frame.opacity, clamp(viewportMinimum * 0.0042, 2, 6));
       }
       context.globalAlpha = 1;
