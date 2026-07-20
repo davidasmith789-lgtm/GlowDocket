@@ -27,6 +27,25 @@ export const GAMIFICATION_ACHIEVEMENTS = Object.freeze([
   { id: "focus-finish", title: "Focus Finisher", description: "Complete an assignment after a focus session.", icon: "🧠", tone: "rose" },
 ]);
 
+export const BADGE_MASTERY_CHALLENGES = Object.freeze([
+  { id: "first-completion", target: 50, description: "Complete 50 more assignments." },
+  { id: "five-completions", target: 75, description: "Complete 75 more assignments." },
+  { id: "ten-completions", target: 100, description: "Complete 100 more assignments." },
+  { id: "twenty-five-completions", target: 150, description: "Complete 150 more assignments." },
+  { id: "weekly-goal", target: 5, description: "Reach your weekly goal in 5 different weeks." },
+  { id: "double-weekly-goal", target: 3, description: "Double your weekly goal in 3 different weeks." },
+  { id: "three-productive-days", target: 3, description: "Work on 5 different days in 3 weeks." },
+  { id: "five-productive-days", target: 5, description: "Work on 5 different days in 5 weeks." },
+  { id: "high-priority", target: 25, description: "Complete 25 high-priority assignments." },
+  { id: "overdue-recovery", target: 15, description: "Recover 15 overdue assignments." },
+  { id: "ahead-of-schedule", target: 25, description: "Finish 25 assignments at least one day early." },
+  { id: "quick-win", target: 50, description: "Complete 50 assignments estimated at 30 minutes or less." },
+  { id: "deep-work", target: 20, description: "Complete 20 assignments estimated at 2 hours or more." },
+  { id: "course-five", target: 40, description: "Complete 40 assignments in one course." },
+  { id: "related-tasks", target: 30, description: "Finish 30 assignments through all related tasks." },
+  { id: "focus-finish", target: 25, description: "Complete 25 assignments after focus sessions." },
+]);
+
 export const GAMIFICATION_TITLES = Object.freeze([
   { id: "getting-started", label: "Getting Started", requirement: null },
   { id: "momentum-builder", label: "Momentum Builder", requirement: "five-completions" },
@@ -95,7 +114,13 @@ export function normalizeGamification(value = {}) {
   const selectedTitle = GAMIFICATION_TITLES.some((item) => item.id === source.selectedTitle && (!item.requirement || earned.has(item.requirement))) ? source.selectedTitle : DEFAULT_GAMIFICATION.selectedTitle;
   const selectedConfetti = GAMIFICATION_CONFETTI.some((item) => item.id === source.selectedConfetti && (!item.requirement || earned.has(item.requirement))) ? source.selectedConfetti : DEFAULT_GAMIFICATION.selectedConfetti;
   const selectedBadge = earned.has(source.selectedBadge) ? source.selectedBadge : earnedAchievementIds.at(-1) || "";
-  return { version: 1, weeklyGoal, earnedAchievementIds, selectedConfetti, selectedTitle, selectedBadge, showHeaderSummary: source.showHeaderSummary !== false };
+  const masteryIds = new Set(BADGE_MASTERY_CHALLENGES.map((item) => item.id));
+  const masteredBadgeIds = validIds(source.masteredBadgeIds, masteryIds);
+  const masteryProgress = Object.fromEntries(BADGE_MASTERY_CHALLENGES.map((challenge) => [challenge.id, Math.max(0, Math.min(challenge.target, Math.round(Number(source.masteryProgress?.[challenge.id]) || 0)))]));
+  const masteryMilestoneKeys = Object.fromEntries(["weekly-goal", "double-weekly-goal", "three-productive-days", "five-productive-days"].map((id) => [id, [...new Set((Array.isArray(source.masteryMilestoneKeys?.[id]) ? source.masteryMilestoneKeys[id] : []).map(String))].slice(-20)]));
+  const masteryCourseCounts = Object.fromEntries(Object.entries(source.masteryCourseCounts && typeof source.masteryCourseCounts === "object" ? source.masteryCourseCounts : {}).map(([course, count]) => [course, Math.max(0, Math.round(Number(count) || 0))]));
+  const badgeAnimationPreferences = Object.fromEntries(masteredBadgeIds.map((id) => [id, source.badgeAnimationPreferences?.[id] !== false]));
+  return { version: 2, weeklyGoal, earnedAchievementIds, selectedConfetti, selectedTitle, selectedBadge, showHeaderSummary: source.showHeaderSummary !== false, masteryUnlockedAt: typeof source.masteryUnlockedAt === "string" ? source.masteryUnlockedAt : "", masteryProgress, masteryMilestoneKeys, masteryCourseCounts, masteredBadgeIds, badgeAnimationPreferences };
 }
 
 export function grantAllGamificationRewards(value = {}) {
@@ -108,7 +133,59 @@ export function grantAllGamificationRewards(value = {}) {
     selectedConfetti: alreadyGranted ? current.selectedConfetti : "prism",
     selectedTitle: alreadyGranted ? current.selectedTitle : "assignment-ace",
     selectedBadge: alreadyGranted ? current.selectedBadge : "twenty-five-completions",
+    masteryUnlockedAt: current.masteryUnlockedAt || new Date().toISOString(),
+    masteryProgress: Object.fromEntries(BADGE_MASTERY_CHALLENGES.map((challenge) => [challenge.id, challenge.target])),
+    masteredBadgeIds: BADGE_MASTERY_CHALLENGES.map((challenge) => challenge.id),
+    badgeAnimationPreferences: Object.fromEntries(BADGE_MASTERY_CHALLENGES.map((challenge) => [challenge.id, true])),
   });
+}
+
+const getWeekKey = (now, weekStartsOn) => {
+  const { start } = getWeekRange(now, weekStartsOn);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+};
+
+export function advanceBadgeMastery(tasks, previousValue, nextValue, event = {}, options = {}) {
+  const previous = normalizeGamification(previousValue);
+  const next = normalizeGamification(nextValue);
+  const allBaseIds = GAMIFICATION_ACHIEVEMENTS.map((achievement) => achievement.id);
+  const wasUnlocked = allBaseIds.every((id) => previous.earnedAchievementIds.includes(id));
+  const isUnlocked = allBaseIds.every((id) => next.earnedAchievementIds.includes(id));
+  if (!isUnlocked) return next;
+  const unlockedAt = next.masteryUnlockedAt || (options.now || new Date()).toISOString();
+  if (!wasUnlocked) return normalizeGamification({ ...next, masteryUnlockedAt: unlockedAt });
+
+  const progress = { ...next.masteryProgress };
+  const milestoneKeys = Object.fromEntries(Object.entries(next.masteryMilestoneKeys).map(([id, keys]) => [id, [...keys]]));
+  const courseCounts = { ...next.masteryCourseCounts };
+  for (const id of ["first-completion", "five-completions", "ten-completions", "twenty-five-completions"]) progress[id] += 1;
+  if (event.priority === "HIGH") progress["high-priority"] += 1;
+  if (event.wasOverdue) progress["overdue-recovery"] += 1;
+  if (event.completedEarly) progress["ahead-of-schedule"] += 1;
+  if (Number(event.estimatedMinutes) > 0 && Number(event.estimatedMinutes) <= 30) progress["quick-win"] += 1;
+  if (Number(event.estimatedMinutes) >= 120) progress["deep-work"] += 1;
+  if (event.source === "related-tasks") progress["related-tasks"] += 1;
+  if (event.source === "focus") progress["focus-finish"] += 1;
+
+  const courseKey = String(event.course || "Other").trim().toLocaleLowerCase();
+  courseCounts[courseKey] = (courseCounts[courseKey] || 0) + 1;
+  progress["course-five"] = Math.max(progress["course-five"], courseCounts[courseKey]);
+  const weekly = summarizeWeeklyMomentum(tasks, next, options);
+  const weekKey = getWeekKey(options.now || new Date(), options.weekStartsOn);
+  const addMilestone = (id, qualifies) => {
+    if (!qualifies || milestoneKeys[id].includes(weekKey)) return;
+    milestoneKeys[id].push(weekKey);
+    progress[id] = milestoneKeys[id].length;
+  };
+  addMilestone("weekly-goal", weekly.goalReached);
+  addMilestone("double-weekly-goal", weekly.completed >= weekly.goal * 2);
+  addMilestone("three-productive-days", weekly.productiveDays >= 5);
+  addMilestone("five-productive-days", weekly.productiveDays >= 5);
+
+  const masteredBadgeIds = [...new Set([...next.masteredBadgeIds, ...BADGE_MASTERY_CHALLENGES.filter((challenge) => progress[challenge.id] >= challenge.target).map((challenge) => challenge.id)])];
+  const badgeAnimationPreferences = { ...next.badgeAnimationPreferences };
+  masteredBadgeIds.forEach((id) => { if (!(id in badgeAnimationPreferences)) badgeAnimationPreferences[id] = true; });
+  return normalizeGamification({ ...next, masteryUnlockedAt: unlockedAt, masteryProgress: progress, masteryMilestoneKeys: milestoneKeys, masteryCourseCounts: courseCounts, masteredBadgeIds, badgeAnimationPreferences });
 }
 
 export function getWeekRange(now = new Date(), weekStartsOn = "sunday") {

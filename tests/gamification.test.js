@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
+import { advanceBadgeMastery, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
 
 const completedTask = (id, completedAt, extra = {}) => ({ id, title: id, isCompleted: true, completedAt, ...extra });
 
@@ -55,7 +55,27 @@ test("the exact tester account receives every reward without granting lookalike 
   assert.equal(granted.selectedConfetti, "prism");
   assert.equal(granted.selectedTitle, "assignment-ace");
   assert.equal(granted.selectedBadge, "twenty-five-completions");
+  assert.deepEqual(new Set(granted.masteredBadgeIds), new Set(BADGE_MASTERY_CHALLENGES.map((item) => item.id)));
+  assert.ok(granted.masteredBadgeIds.every((id) => granted.badgeAnimationPreferences[id]));
   assert.equal(grantAllGamificationRewards({ ...granted, selectedConfetti: "rainbow" }).selectedConfetti, "rainbow");
+});
+
+test("badge mastery stays hidden until every base badge is earned and then tracks harder challenges", () => {
+  const allIds = GAMIFICATION_ACHIEVEMENTS.map((achievement) => achievement.id);
+  const almostAll = { ...DEFAULT_GAMIFICATION, earnedAchievementIds: allIds.slice(0, -1) };
+  const finalUnlock = { ...almostAll, earnedAchievementIds: allIds };
+  const now = new Date(2026, 6, 24, 12);
+  const unlocked = advanceBadgeMastery([], almostAll, finalUnlock, { priority: "HIGH", course: "Biology" }, { now });
+  assert.ok(unlocked.masteryUnlockedAt);
+  assert.equal(unlocked.masteryProgress["first-completion"], 0);
+  const progressed = advanceBadgeMastery([completedTask("mastery-1", now.toISOString())], unlocked, unlocked, { priority: "HIGH", estimatedMinutes: 20, completedEarly: true, source: "focus", course: "Biology" }, { now });
+  assert.equal(progressed.masteryProgress["first-completion"], 1);
+  assert.equal(progressed.masteryProgress["high-priority"], 1);
+  assert.equal(progressed.masteryProgress["quick-win"], 1);
+  assert.equal(progressed.masteryProgress["focus-finish"], 1);
+  assert.equal(progressed.masteryProgress["course-five"], 1);
+  const mastered = normalizeGamification({ ...progressed, masteredBadgeIds: ["first-completion"], badgeAnimationPreferences: { "first-completion": false } });
+  assert.equal(mastered.badgeAnimationPreferences["first-completion"], false);
 });
 
 test("celebration color studio counts unique sign-in days and unlocks at sixty", () => {

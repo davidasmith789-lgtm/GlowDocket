@@ -1134,10 +1134,17 @@ textarea {
 .gamification-week-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 18px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary-color) 52%, var(--border-color)); border-radius: 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 17%, var(--surface-alt)), color-mix(in srgb, var(--secondary-color) 10%, var(--surface-alt))); box-shadow: 0 12px 30px color-mix(in srgb, var(--primary-color) 12%, transparent), inset 0 0 0 1px color-mix(in srgb, white 8%, transparent); }
 .gamification-week-card > div { display: grid; }
 .gamification-week-card > div strong { font-size: 1.35rem; }
-.gamification-week-card progress { grid-column: 1 / -1; width: 100%; accent-color: var(--success-color); }
+.gamification-week-card progress { grid-column: 1 / -1; width: 100%; accent-color: var(--success-color); cursor: default; pointer-events: none; }
+.gamification-week-card progress::-webkit-progress-bar { border-radius: 999px; background: color-mix(in srgb, var(--border-color) 78%, transparent); }
+.gamification-week-card progress::-webkit-progress-value { border-radius: 999px; background: var(--success-color); }
+.gamification-week-card progress::-moz-progress-bar { border-radius: 999px; background: var(--success-color); }
 .gamification-week-card label { display: flex; align-items: center; gap: 8px; }
 .gamification-week-card input { width: 72px; }
 .achievement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.achievement-card-shell { display: grid; min-width: 0; align-content: start; gap: 8px; }
+.badge-mastery-reveal { display: grid; gap: 4px; margin: 12px 0 14px; padding: 14px 16px; border: 1px solid color-mix(in srgb, #fbbf24 58%, var(--border-color)); border-radius: 16px; background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 16%, var(--surface-alt)), color-mix(in srgb, #8b5cf6 10%, var(--surface-alt))); color: var(--text-color); box-shadow: 0 10px 28px color-mix(in srgb, #fbbf24 14%, transparent); }
+.badge-mastery-reveal strong { color: color-mix(in srgb, #fbbf24 72%, var(--text-color)); font-size: 1.05rem; }
+.badge-mastery-reveal span { color: var(--muted-text); line-height: 1.4; }
 .gamification-section-hint { color: var(--muted-text); }
 .achievement-card { --badge-color: var(--primary-color); --badge-soft: var(--surface-alt); position: relative; display: grid; min-width: 0; min-height: 230px; align-content: center; justify-items: center; gap: 13px; padding: 22px 18px 18px; overflow: hidden; contain: layout paint style; border: 1px solid color-mix(in srgb, var(--badge-color) 54%, var(--border-color)); border-radius: 22px; background: radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--badge-color) 28%, transparent), transparent 36%), linear-gradient(145deg, color-mix(in srgb, var(--badge-color) 16%, var(--card-bg)), var(--badge-soft)); color: var(--text-color); box-shadow: inset 0 4px 0 color-mix(in srgb, var(--badge-color) 82%, transparent), 0 8px 18px color-mix(in srgb, var(--badge-color) 10%, transparent); cursor: pointer; text-align: center; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
 .achievement-card::before { position: absolute; inset: 7px; border: 1px solid color-mix(in srgb, var(--badge-color) 24%, transparent); border-radius: 16px; content: ""; pointer-events: none; }
@@ -1176,6 +1183,49 @@ textarea {
 .tone-cyan { --badge-color: #06b6d4; --badge-soft: color-mix(in srgb, #06b6d4 8%, var(--surface-alt)); }
 .tone-lime { --badge-color: #84cc16; --badge-soft: color-mix(in srgb, #84cc16 8%, var(--surface-alt)); }
 .achievement-card-copy { display: grid; justify-items: center; gap: 5px; text-align: center; }
+.badge-mastery-progress { display: grid; width: 100%; gap: 5px; margin-top: 7px; padding-top: 9px; border-top: 1px solid color-mix(in srgb, var(--badge-color) 26%, var(--border-color)); }
+.badge-mastery-progress b { color: var(--text-color); font-size: .74rem; line-height: 1.35; }
+.badge-mastery-progress progress { width: 100%; height: 7px; accent-color: var(--badge-color); pointer-events: none; }
+.badge-mastery-progress > small { color: var(--muted-text); font-size: .68rem; font-weight: 850; }
+.badge-animation-toggle { display: flex; min-height: 42px; align-items: center; justify-content: center; gap: 9px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--primary-color) 30%, var(--border-color)); border-radius: 13px; background: var(--surface-alt); color: var(--text-color); cursor: pointer; font-size: .78rem; font-weight: 850; }
+.badge-animation-toggle input { width: 20px; height: 20px; accent-color: var(--primary-color); }
+.badge-animation-toggle b { min-width: 24px; color: var(--primary-color); }
+
+@media (min-width: 768px) {
+  .badge-first-completion.is-mastery-animated .achievement-medallion::before { animation: mastery-starburst 2.4s ease-in-out infinite; }
+  .badge-five-completions.is-mastery-animated .achievement-icon { animation: mastery-rocket 1.45s ease-in-out infinite; }
+  .badge-ten-completions.is-mastery-animated .achievement-rays { animation: mastery-neon-ring 3s linear infinite; }
+  .badge-twenty-five-completions.is-mastery-animated .achievement-ornament { animation: mastery-trophy-flare 1.8s ease-in-out infinite; }
+  .badge-weekly-goal.is-mastery-animated .achievement-rays { animation: mastery-target 1.9s ease-out infinite; }
+  .badge-double-weekly-goal.is-mastery-animated .achievement-medallion::before { animation: mastery-overcharge 1.1s ease-in-out infinite alternate; }
+  .badge-three-productive-days.is-mastery-animated .achievement-rays { animation: mastery-flame 1.7s ease-in-out infinite; }
+  .badge-five-productive-days.is-mastery-animated .achievement-medallion { animation: mastery-swords 2.1s ease-in-out infinite; }
+  .badge-high-priority.is-mastery-animated .achievement-core { animation: mastery-lightning .9s steps(2, end) infinite; }
+  .badge-overdue-recovery.is-mastery-animated .achievement-medallion::before { animation: mastery-shield 2.5s ease-in-out infinite; }
+  .badge-ahead-of-schedule.is-mastery-animated .achievement-medallion::after { animation: mastery-speed 1.3s ease-in-out infinite; }
+  .badge-quick-win.is-mastery-animated .achievement-icon { animation: mastery-run 1s ease-in-out infinite; }
+  .badge-deep-work.is-mastery-animated .achievement-core { animation: mastery-sunrise 2.8s ease-in-out infinite; }
+  .badge-course-five.is-mastery-animated .achievement-ornament { animation: mastery-cap 2s ease-in-out infinite; }
+  .badge-related-tasks.is-mastery-animated .achievement-rays { animation: mastery-path 2.2s linear infinite; }
+  .badge-focus-finish.is-mastery-animated .achievement-core { animation: mastery-focus 2s ease-in-out infinite; }
+}
+
+@keyframes mastery-starburst { 0%,100% { transform: rotate(0) scale(1); filter: brightness(1); } 50% { transform: rotate(18deg) scale(1.08); filter: brightness(1.45); } }
+@keyframes mastery-rocket { 0%,100% { transform: translate3d(0,2px,0) rotate(-3deg); } 45% { transform: translate3d(5px,-8px,0) rotate(7deg); } 60% { transform: translate3d(-2px,-5px,0) rotate(2deg); } }
+@keyframes mastery-neon-ring { to { transform: rotate(360deg); filter: hue-rotate(360deg); } }
+@keyframes mastery-trophy-flare { 0%,100% { transform: translate(-50%,0) scale(.8); opacity: .55; } 50% { transform: translate(-50%,-8px) scale(1.5) rotate(90deg); opacity: 1; } }
+@keyframes mastery-target { 0% { transform: scale(.72); opacity: 1; } 75%,100% { transform: scale(1.32); opacity: 0; } }
+@keyframes mastery-overcharge { from { transform: scale(.96) rotate(-2deg); filter: brightness(1); } to { transform: scale(1.08) rotate(2deg); filter: brightness(1.6) drop-shadow(0 0 9px var(--badge-color)); } }
+@keyframes mastery-flame { 0%,100% { transform: translateY(3px) scaleX(.92); } 45% { transform: translateY(-5px) scaleX(1.08) rotate(8deg); } 70% { transform: translateY(-2px) rotate(-6deg); } }
+@keyframes mastery-swords { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) scale(1.06); filter: drop-shadow(0 0 8px var(--badge-color)); } }
+@keyframes mastery-lightning { 0%,100% { filter: brightness(1); box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--badge-color) 32%, transparent); } 50% { filter: brightness(1.8); box-shadow: 0 0 20px var(--badge-color), inset 0 0 12px white; } }
+@keyframes mastery-shield { 0%,100% { transform: scale(.96); opacity: .82; } 50% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 8px var(--badge-color)); } }
+@keyframes mastery-speed { 0% { transform: skewX(-12deg) translateX(-6px); opacity: .45; } 55% { transform: skewX(-12deg) translateX(10px); opacity: 1; } 100% { transform: skewX(-12deg) translateX(18px); opacity: 0; } }
+@keyframes mastery-run { 0%,100% { transform: translateX(-4px) rotate(-7deg); } 50% { transform: translateX(5px) rotate(7deg) scale(1.08); } }
+@keyframes mastery-sunrise { 0%,100% { background-position: 50% 70%; filter: brightness(.95); } 50% { background-position: 50% 20%; filter: brightness(1.45) drop-shadow(0 0 7px var(--badge-color)); } }
+@keyframes mastery-cap { 0%,100% { transform: translate(-50%,1px) rotate(-8deg); } 50% { transform: translate(-50%,-10px) rotate(10deg) scale(1.2); } }
+@keyframes mastery-path { to { transform: rotate(360deg); background-position: 40px 0; } }
+@keyframes mastery-focus { 0%,100% { transform: scale(.92); box-shadow: 0 0 0 0 color-mix(in srgb, var(--badge-color) 42%, transparent); } 50% { transform: scale(1.06); box-shadow: 0 0 0 12px transparent; } }
 .achievement-grid small { color: var(--muted-text); }
 .achievement-grid em { color: var(--success-color); font-size: .72rem; font-style: normal; font-weight: 800; text-transform: uppercase; }
 .achievement-grid .is-locked { opacity: .65; }
@@ -7103,6 +7153,7 @@ html[data-theme="dark"] .sync-conflict-dialog {
   88% { opacity: .016; transform: translate(-50%,-50%) scale(20.6) rotateX(2.6deg); }
   90%, 100% { opacity: 0; filter: none; transform: translate(-50%,-50%) scale(22) rotateX(2deg); }
 }
+@media (max-width: 767px) { .badge-animation-toggle { display: none; } }
 
 /* Automatically shed decorative motion when sustained frame drops are detected. */
 .adaptive-low-motion .App *:not(.cloud-sync-status),
