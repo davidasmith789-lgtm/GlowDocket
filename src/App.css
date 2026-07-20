@@ -4710,6 +4710,7 @@ a,
 .studio-celebration-pill { display: inline-flex; margin-left: 6px; padding: 3px 7px; border: 1px solid color-mix(in srgb, var(--primary-color) 35%, var(--border-color)); border-radius: 999px; background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-alt)); color: var(--text-color); font-size: .66rem; font-weight: 900; vertical-align: middle; }
 .celebration-palette-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(32px, 1fr)); gap: 5px; margin: 0 0 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); }
 .celebration-palette-preview i { height: 22px; border-radius: 7px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 35%); }
+.celebration-disabled-note { margin: 0; padding: 14px; border: 1px dashed var(--border-color); border-radius: 13px; background: var(--surface-alt); color: var(--muted-text); line-height: 1.45; }
 .celebration-studio-preview-row { display: grid; grid-template-columns: minmax(0, 1fr) 180px; align-items: start; gap: 14px; margin-bottom: 12px; }
 .celebration-studio-preview-row > .hint-text { margin: 4px 0; }
 .celebration-color-preview { position: relative; isolation: isolate; width: 180px; height: 126px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary-color) 38%, var(--border-color)); border-radius: 15px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary-color) 13%, var(--surface-alt)), var(--surface-color)); box-shadow: inset 0 0 0 1px color-mix(in srgb, white 8%, transparent); }
@@ -4723,13 +4724,18 @@ a,
 .celebration-color-preview.preview-sparkles i { width: 9px; height: 9px; clip-path: polygon(50% 0,60% 39%,100% 50%,60% 61%,50% 100%,40% 61%,0 50%,40% 39%); animation-name: celebration-preview-twinkle; }
 .celebration-color-preview.preview-ribbons i { width: 4px; height: 18px; border-radius: 999px; animation-name: celebration-preview-ribbon; }
 .celebration-color-preview.preview-prism i { width: 9px; height: 9px; border-radius: 2px; animation-name: celebration-preview-prism; }
-.celebration-color-preview.preview-meteors i { width: 4px; height: 16px; border-radius: 999px; background: linear-gradient(transparent, var(--preview-color)); animation-duration: calc(var(--preview-duration) - 350ms); animation-name: celebration-preview-sweep; }
-.celebration-color-preview.preview-bubbles i { width: 11px; height: 11px; border: 2px solid var(--preview-color); border-radius: 50%; background: transparent; animation-name: celebration-preview-twinkle; }
-.celebration-color-preview.preview-leaves i { width: 8px; height: 14px; border-radius: 90% 10% 80% 20%; animation-name: celebration-preview-wave; }
+.celebration-color-preview.preview-meteors i { width: 4px; height: 16px; border-radius: 999px; background: linear-gradient(transparent, var(--preview-color)); animation-duration: calc(var(--preview-duration) - 350ms); animation-name: celebration-preview-meteor; }
+.celebration-color-preview.preview-bubbles i { width: 13px; height: 13px; border: 2px solid var(--preview-color); border-radius: 50%; background: radial-gradient(circle at 30% 26%, rgb(255 255 255 / 82%) 0 9%, transparent 11% 35%, color-mix(in srgb, var(--preview-color) 18%, transparent) 37%); animation-name: celebration-preview-bubble; }
+.celebration-color-preview.preview-bubbles i:nth-child(3n) { width: 8px; height: 8px; }
+.celebration-color-preview.preview-bubbles i:nth-child(4n) { width: 18px; height: 18px; }
+.celebration-color-preview.preview-leaves i { width: 8px; height: 14px; border-radius: 90% 10% 80% 20%; transform-origin: 50% 10%; animation-name: celebration-preview-leaf; }
 .celebration-color-preview.preview-snow i { width: 10px; height: 10px; clip-path: polygon(44% 0,56% 0,56% 38%,89% 19%,95% 29%,62% 48%,95% 67%,89% 77%,56% 58%,56% 100%,44% 100%,44% 58%,11% 77%,5% 67%,38% 48%,5% 29%,11% 19%,44% 38%); animation-name: celebration-preview-twinkle; }
-.celebration-color-preview.preview-fireworks i { width: 8px; height: 8px; border-radius: 50% 0 50% 50%; animation-duration: calc(var(--preview-duration) - 280ms); animation-name: celebration-preview-prism; }
+.celebration-color-preview.preview-fireworks i { top: 0; width: 5px; height: 5px; border-radius: 50%; animation-duration: calc(var(--preview-duration) - 180ms); animation-name: celebration-preview-firework; }
+.celebration-color-preview.preview-fireworks i:nth-child(3n+1) { left: 25%; }
+.celebration-color-preview.preview-fireworks i:nth-child(3n+2) { left: 50%; }
+.celebration-color-preview.preview-fireworks i:nth-child(3n) { left: 75%; }
 .celebration-color-preview.preview-hearts i { width: 11px; height: 10px; clip-path: polygon(50% 92%,8% 50%,4% 30%,12% 12%,30% 5%,50% 21%,70% 5%,88% 12%,96% 30%,92% 50%); animation-name: celebration-preview-twinkle; }
-.celebration-color-preview.preview-pixels i { width: 8px; height: 8px; border-radius: 0; animation-timing-function: steps(10, end); }
+.celebration-color-preview.preview-pixels i { width: 8px; height: 8px; border-radius: 0; animation-timing-function: linear; }
 .celebration-color-preview.preview-crowns i { width: 13px; height: 11px; border-radius: 1px; clip-path: polygon(0 15%,25% 48%,50% 0,75% 48%,100% 15%,87% 100%,13% 100%); animation-name: celebration-preview-twinkle; }
 @keyframes celebration-preview-fall { 0% { opacity: 0; transform: translate3d(0,0,0) rotate(0); } 8% { opacity: 1; } 48% { transform: translate3d(var(--preview-drift),62px,0) rotate(190deg); } 92% { opacity: 1; } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * -.5),142px,0) rotate(390deg); } }
 @keyframes celebration-preview-twinkle { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.2); } 18% { opacity: 1; transform: translate3d(var(--preview-drift),22px,0) scale(1.2) rotate(70deg); } 42% { opacity: .25; } 66% { opacity: 1; transform: translate3d(calc(var(--preview-drift) * -.6),88px,0) scale(1.35) rotate(250deg); } 100% { opacity: 0; transform: translate3d(var(--preview-drift),142px,0) scale(.25) rotate(430deg); } }
@@ -4737,6 +4743,10 @@ a,
 @keyframes celebration-preview-sweep { 0% { opacity: 0; transform: translate3d(-18px,0,0) rotate(-60deg); } 8% { opacity: 1; } 40% { transform: translate3d(20px,55px,0) rotate(120deg); } 72% { transform: translate3d(-15px,100px,0) rotate(280deg); } 100% { opacity: 0; transform: translate3d(18px,142px,0) rotate(440deg); } }
 @keyframes celebration-preview-ribbon { 0% { opacity: 0; transform: translate3d(0,0,0) rotateX(0) rotateZ(-20deg); } 8% { opacity: 1; } 35% { transform: translate3d(var(--preview-drift),48px,0) rotateX(280deg) rotateZ(35deg); } 68% { transform: translate3d(calc(var(--preview-drift) * -.7),95px,0) rotateX(580deg) rotateZ(-40deg); } 100% { opacity: 0; transform: translate3d(var(--preview-drift),142px,0) rotateX(850deg) rotateZ(55deg); } }
 @keyframes celebration-preview-prism { 0% { opacity: 0; transform: translate3d(-12px,0,0) rotate(0) scale(.4); } 8% { opacity: 1; } 32% { transform: translate3d(14px,42px,0) rotate(220deg) scale(1.25); } 64% { transform: translate3d(-14px,88px,0) rotate(470deg) scale(.55); } 100% { opacity: 0; transform: translate3d(12px,142px,0) rotate(760deg) scale(1.15); } }
+@keyframes celebration-preview-meteor { 0% { opacity: 0; transform: translate3d(0,0,0); } 7% { opacity: 1; } 94% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0,142px,0); } }
+@keyframes celebration-preview-bubble { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.65); } 10% { opacity: .9; } 30% { transform: translate3d(10px,38px,0) scale(1.08); } 60% { transform: translate3d(-9px,82px,0) scale(.88); } 85% { opacity: .9; transform: translate3d(11px,116px,0) scale(1.12); } 100% { opacity: 0; transform: translate3d(-5px,142px,0) scale(.94); } }
+@keyframes celebration-preview-leaf { 0% { opacity: 0; transform: translate3d(0,0,0) rotate(-30deg); } 8% { opacity: 1; } 24% { transform: translate3d(13px,30px,0) rotate(42deg); } 48% { transform: translate3d(-12px,65px,0) rotate(-40deg); } 72% { transform: translate3d(14px,101px,0) rotate(44deg); } 100% { opacity: 0; transform: translate3d(-9px,142px,0) rotate(-32deg); } }
+@keyframes celebration-preview-firework { 0% { opacity: 0; transform: translate3d(0,142px,0) scale(.3); } 18% { opacity: 1; } 42% { transform: translate3d(0,48px,0) scale(.55); } 52% { transform: translate3d(0,38px,0) scale(1.6); } 70% { opacity: 1; transform: translate3d(var(--preview-drift),68px,0) scale(1); } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * 1.8),112px,0) scale(.2); } }
 @media (max-width: 650px) { .celebration-studio-preview-row { grid-template-columns: 1fr; } .celebration-color-preview { width: 100%; } }
 .reduce-motion .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); }
 @media (prefers-reduced-motion: reduce) { .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); } }
@@ -6539,18 +6549,23 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .completion-confetti.is-ribbons i:nth-child(even) { animation-name: completion-ribbon-flutter-reverse; }
 .completion-confetti.is-prism i { width: 12px; height: 12px; border-radius: 3px; background: conic-gradient(from 45deg, var(--celebration-1, #f43f5e), var(--celebration-2, #f59e0b), var(--celebration-4, #22c55e), var(--celebration-5, #06b6d4), var(--celebration-6, #6366f1), var(--celebration-1, #f43f5e)); animation-name: completion-prism-helix; animation-duration: calc(var(--confetti-duration) + 250ms); animation-timing-function: cubic-bezier(.3,.55,.4,1); }
 .completion-confetti.is-prism i:nth-child(even) { animation-name: completion-prism-helix-reverse; animation-delay: calc(var(--confetti-delay) + 180ms); }
-.completion-confetti.is-meteors i { width: 5px; height: 20px; border-radius: 999px 999px 3px 3px; background: linear-gradient(transparent, var(--celebration-1, #fb7185)); animation-name: completion-rainbow-sweep; animation-duration: calc(var(--confetti-duration) - 650ms); }
+.completion-confetti.is-meteors i { width: 5px; height: 20px; border-radius: 999px 999px 3px 3px; background: linear-gradient(transparent, var(--celebration-1, #fb7185)); animation-name: completion-meteor-drop; animation-duration: calc(var(--confetti-duration) - 650ms); animation-timing-function: linear; }
 .completion-confetti.is-meteors i:nth-child(even) { background: linear-gradient(transparent, var(--celebration-2, #fbbf24)); }
-.completion-confetti.is-bubbles i { width: 14px; height: 14px; border: 2px solid var(--celebration-5, #67e8f9); border-radius: 50%; background: transparent; animation-name: completion-sparkle-float; animation-duration: calc(var(--confetti-duration) + 900ms); }
+.completion-confetti.is-bubbles i { width: 17px; height: 17px; border: 2px solid var(--celebration-5, #67e8f9); border-radius: 50%; background: radial-gradient(circle at 30% 26%, rgb(255 255 255 / 82%) 0 8%, transparent 10% 34%, color-mix(in srgb, var(--celebration-5, #67e8f9) 18%, transparent) 36% 100%); animation-name: completion-bubble-fall; animation-duration: calc(var(--confetti-duration) + 900ms); }
+.completion-confetti.is-bubbles i:nth-child(3n) { width: 10px; height: 10px; }
+.completion-confetti.is-bubbles i:nth-child(4n) { width: 23px; height: 23px; }
 .completion-confetti.is-bubbles i:nth-child(even) { border-color: var(--celebration-6, #c084fc); }
-.completion-confetti.is-leaves i { width: 10px; height: 17px; border-radius: 90% 10% 80% 20%; background: var(--celebration-4, #22c55e); animation-name: completion-course-wave; animation-duration: calc(var(--confetti-duration) + 450ms); }
-.completion-confetti.is-leaves i:nth-child(even) { background: var(--celebration-2, #f59e0b); animation-name: completion-course-wave-reverse; }
+.completion-confetti.is-leaves i { width: 10px; height: 17px; border-radius: 90% 10% 80% 20%; background: var(--celebration-4, #22c55e); animation-name: completion-leaf-rock; animation-duration: calc(var(--confetti-duration) + 450ms); animation-timing-function: ease-in-out; transform-origin: 50% 10%; }
+.completion-confetti.is-leaves i:nth-child(even) { background: var(--celebration-2, #f59e0b); animation-name: completion-leaf-rock-reverse; }
 .completion-confetti.is-snow i { width: 12px; height: 12px; background: var(--celebration-5, #bae6fd); clip-path: polygon(44% 0,56% 0,56% 38%,89% 19%,95% 29%,62% 48%,95% 67%,89% 77%,56% 58%,56% 100%,44% 100%,44% 58%,11% 77%,5% 67%,38% 48%,5% 29%,11% 19%,44% 38%); animation-name: completion-stars-fall; animation-duration: calc(var(--confetti-duration) + 1200ms); }
 .completion-confetti.is-snow i:nth-child(even) { background: var(--celebration-3, #f8fafc); }
-.completion-confetti.is-fireworks i { width: 10px; height: 10px; border-radius: 50% 0 50% 50%; animation-name: completion-prism-helix; animation-duration: calc(var(--confetti-duration) - 500ms); }
-.completion-confetti.is-fireworks i:nth-child(even) { animation-name: completion-prism-helix-reverse; }
+.completion-confetti.is-fireworks i { top: 0; width: 6px; height: 6px; border-radius: 50%; animation-name: completion-firework-burst; animation-duration: calc(var(--confetti-duration) - 350ms); animation-timing-function: cubic-bezier(.2,.7,.35,1); }
+.completion-confetti.is-fireworks i:nth-child(3n+1) { left: 24%; }
+.completion-confetti.is-fireworks i:nth-child(3n+2) { left: 50%; animation-delay: calc(var(--confetti-delay) + 520ms); }
+.completion-confetti.is-fireworks i:nth-child(3n) { left: 76%; animation-delay: calc(var(--confetti-delay) + 980ms); }
+.completion-confetti.is-fireworks i:nth-child(even) { animation-name: completion-firework-burst-reverse; }
 .completion-confetti.is-hearts i { width: 13px; height: 12px; border-radius: 3px; background: var(--celebration-1, #fb7185); clip-path: polygon(50% 92%,8% 50%,4% 30%,12% 12%,30% 5%,50% 21%,70% 5%,88% 12%,96% 30%,92% 50%); animation-name: completion-sparkle-float; }
-.completion-confetti.is-pixels i { width: 10px; height: 10px; border-radius: 0; animation-name: completion-confetti-fall; animation-timing-function: steps(12, end); }
+.completion-confetti.is-pixels i { width: 10px; height: 10px; border-radius: 0; animation-name: completion-confetti-fall; animation-timing-function: linear; }
 .completion-confetti.is-crowns i { width: 16px; height: 13px; border-radius: 2px; background: linear-gradient(var(--celebration-3, #fde68a), var(--celebration-2, #f59e0b)); clip-path: polygon(0 15%,25% 48%,50% 0,75% 48%,100% 15%,87% 100%,13% 100%); animation-name: completion-stars-fall; }
 
 .celebration-stars .completion-celebration-toast { border-color: #fbbf24; background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 22%, var(--surface-color)), color-mix(in srgb, #fff7c2 8%, var(--surface-color))); box-shadow: 0 18px 48px color-mix(in srgb, #fbbf24 28%, transparent); }
@@ -7020,6 +7035,64 @@ html[data-theme="dark"] .sync-conflict-dialog {
   74% { transform: translate3d(var(--confetti-sway), 74vh, 0) rotate(calc(var(--confetti-rotation) * .74)) scale(var(--confetti-scale)); }
   94% { opacity: 1; }
   100% { opacity: 0; transform: translate3d(var(--confetti-drift), 100vh, 0) rotate(var(--confetti-rotation)) scale(var(--confetti-scale)); }
+}
+
+@keyframes completion-meteor-drop {
+  0% { opacity: 0; transform: translate3d(0, -110%, 0); }
+  5% { opacity: 1; }
+  94% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(0, 100vh, 0); }
+}
+
+@keyframes completion-bubble-fall {
+  0% { opacity: 0; transform: translate3d(0, -110%, 0) scale(.65); }
+  7% { opacity: .9; }
+  22% { transform: translate3d(18px, 20vh, 0) scale(1.08); }
+  44% { transform: translate3d(-16px, 42vh, 0) scale(.86); }
+  66% { transform: translate3d(20px, 65vh, 0) scale(1.12); }
+  86% { transform: translate3d(-12px, 85vh, 0) scale(.92); }
+  94% { opacity: .85; }
+  100% { opacity: 0; transform: translate3d(8px, 100vh, 0) scale(1.16); }
+}
+
+@keyframes completion-leaf-rock {
+  0% { opacity: 0; transform: translate3d(0, -110%, 0) rotate(-28deg); }
+  5% { opacity: 1; }
+  20% { transform: translate3d(24px, 18vh, 0) rotate(42deg); }
+  40% { transform: translate3d(-20px, 39vh, 0) rotate(-38deg); }
+  60% { transform: translate3d(26px, 59vh, 0) rotate(46deg); }
+  80% { transform: translate3d(-18px, 79vh, 0) rotate(-34deg); }
+  94% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(16px, 100vh, 0) rotate(30deg); }
+}
+
+@keyframes completion-leaf-rock-reverse {
+  0% { opacity: 0; transform: translate3d(0, -110%, 0) rotate(28deg); }
+  5% { opacity: 1; }
+  20% { transform: translate3d(-24px, 18vh, 0) rotate(-42deg); }
+  40% { transform: translate3d(20px, 39vh, 0) rotate(38deg); }
+  60% { transform: translate3d(-26px, 59vh, 0) rotate(-46deg); }
+  80% { transform: translate3d(18px, 79vh, 0) rotate(34deg); }
+  94% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(-16px, 100vh, 0) rotate(-30deg); }
+}
+
+@keyframes completion-firework-burst {
+  0% { opacity: 0; transform: translate3d(0, 100vh, 0) scale(.35); }
+  12% { opacity: 1; }
+  38% { opacity: 1; transform: translate3d(0, 36vh, 0) scale(.55); }
+  48% { opacity: 1; transform: translate3d(0, 30vh, 0) scale(1.7); }
+  64% { opacity: 1; transform: translate3d(var(--confetti-drift), 42vh, 0) scale(1.05); }
+  100% { opacity: 0; transform: translate3d(calc(var(--confetti-drift) * 2.3), 70vh, 0) scale(.2); }
+}
+
+@keyframes completion-firework-burst-reverse {
+  0% { opacity: 0; transform: translate3d(0, 100vh, 0) scale(.35); }
+  12% { opacity: 1; }
+  38% { opacity: 1; transform: translate3d(0, 52vh, 0) scale(.55); }
+  48% { opacity: 1; transform: translate3d(0, 46vh, 0) scale(1.7); }
+  64% { opacity: 1; transform: translate3d(calc(var(--confetti-drift) * -1), 56vh, 0) scale(1.05); }
+  100% { opacity: 0; transform: translate3d(calc(var(--confetti-drift) * -2.3), 82vh, 0) scale(.2); }
 }
 
 @keyframes completion-stars-fall {

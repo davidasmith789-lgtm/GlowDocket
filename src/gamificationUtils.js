@@ -41,6 +41,7 @@ export const GAMIFICATION_TITLES = Object.freeze([
 ]);
 
 export const GAMIFICATION_CONFETTI = Object.freeze([
+  { id: "none", label: "None", requirement: null },
   { id: "standard", label: "Glow Mix", requirement: null },
   { id: "stars", label: "Golden Stars", requirement: "weekly-goal" },
   { id: "course", label: "Course Colors", requirement: "three-productive-days" },

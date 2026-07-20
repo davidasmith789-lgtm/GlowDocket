@@ -275,6 +275,7 @@ const CELEBRATION_COLOR_FIELDS = [
 ];
 
 const CELEBRATION_STYLE_COLOR_FIELDS = {
+  none: [],
   standard: ["palette1", "palette2", "palette3", "palette4", "palette5", "palette6"],
   stars: ["palette3"],
   course: ["palette1"],
@@ -4375,7 +4376,7 @@ function App() {
     handleAddFieldSettingChange("gamification", nextGamification);
     completionCelebrationSequenceRef.current += 1;
     const selectedStyleColors = getCelebrationColorsForStyle(userSettings.celebrationColors, nextGamification.selectedConfetti);
-    setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
+    if (nextGamification.selectedConfetti !== "none") setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
     setTasks(updated);
     saveTasksForCurrentUser(updated);
     if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) runImmediateReminderMutation(completedTask.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
@@ -4499,7 +4500,7 @@ function App() {
       handleAddFieldSettingChange("gamification", nextGamification);
       completionCelebrationSequenceRef.current += 1;
       const selectedStyleColors = getCelebrationColorsForStyle(userSettings.celebrationColors, nextGamification.selectedConfetti);
-      setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
+      if (nextGamification.selectedConfetti !== "none") setCompletionCelebration({ id: `${taskId}-${completionCelebrationSequenceRef.current}`, title: currentTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(currentTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
       setTasks(updated);
       saveTasksForCurrentUser(updated);
     } else {
@@ -8056,7 +8057,7 @@ function App() {
   const celebrationStudioProgress = getCelebrationStudioProgress(currentUser && currentUser !== "guest" ? userSettings.signInDays : [], accountMode === "cloud" && currentUser !== "guest" && isGamificationTestAccount(accountEmail));
   const selectedCelebrationOption = GAMIFICATION_CONFETTI.find((option) => option.id === gamification.selectedConfetti) || GAMIFICATION_CONFETTI[0];
   const selectedCelebrationColors = getCelebrationColorsForStyle(userSettings.celebrationColors, selectedCelebrationOption.id);
-  const selectedCelebrationColorFields = [
+  const selectedCelebrationColorFields = selectedCelebrationOption.id === "none" ? [] : [
     ...(CELEBRATION_STYLE_COLOR_FIELDS[selectedCelebrationOption.id] || CELEBRATION_STYLE_COLOR_FIELDS.standard).map((key) => {
       const field = CELEBRATION_COLOR_FIELDS.find((candidate) => candidate.key === key);
       return { ...field, label: CELEBRATION_STYLE_COLOR_LABELS[selectedCelebrationOption.id]?.[key] || field.label };
@@ -9840,7 +9841,7 @@ function App() {
                       </div>
                       {colorGroupsOpen.celebrations === true && (
                         <>
-                          <div className="celebration-studio-preview-row"><p className="hint-text">Editing <strong>{selectedCelebrationOption.label}</strong>. Choose another celebration in Cosmetics to give it a separate palette.</p><div className={`celebration-color-preview preview-${selectedCelebrationOption.id}`} aria-label={`Animated preview of ${selectedCelebrationOption.label}`}><strong>Preview</strong><div aria-hidden="true">{CELEBRATION_PREVIEW_PARTICLES.map((particle, index) => <i key={particle.id} style={{ "--preview-x": particle.x, "--preview-delay": particle.delay, "--preview-duration": particle.duration, "--preview-drift": particle.drift, "--preview-color": selectedCelebrationPreviewColors[index % selectedCelebrationPreviewColors.length] }} />)}</div></div></div>
+                          {selectedCelebrationOption.id === "none" ? <p className="celebration-disabled-note">Celebrations are turned off. Select a celebration in Cosmetics to preview and customize it.</p> : <><div className="celebration-studio-preview-row"><p className="hint-text">Editing <strong>{selectedCelebrationOption.label}</strong>. Choose another celebration in Cosmetics to give it a separate palette.</p><div className={`celebration-color-preview preview-${selectedCelebrationOption.id}`} aria-label={`Animated preview of ${selectedCelebrationOption.label}`}><strong>Preview</strong><div aria-hidden="true">{CELEBRATION_PREVIEW_PARTICLES.map((particle, index) => <i key={particle.id} style={{ "--preview-x": particle.x, "--preview-delay": particle.delay, "--preview-duration": particle.duration, "--preview-drift": particle.drift, "--preview-color": selectedCelebrationPreviewColors[index % selectedCelebrationPreviewColors.length] }} />)}</div></div></div>
                           <div className="celebration-palette-preview" aria-hidden="true">{selectedCelebrationColorFields.filter((field) => field.key.startsWith("palette")).map((field) => <i key={field.key} style={{ backgroundColor: selectedCelebrationColors[field.key] || field.fallback }} />)}</div>
                           <div className="color-control-grid">
                             {selectedCelebrationColorFields.map((field) => {
@@ -9848,7 +9849,7 @@ function App() {
                               const draftKey = `celebration:${selectedCelebrationOption.id}:${field.key}`;
                               return <label className="color-control" key={field.key}><span>{field.label}</span><div><input type="color" value={value} onChange={(event) => { handleCelebrationColorChange(field.key, event.target.value); clearColorTextDraft(draftKey); }} aria-label={`${field.label} color`} /><input type="text" value={colorTextDrafts[draftKey] ?? value.toUpperCase()} onChange={(event) => setColorTextDrafts((drafts) => ({ ...drafts, [draftKey]: event.target.value }))} onBlur={() => commitColorTextDraft(draftKey, value, (color) => handleCelebrationColorChange(field.key, color))} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") clearColorTextDraft(draftKey); }} maxLength={7} spellCheck="false" aria-label={`${field.label} hex color`} /></div></label>;
                             })}
-                          </div>
+                          </div></>}
                         </>
                       )}
                     </div>

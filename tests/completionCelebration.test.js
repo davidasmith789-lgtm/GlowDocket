@@ -21,6 +21,10 @@ test("assignment completion uses accessible dependency-free confetti with reduce
     "completion-sparkle-float",
     "completion-ribbon-flutter",
     "completion-prism-helix",
+    "completion-meteor-drop",
+    "completion-bubble-fall",
+    "completion-leaf-rock",
+    "completion-firework-burst",
   ]) {
     assert.match(css, new RegExp(`@keyframes ${animationName}`));
   }

@@ -38,6 +38,8 @@ test("expanded reward collection includes elaborate badges, titles, and celebrat
   assert.ok(GAMIFICATION_ACHIEVEMENTS.length >= 16);
   assert.ok(GAMIFICATION_TITLES.length >= 10);
   assert.ok(GAMIFICATION_CONFETTI.length >= 15);
+  assert.equal(GAMIFICATION_CONFETTI[0].id, "none");
+  assert.equal(DEFAULT_GAMIFICATION.selectedConfetti, "standard");
   for (const id of ["meteors", "bubbles", "leaves", "snow", "fireworks", "hearts", "pixels", "crowns"]) assert.ok(GAMIFICATION_CONFETTI.some((option) => option.id === id));
   const tasks = Array.from({ length: 25 }, (_, index) => completedTask(`task-${index}`, `2026-07-${String(1 + (index % 24)).padStart(2, "0")}T12:00:00`, { course: "Biology" }));
   const unlocked = getNewAchievementIds(tasks, DEFAULT_GAMIFICATION, { completedEarly: true, estimatedMinutes: 20 }, { now: new Date(2026, 6, 24) });
@@ -105,6 +107,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /How to unlock more titles/);
   assert.match(app, /How to unlock more celebrations/);
   assert.match(app, /lockedCelebrationOptions\.length > 0/);
+  assert.match(app, /selectedConfetti !== "none"/);
+  assert.match(app, /Celebrations are turned off/);
   assert.match(app, /<details className="cosmetic-unlock-guide">/);
   assert.match(app, /CELEBRATION_PREVIEW_PARTICLES\.map/);
   assert.match(app, />Preview<\/strong>/);
