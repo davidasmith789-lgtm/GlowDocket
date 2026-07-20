@@ -25,6 +25,18 @@ export const GAMIFICATION_ACHIEVEMENTS = Object.freeze([
   { id: "course-five", title: "Course Champion", description: "Complete five assignments in one course.", icon: "🎓", tone: "cyan" },
   { id: "related-tasks", title: "Step by Step", description: "Finish an assignment by completing all related tasks.", icon: "🪜", tone: "emerald" },
   { id: "focus-finish", title: "Focus Finisher", description: "Complete an assignment after a focus session.", icon: "🧠", tone: "rose" },
+  { id: "flash-first-deck", title: "First Deck", description: "Create your first Flashcard deck.", icon: "🗂️", tone: "cyan" },
+  { id: "flash-first-session", title: "First Study Session", description: "Complete a meaningful Flashcard session.", icon: "📚", tone: "violet" },
+  { id: "flash-25-cards", title: "25 Unique Cards", description: "Review 25 unique Flashcards.", icon: "✨", tone: "gold" },
+  { id: "flash-100-cards", title: "100 Unique Cards", description: "Review 100 unique Flashcards.", icon: "💯", tone: "orange" },
+  { id: "flash-500-cards", title: "500 Unique Cards", description: "Review 500 unique Flashcards.", icon: "🌟", tone: "legendary" },
+  { id: "flash-three-days", title: "Three Study Days", description: "Study Flashcards on three days.", icon: "🔥", tone: "orange" },
+  { id: "flash-seven-day-streak", title: "Seven-Day Study Streak", description: "Study Flashcards seven days in a row.", icon: "📅", tone: "emerald" },
+  { id: "flash-before-target", title: "Ahead of the Test", description: "Complete a deck before its target date.", icon: "⏩", tone: "cyan" },
+  { id: "flash-first-shared", title: "First Shared Deck", description: "Publish your first Shared Deck.", icon: "🌐", tone: "blue" },
+  { id: "flash-first-helpful", title: "Helpful Creator", description: "Receive your first Helpful deck rating.", icon: "👍", tone: "lime" },
+  { id: "flash-ten-helpful", title: "Trusted Study Creator", description: "Receive 10 Helpful deck ratings.", icon: "🏅", tone: "gold" },
+  { id: "flash-community-creator", title: "Community Study Creator", description: "Attach a Shared Deck to Community.", icon: "🤝", tone: "rose" },
 ]);
 
 export const BADGE_MASTERY_CHALLENGES = Object.freeze([

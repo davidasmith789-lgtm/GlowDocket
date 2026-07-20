@@ -1,0 +1,6 @@
+with objects as(
+select'table'::text kind,schemaname schema_name,tablename object_name,null::text parent from pg_tables where schemaname='public'and(tablename like'flashcard%'or tablename='community_post_decks') union all
+select'function',n.nspname,p.proname||'('||pg_get_function_identity_arguments(p.oid)||')',null from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'and(p.proname like'flashcard%'or p.proname in('save_flashcard_deck','copy_flashcard_deck','complete_flashcard_session','rate_flashcard_deck','report_flashcard_deck','moderate_flashcard_deck','attach_deck_to_community_post','add_cards_to_owned_deck','unlink_assignment_flashcards')) union all
+select'trigger',event_object_schema,trigger_name,event_object_table from information_schema.triggers where event_object_schema='public'and(trigger_name like'flashcard%'or event_object_table like'flashcard%') union all
+select'index',schemaname,indexname,tablename from pg_indexes where schemaname='public'and(indexname like'flash%'or tablename like'flashcard%'or tablename='community_post_decks') union all
+select'policy',schemaname,policyname,tablename from pg_policies where schemaname='public'and(tablename like'flashcard%'or tablename='community_post_decks'))select*from objects order by kind,object_name;

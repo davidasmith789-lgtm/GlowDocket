@@ -56,6 +56,8 @@ import FocusSession from "./components/FocusSession.jsx";
 import AchievementEmblem from "./components/AchievementEmblem.jsx";
 import CompletionRippleCanvas from "./components/CompletionRippleCanvas.jsx";
 import CommunityHub from "./components/CommunityHub.jsx";
+import FlashcardsHub from "./components/FlashcardsHub.jsx";
+import AssignmentFlashcards from "./components/AssignmentFlashcards.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
 import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
@@ -1948,6 +1950,12 @@ function App() {
   const [externalPushSubscriptionVersion, setExternalPushSubscriptionVersion] = useState(0);
   const externalPushSyncTimerRef = useRef(null);
   const [currentTab, setCurrentTab] = useState(() => recoveryRequestedOnLoad() ? "settings" : "dashboard");
+  const [flashcardLaunchDeckId, setFlashcardLaunchDeckId] = useState("");
+  useEffect(() => {
+    const openFlashcardDeck = (event) => { setFlashcardLaunchDeckId(event.detail?.deckId || ""); setCurrentTab("flashcards"); };
+    addEventListener("glowdocket:open-flashcard-deck", openFlashcardDeck);
+    return () => removeEventListener("glowdocket:open-flashcard-deck", openFlashcardDeck);
+  }, []);
   const [feedbackCategory, setFeedbackCategory] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackScreenshot, setFeedbackScreenshot] = useState(null);
@@ -4662,6 +4670,7 @@ function App() {
       return updated;
     });
     if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) runImmediateReminderMutation(taskBeingDeleted.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
+    if (accountMode === "cloud") getSupabaseBrowserClient().then((client) => client.rpc("unlink_assignment_flashcards", { assignment_id: id })).catch(() => {});
   };
 
   const handleRestoreDeleted = (id) => {
@@ -6612,6 +6621,7 @@ function App() {
       </div>
       {renderTaskAttachments(task)}
       {renderSubtaskChecklist(task)}
+      {import.meta.env.VITE_FLASHCARDS_ENABLED === "true" && accountMode === "cloud" && <AssignmentFlashcards assignment={task} userId={currentUser} dueDate={getEffectiveDeadline(task)?.toISOString?.().slice(0, 10) || ""} />}
       {renderCopyAction(task)}
     </>
   );
@@ -8112,10 +8122,11 @@ function App() {
   const lockedCelebrationOptions = GAMIFICATION_CONFETTI.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
   const updateGamification = (changes) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...gamification, ...changes }));
   const communityEnabled = import.meta.env.VITE_COMMUNITY_HUB_ENABLED === "true" && accountMode === "cloud";
-  const mobileOwnedTabs = ["dashboard", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses", ...(communityEnabled ? ["community"] : [])];
+  const flashcardsEnabled = import.meta.env.VITE_FLASHCARDS_ENABLED === "true" && accountMode === "cloud";
+  const mobileOwnedTabs = ["dashboard", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses", ...(communityEnabled ? ["community"] : []), ...(flashcardsEnabled ? ["flashcards"] : [])];
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
   const mobileTaskTabActive = ["todo", "inProgress", "completed"].includes(currentTab);
-  const mobileMoreActive = ["settings", "recommendations", "mobile-tools", "mobile-courses", "community"].includes(currentTab);
+  const mobileMoreActive = ["settings", "recommendations", "mobile-tools", "mobile-courses", "community", "flashcards"].includes(currentTab);
   const selectedMobileSettingsSection = SETTINGS_SECTIONS.find((section) => section.id === settingsSection) || SETTINGS_SECTIONS[0];
   const normalizedHelpSearch = helpSearch.trim().toLowerCase();
   const visiblePersonalizationTips = PERSONALIZATION_TIPS
@@ -8343,6 +8354,7 @@ function App() {
           </button>
 
           {communityEnabled && <button className={`tab-button ${currentTab === "community" ? "active" : ""}`} onClick={() => setCurrentTab("community")}>Community</button>}
+          {flashcardsEnabled && <button className={`tab-button ${currentTab === "flashcards" ? "active" : ""}`} onClick={() => setCurrentTab("flashcards")}>Flashcards</button>}
 
           <button
             data-tab="settings"
@@ -8459,6 +8471,7 @@ function App() {
               </>
             )}
             {communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} isMobile />}
+            {flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} isMobile reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(ids) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...ids])] }))} />}
           </main>
         )}
 
@@ -8474,6 +8487,7 @@ function App() {
 
         {currentTab === "dashboard" && renderWorkspaceForTab("dashboard")}
         {!isMobileUi && communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} />}
+        {!isMobileUi && flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(ids) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...ids])] }))} />}
         {!isMobileUi && currentTab !== "dashboard" && currentTab !== "calendar" && renderWorkspaceExtrasForTab(currentTab)}
 
         {/*
@@ -10637,6 +10651,7 @@ function App() {
                     <button type="button" onClick={() => openMobileTab("mobile-tools")}><strong>Study tools</strong><span>Reminders and course overview</span></button>
                     <button type="button" onClick={() => openMobileTab("mobile-courses")}><strong>Courses & colors</strong><span>Manage your subjects</span></button>
                     {communityEnabled && <button type="button" onClick={() => openMobileTab("community")}><strong>Community</strong><span>Course advice and study guides</span></button>}
+                    {flashcardsEnabled && <button type="button" onClick={() => openMobileTab("flashcards")}><strong>Flashcards</strong><span>Create and study decks</span></button>}
                     <button type="button" onClick={() => openMobileTab("recommendations")}><strong>Feedback & Support</strong><span>Report a problem or suggest an improvement</span></button>
                     <button type="button" onClick={() => openMobileTab("settings")}><strong>Settings</strong><span>Appearance, reminders, and account</span></button>
                   </div>
