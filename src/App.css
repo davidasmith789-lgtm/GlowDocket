@@ -1173,6 +1173,32 @@ textarea {
 .badge-quick-win .achievement-medallion::after, .badge-ahead-of-schedule .achievement-medallion::after { transform: skewX(-12deg); }
 .badge-course-five .achievement-medallion::before { clip-path: polygon(50% 0,94% 23%,87% 76%,50% 100%,13% 76%,6% 23%); }
 .badge-related-tasks .achievement-rays { background: repeating-conic-gradient(var(--badge-accent) 0 7deg, transparent 7deg 30deg); }
+.badge-flash-first-deck .achievement-medallion::before { clip-path: polygon(12% 18%,88% 18%,100% 50%,88% 82%,12% 82%,0 50%); }
+.badge-flash-first-session .achievement-core { border-radius: 38% 62% 42% 58%; }
+.badge-flash-25-cards .achievement-rays { border-style: dashed; background: repeating-linear-gradient(45deg, transparent 0 7px, color-mix(in srgb, var(--badge-color) 38%, transparent) 7px 9px); }
+.badge-flash-100-cards .achievement-medallion::before { clip-path: polygon(50% 0,64% 14%,83% 8%,86% 29%,100% 42%,86% 56%,91% 78%,68% 80%,50% 100%,34% 82%,10% 88%,13% 64%,0 48%,16% 34%,12% 12%,35% 17%); }
+.badge-flash-500-cards .achievement-medallion { --badge-accent: #fff7bd; transform: scale(1.07); }
+.badge-flash-three-days .achievement-core { border-radius: 18px; }
+.badge-flash-seven-day-streak .achievement-medallion::before { clip-path: polygon(50% 0,62% 18%,84% 10%,82% 34%,100% 50%,80% 62%,84% 90%,59% 82%,50% 100%,39% 81%,14% 90%,18% 63%,0 50%,20% 36%,15% 10%,38% 18%); }
+.badge-flash-before-target .achievement-rays { border-style: solid; background: conic-gradient(transparent 0 72%, color-mix(in srgb, white 62%, var(--badge-color)) 72% 78%, transparent 78%); }
+.badge-flash-first-shared .achievement-core { background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--badge-color) 74%, white) 0 13%, #111827 15% 23%, color-mix(in srgb, var(--badge-color) 65%, #111827) 25% 56%, #111827 58%); }
+.badge-flash-first-helpful .achievement-medallion::after { transform: rotate(8deg); }
+.badge-flash-ten-helpful .achievement-medallion::before { clip-path: polygon(50% 0,61% 17%,82% 8%,85% 30%,100% 43%,88% 62%,92% 87%,66% 84%,50% 100%,34% 84%,8% 87%,12% 62%,0 43%,15% 30%,18% 8%,39% 17%); }
+.badge-flash-community-creator .achievement-rays { background: repeating-conic-gradient(from 15deg, var(--badge-accent) 0 3deg, transparent 3deg 24deg); }
+.achievement-card[class*="badge-flash-"] .achievement-ornament { font-size: 0; }
+.achievement-card[class*="badge-flash-"] .achievement-ornament::after { font-size: .8rem; }
+.badge-flash-first-deck .achievement-ornament::after { content: "+"; }
+.badge-flash-first-session .achievement-ornament::after { content: "✓"; }
+.badge-flash-25-cards .achievement-ornament::after { content: "25"; font-size: .58rem; }
+.badge-flash-100-cards .achievement-ornament::after { content: "∞"; }
+.badge-flash-500-cards .achievement-ornament::after { content: "★"; }
+.badge-flash-three-days .achievement-ornament::after { content: "3"; }
+.badge-flash-seven-day-streak .achievement-ornament::after { content: "7"; }
+.badge-flash-before-target .achievement-ornament::after { content: "↗"; }
+.badge-flash-first-shared .achievement-ornament::after { content: "◎"; }
+.badge-flash-first-helpful .achievement-ornament::after { content: "+1"; font-size: .58rem; }
+.badge-flash-ten-helpful .achievement-ornament::after { content: "10"; font-size: .58rem; }
+.badge-flash-community-creator .achievement-ornament::after { content: "◇"; }
 .tone-gold { --badge-color: #f59e0b; --badge-soft: color-mix(in srgb, #f59e0b 8%, var(--surface-alt)); }
 .tone-violet { --badge-color: #8b5cf6; --badge-soft: color-mix(in srgb, #8b5cf6 8%, var(--surface-alt)); }
 .tone-blue { --badge-color: #3b82f6; --badge-soft: color-mix(in srgb, #3b82f6 8%, var(--surface-alt)); }
@@ -1208,6 +1234,18 @@ textarea {
   .badge-course-five.is-mastery-animated .achievement-ornament { animation: mastery-cap 2s ease-in-out infinite; }
   .badge-related-tasks.is-mastery-animated .achievement-rays { animation: mastery-path 2.2s linear infinite; }
   .badge-focus-finish.is-mastery-animated .achievement-core { animation: mastery-focus 2s ease-in-out infinite; }
+  .badge-flash-first-deck.is-mastery-animated .achievement-medallion::before { animation: flash-mastery-deck 2.6s ease-in-out infinite; }
+  .badge-flash-first-session.is-mastery-animated .achievement-icon { animation: flash-mastery-page 1.8s ease-in-out infinite; transform-origin: left center; }
+  .badge-flash-25-cards.is-mastery-animated .achievement-rays { animation: flash-mastery-spark-stack 2.2s steps(6, end) infinite; }
+  .badge-flash-100-cards.is-mastery-animated .achievement-core { animation: flash-mastery-century 3.4s linear infinite; }
+  .badge-flash-500-cards.is-mastery-animated .achievement-medallion { animation: flash-mastery-superstar 2s ease-in-out infinite; }
+  .badge-flash-three-days.is-mastery-animated .achievement-ornament { animation: flash-mastery-calendar 2.4s ease-in-out infinite; }
+  .badge-flash-seven-day-streak.is-mastery-animated .achievement-icon { animation: flash-mastery-streak 1.25s ease-in-out infinite alternate; }
+  .badge-flash-before-target.is-mastery-animated .achievement-rays { animation: flash-mastery-clock 1.6s cubic-bezier(.2,.8,.2,1) infinite; }
+  .badge-flash-first-shared.is-mastery-animated .achievement-core { animation: flash-mastery-orbit 3s ease-in-out infinite; }
+  .badge-flash-first-helpful.is-mastery-animated .achievement-medallion::after { animation: flash-mastery-thumbs-up 1.7s ease-in-out infinite; }
+  .badge-flash-ten-helpful.is-mastery-animated .achievement-ornament { animation: flash-mastery-medal 2.1s cubic-bezier(.4,0,.2,1) infinite; }
+  .badge-flash-community-creator.is-mastery-animated .achievement-rays { animation: flash-mastery-network 2.8s ease-in-out infinite; }
 }
 
 @keyframes mastery-starburst { 0%,100% { transform: rotate(0) scale(1); filter: brightness(1); } 50% { transform: rotate(18deg) scale(1.08); filter: brightness(1.45); } }
@@ -1226,6 +1264,18 @@ textarea {
 @keyframes mastery-cap { 0%,100% { transform: translate(-50%,1px) rotate(-8deg); } 50% { transform: translate(-50%,-10px) rotate(10deg) scale(1.2); } }
 @keyframes mastery-path { to { transform: rotate(360deg); background-position: 40px 0; } }
 @keyframes mastery-focus { 0%,100% { transform: scale(.92); box-shadow: 0 0 0 0 color-mix(in srgb, var(--badge-color) 42%, transparent); } 50% { transform: scale(1.06); box-shadow: 0 0 0 12px transparent; } }
+@keyframes flash-mastery-deck { 0%,100% { transform: translateX(-2px) rotate(-2deg); } 45% { transform: translateX(4px) rotate(3deg); filter: brightness(1.4); } 65% { transform: translateX(0) rotate(-1deg); } }
+@keyframes flash-mastery-page { 0%,100% { transform: perspective(90px) rotateY(0); } 48% { transform: perspective(90px) rotateY(-28deg) scale(.96); } 60% { transform: perspective(90px) rotateY(8deg); } }
+@keyframes flash-mastery-spark-stack { 0%,100% { transform: scale(.9); filter: brightness(1); } 50% { transform: scale(1.08) rotate(8deg); filter: brightness(1.65) hue-rotate(35deg); } }
+@keyframes flash-mastery-century { to { transform: rotate(360deg); filter: hue-rotate(360deg) drop-shadow(0 0 7px var(--badge-color)); } }
+@keyframes flash-mastery-superstar { 0%,100% { transform: scale(1.03); filter: brightness(1); } 45% { transform: scale(1.14) rotate(4deg); filter: brightness(1.55) drop-shadow(0 0 12px var(--badge-color)); } 60% { transform: scale(1.09) rotate(-3deg); } }
+@keyframes flash-mastery-calendar { 0%,35%,100% { transform: translateY(0) rotate(0); } 45% { transform: translateY(-9px) rotate(-12deg); } 58% { transform: translateY(-4px) rotate(8deg); } }
+@keyframes flash-mastery-streak { from { transform: translateY(3px) scale(.94); filter: brightness(1); } to { transform: translateY(-4px) scale(1.08); filter: brightness(1.6) drop-shadow(0 0 8px #fb923c); } }
+@keyframes flash-mastery-clock { 0% { transform: rotate(0) scale(.9); opacity: .7; } 70% { transform: rotate(300deg) scale(1.08); opacity: 1; } 100% { transform: rotate(360deg) scale(.9); opacity: .7; } }
+@keyframes flash-mastery-orbit { 0%,100% { border-radius: 50%; transform: rotate(0); } 50% { border-radius: 42% 58% 52% 48%; transform: rotate(180deg); filter: drop-shadow(0 0 9px var(--badge-color)); } }
+@keyframes flash-mastery-thumbs-up { 0%,100% { transform: rotate(8deg) translateY(0); } 45% { transform: rotate(-7deg) translateY(-7px) scale(1.08); } 65% { transform: rotate(12deg) translateY(-3px); } }
+@keyframes flash-mastery-medal { 0%,100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-7px) rotate(360deg); } 58% { transform: translateY(1px) rotate(360deg); } }
+@keyframes flash-mastery-network { 0%,100% { transform: scale(.88); opacity: .65; } 50% { transform: scale(1.15) rotate(30deg); opacity: 1; filter: drop-shadow(0 0 8px var(--badge-color)); } }
 .achievement-grid small { color: var(--muted-text); }
 .achievement-grid em { color: var(--success-color); font-size: .72rem; font-style: normal; font-weight: 800; text-transform: uppercase; }
 .achievement-grid .is-locked { opacity: .65; }

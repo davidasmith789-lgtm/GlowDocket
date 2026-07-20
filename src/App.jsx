@@ -61,7 +61,7 @@ import AssignmentFlashcards from "./components/AssignmentFlashcards.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
 import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
-import { advanceBadgeMastery, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getGamificationTitle, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "./gamificationUtils.js";
+import { advanceBadgeMastery, applyFlashcardMasterySummary, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getGamificationTitle, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "./gamificationUtils.js";
 
 /*
  * GLOWDOCKET APPLICATION MAP
@@ -8487,7 +8487,7 @@ function App() {
               </>
             )}
             {communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} isMobile />}
-            {flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} isMobile reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(ids) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...ids])] }))} />}
+            {flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} isMobile reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(summary) => { const withBadges = normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...(summary.badges || [])])] }); handleAddFieldSettingChange("gamification", applyFlashcardMasterySummary(withBadges, summary)); }} />}
           </main>
         )}
 
@@ -8503,7 +8503,7 @@ function App() {
 
         {currentTab === "dashboard" && renderWorkspaceForTab("dashboard")}
         {!isMobileUi && communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} />}
-        {!isMobileUi && flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(ids) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...ids])] }))} />}
+        {!isMobileUi && flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(summary) => { const withBadges = normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...(summary.badges || [])])] }); handleAddFieldSettingChange("gamification", applyFlashcardMasterySummary(withBadges, summary)); }} />}
         {!isMobileUi && currentTab !== "dashboard" && currentTab !== "calendar" && renderWorkspaceExtrasForTab(currentTab)}
 
         {/*

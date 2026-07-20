@@ -118,6 +118,18 @@ test("Full Color Studio exposes Community and Flashcards feature colors", () => 
   assert.match(hubStyles, /--primary-color: var\(--flashcard-accent-color\)/);
 });
 
+test("every Flashcard reward has distinct emblem artwork and a mastery animation", () => {
+  const emblems = read("src/components/AchievementEmblem.jsx");
+  const css = read("src/App.css");
+  const gamification = read("src/gamificationUtils.js");
+  const ids = [...gamification.matchAll(/id: "(flash-[^"]+)"/g)].map((match) => match[1]).slice(0, 12);
+  assert.equal(new Set(ids).size, 12);
+  for (const id of ids) {
+    assert.match(emblems, new RegExp(`case "${id}"`));
+    assert.match(css, new RegExp(`\\.badge-${id}\\.is-mastery-animated`));
+  }
+});
+
 test("Flashcards includes no uploads, paid AI, or service-role secret", () => {
   const all = `${sql}\n${hub}\n${community}\n${assignment}`;
   assert.doesNotMatch(

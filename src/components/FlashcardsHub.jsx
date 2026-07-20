@@ -94,7 +94,7 @@ export default function FlashcardsHub({
       .then(({ data }) => {
         if (data) {
           setRewardSummary(data);
-          rewardsCallbackRef.current(data.badges || []);
+          rewardsCallbackRef.current(data);
         }
       })
       .catch(() => {});
@@ -203,7 +203,7 @@ export default function FlashcardsHub({
             (id) => !(rewardSummary?.badges || []).includes(id),
           );
           setRewardSummary(rewards);
-          rewardsCallbackRef.current(rewards.badges || []);
+          rewardsCallbackRef.current(rewards);
           if (unlocked && !reduceMotion) {
             setCelebrating(true);
             setTimeout(() => setCelebrating(false), 1800);

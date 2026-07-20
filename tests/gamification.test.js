@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { advanceBadgeMastery, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
+import { advanceBadgeMastery, applyFlashcardMasterySummary, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum } from "../src/gamificationUtils.js";
 
 const completedTask = (id, completedAt, extra = {}) => ({ id, title: id, isCompleted: true, completedAt, ...extra });
 
@@ -78,6 +78,26 @@ test("badge mastery stays hidden until every base badge is earned and then track
   assert.equal(progressed.masteryProgress["course-five"], 1);
   const mastered = normalizeGamification({ ...progressed, masteredBadgeIds: ["first-completion"], badgeAnimationPreferences: { "first-completion": false } });
   assert.equal(mastered.badgeAnimationPreferences["first-completion"], false);
+});
+
+test("flashcard badges have approachable mastery tasks driven by aggregate study totals", () => {
+  const flashChallenges = BADGE_MASTERY_CHALLENGES.filter((challenge) => challenge.id.startsWith("flash-"));
+  assert.equal(flashChallenges.length, 12);
+  assert.ok(flashChallenges.every((challenge) => challenge.target > 1));
+  const allIds = GAMIFICATION_ACHIEVEMENTS.map((achievement) => achievement.id);
+  const mastered = applyFlashcardMasterySummary({ ...DEFAULT_GAMIFICATION, earnedAchievementIds: allIds }, {
+    deck_count: 3,
+    session_count: 3,
+    unique_cards: 550,
+    study_days: 4,
+    recent_study_days: 8,
+    before_target_sessions: 2,
+    shared_deck_count: 2,
+    helpful_count: 12,
+    community_deck_count: 2,
+  });
+  assert.ok(flashChallenges.every((challenge) => mastered.masteredBadgeIds.includes(challenge.id)));
+  assert.ok(flashChallenges.every((challenge) => mastered.badgeAnimationPreferences[challenge.id]));
 });
 
 test("celebration color studio counts unique sign-in days and unlocks at sixty", () => {

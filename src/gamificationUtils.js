@@ -56,7 +56,34 @@ export const BADGE_MASTERY_CHALLENGES = Object.freeze([
   { id: "course-five", target: 40, description: "Complete 40 assignments in one course." },
   { id: "related-tasks", target: 30, description: "Finish 30 assignments through all related tasks." },
   { id: "focus-finish", target: 25, description: "Complete 25 assignments after focus sessions." },
+  { id: "flash-first-deck", target: 3, description: "Create 3 Flashcard decks." },
+  { id: "flash-first-session", target: 3, description: "Complete 3 study sessions." },
+  { id: "flash-25-cards", target: 40, description: "Review 40 unique Flashcards." },
+  { id: "flash-100-cards", target: 125, description: "Review 125 unique Flashcards." },
+  { id: "flash-500-cards", target: 550, description: "Review 550 unique Flashcards." },
+  { id: "flash-three-days", target: 4, description: "Study Flashcards on 4 different days." },
+  { id: "flash-seven-day-streak", target: 8, description: "Study on 8 days in a rolling week-plus." },
+  { id: "flash-before-target", target: 2, description: "Finish 2 sessions before a target date." },
+  { id: "flash-first-shared", target: 2, description: "Publish 2 Shared Decks." },
+  { id: "flash-first-helpful", target: 2, description: "Receive 2 Helpful ratings." },
+  { id: "flash-ten-helpful", target: 12, description: "Receive 12 Helpful ratings." },
+  { id: "flash-community-creator", target: 2, description: "Attach 2 decks to Community." },
 ]);
+
+const FLASHCARD_MASTERY_METRICS = Object.freeze({
+  "flash-first-deck": "deck_count",
+  "flash-first-session": "session_count",
+  "flash-25-cards": "unique_cards",
+  "flash-100-cards": "unique_cards",
+  "flash-500-cards": "unique_cards",
+  "flash-three-days": "study_days",
+  "flash-seven-day-streak": "recent_study_days",
+  "flash-before-target": "before_target_sessions",
+  "flash-first-shared": "shared_deck_count",
+  "flash-first-helpful": "helpful_count",
+  "flash-ten-helpful": "helpful_count",
+  "flash-community-creator": "community_deck_count",
+});
 
 export const GAMIFICATION_TITLES = Object.freeze([
   { id: "getting-started", label: "Getting Started", requirement: null },
@@ -198,6 +225,23 @@ export function advanceBadgeMastery(tasks, previousValue, nextValue, event = {},
   const badgeAnimationPreferences = { ...next.badgeAnimationPreferences };
   masteredBadgeIds.forEach((id) => { if (!(id in badgeAnimationPreferences)) badgeAnimationPreferences[id] = true; });
   return normalizeGamification({ ...next, masteryUnlockedAt: unlockedAt, masteryProgress: progress, masteryMilestoneKeys: milestoneKeys, masteryCourseCounts: courseCounts, masteredBadgeIds, badgeAnimationPreferences });
+}
+
+export function applyFlashcardMasterySummary(value, summary = {}) {
+  const current = normalizeGamification(value);
+  const allBaseIds = GAMIFICATION_ACHIEVEMENTS.map((achievement) => achievement.id);
+  if (!allBaseIds.every((id) => current.earnedAchievementIds.includes(id))) return current;
+  const progress = { ...current.masteryProgress };
+  for (const [id, metric] of Object.entries(FLASHCARD_MASTERY_METRICS)) {
+    progress[id] = Math.max(progress[id] || 0, Math.round(Number(summary[metric]) || 0));
+  }
+  const masteredBadgeIds = [...new Set([
+    ...current.masteredBadgeIds,
+    ...BADGE_MASTERY_CHALLENGES.filter((challenge) => progress[challenge.id] >= challenge.target).map((challenge) => challenge.id),
+  ])];
+  const badgeAnimationPreferences = { ...current.badgeAnimationPreferences };
+  masteredBadgeIds.forEach((id) => { if (!(id in badgeAnimationPreferences)) badgeAnimationPreferences[id] = true; });
+  return normalizeGamification({ ...current, progress, masteryProgress: progress, masteredBadgeIds, badgeAnimationPreferences });
 }
 
 export function getWeekRange(now = new Date(), weekStartsOn = "sunday") {
