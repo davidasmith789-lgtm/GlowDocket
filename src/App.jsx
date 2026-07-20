@@ -8105,8 +8105,8 @@ function App() {
   const earnedAchievements = new Set(gamification.earnedAchievementIds);
   const masteryUnlocked = GAMIFICATION_ACHIEVEMENTS.every((achievement) => earnedAchievements.has(achievement.id));
   const masteredBadges = new Set(gamification.masteredBadgeIds);
-  const selectedBadgeAnimated = Boolean(selectedAchievement && masteredBadges.has(selectedAchievement.id) && gamification.badgeAnimationPreferences[selectedAchievement.id] !== false);
   const selectedAchievement = GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === gamification.selectedBadge);
+  const selectedBadgeAnimated = Boolean(selectedAchievement && masteredBadges.has(selectedAchievement.id) && gamification.badgeAnimationPreferences[selectedAchievement.id] !== false);
   const lockedTitleOptions = GAMIFICATION_TITLES.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
   const lockedCelebrationOptions = GAMIFICATION_CONFETTI.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
   const updateGamification = (changes) => handleAddFieldSettingChange("gamification", normalizeGamification({ ...gamification, ...changes }));

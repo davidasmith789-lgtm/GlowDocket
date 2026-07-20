@@ -101,6 +101,7 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(css, /\.completion-celebration\s*\{[\s\S]*?inset: 0;/);
   assert.match(css, /translate3d\(var\(--confetti-drift\), 100vh/);
   assert.match(app, /momentum-badge-stage/);
+  assert.ok(app.indexOf("const selectedAchievement =") < app.indexOf("const selectedBadgeAnimated ="));
   assert.match(app, /momentum-badge-count/);
   assert.match(app, /selectedBadge: achievement\.id/);
   assert.match(css, /\.achievement-card\.is-selected/);
