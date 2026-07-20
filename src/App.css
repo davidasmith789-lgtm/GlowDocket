@@ -6523,11 +6523,11 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .completion-firework { position: absolute; top: var(--burst-y); left: var(--burst-x); width: 1px; height: 1px; }
 .completion-firework > b { position: absolute; z-index: 2; width: 9px; height: 9px; border: 2px solid white; border-radius: 50%; background: var(--celebration-3, #facc15); box-shadow: 0 0 12px var(--celebration-3, #facc15); opacity: 0; transform: translate(-50%, -50%) scale(.2); animation: completion-firework-core 500ms ease-out var(--burst-delay) both; }
 .completion-firework > i { position: absolute; top: -1px; left: 0; width: clamp(34px, 5.5vw, 86px); height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--burst-color), color-mix(in srgb, var(--burst-color) 70%, white), transparent); opacity: 0; transform: rotate(var(--burst-angle)) translateX(0) scaleX(.05); transform-origin: 0 50%; will-change: transform, opacity; animation: completion-firework-ray 500ms cubic-bezier(.12,.62,.28,1) var(--burst-delay) both; }
-.completion-gold-ripple { position: absolute; inset: 0; overflow: hidden; contain: strict; pointer-events: none; perspective: 900px; }
-.completion-gold-ripple > i { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 8vmin; height: 8vmin; border: clamp(2px, .42vmin, 6px) solid var(--celebration-3, #d4a72c); border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--celebration-3, #d4a72c) 68%, transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--celebration-3, #d4a72c) 42%, transparent)); transform: translate(-50%,-50%) scale(.08) rotateX(50deg); will-change: transform, opacity; animation: completion-gold-ripple 1120ms cubic-bezier(.12,.58,.22,1) var(--ripple-delay) both; }
-.gold-ripple-flash { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 16vmin; height: 16vmin; border-radius: 50%; background: radial-gradient(circle, #fff4c2 0 3%, var(--celebration-3, #d4a72c) 5% 10%, color-mix(in srgb, var(--celebration-3, #d4a72c) 34%, transparent) 20%, transparent 62%); opacity: 0; transform: translate(-50%,-50%) scale(.15); animation: completion-gold-ripple-flash 1180ms cubic-bezier(.14,.58,.22,1) both; }
+.completion-gold-ripple { position: absolute; inset: 0; overflow: hidden; contain: strict; pointer-events: none; transform: translateZ(0); }
+.completion-gold-ripple > i { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax; box-sizing: border-box; border: clamp(2px, .28vmin, 4px) solid color-mix(in srgb, var(--celebration-3, #d4a72c) 82%, transparent); border-radius: 50%; opacity: 0; box-shadow: 0 0 7px color-mix(in srgb, var(--celebration-3, #d4a72c) 34%, transparent), inset 0 0 7px color-mix(in srgb, var(--celebration-3, #d4a72c) 24%, transparent); backface-visibility: hidden; transform: translate3d(0,0,0) scale(.006); will-change: transform, opacity; animation: completion-gold-ripple 1280ms linear var(--ripple-delay) both; }
+.gold-ripple-flash { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 80vmax; height: 80vmax; margin: -40vmax 0 0 -40vmax; border-radius: 50%; background: radial-gradient(circle, #f3df9a 0 1%, var(--celebration-3, #d4a72c) 2% 5%, color-mix(in srgb, var(--celebration-3, #d4a72c) 25%, transparent) 12%, transparent 46%); opacity: 0; backface-visibility: hidden; transform: translate3d(0,0,0) scale(.01); will-change: transform, opacity; animation: completion-gold-ripple-flash 1260ms linear both; }
 .gold-ripple-speed-lines { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 1px; height: 1px; }
-.gold-ripple-speed-lines b { position: absolute; left: 0; top: -1px; width: clamp(60px, 16vw, 270px); height: clamp(1px, .18vw, 3px); border-radius: 999px; background: linear-gradient(90deg, transparent, var(--celebration-3, #d4a72c) 32%, #f5df91 64%, transparent); opacity: 0; transform: rotate(var(--line-angle)) translateX(3vmin) scaleX(.05); transform-origin: 0 50%; animation: completion-gold-speed-line 980ms cubic-bezier(.12,.62,.22,1) var(--line-delay) both; }
+.gold-ripple-speed-lines b { position: absolute; left: 0; top: -1px; width: clamp(60px, 16vw, 270px); height: clamp(1px, .18vw, 3px); border-radius: 999px; background: linear-gradient(90deg, transparent, var(--celebration-3, #d4a72c) 32%, #ead688 64%, transparent); opacity: 0; backface-visibility: hidden; transform: rotate(var(--line-angle)) translate3d(3vmin,0,0) scaleX(.05); transform-origin: 0 50%; will-change: transform, opacity; animation: completion-gold-speed-line 1120ms linear var(--line-delay) both; }
 
 .completion-confetti i {
   position: absolute;
@@ -7079,36 +7079,47 @@ html[data-theme="dark"] .sync-conflict-dialog {
 }
 
 @keyframes completion-gold-ripple {
-  0% { opacity: 0; transform: translate(-50%,-50%) scale(.08) rotateX(62deg); }
-  6% { opacity: .32; transform: translate(-50%,-50%) scale(.14) rotateX(58deg); }
-  14% { opacity: .78; transform: translate(-50%,-50%) scale(.35) rotateX(51deg); }
-  24% { opacity: .92; transform: translate(-50%,-50%) scale(.9) rotateX(42deg); }
-  36% { opacity: .9; transform: translate(-50%,-50%) scale(2.1) rotateX(32deg); }
-  50% { opacity: .76; transform: translate(-50%,-50%) scale(4.5) rotateX(22deg); }
-  64% { opacity: .58; transform: translate(-50%,-50%) scale(8.4) rotateX(14deg); }
-  78% { opacity: .34; transform: translate(-50%,-50%) scale(14.5) rotateX(7deg); }
-  90% { opacity: .14; transform: translate(-50%,-50%) scale(22) rotateX(2deg); }
-  100% { opacity: 0; transform: translate(-50%,-50%) scale(34) rotateX(0deg); }
+  0% { opacity: 0; transform: translate3d(0,0,0) scale(.006); }
+  5% { opacity: .3; transform: translate3d(0,0,0) scale(.009); }
+  10% { opacity: .62; transform: translate3d(0,0,0) scale(.014); }
+  16% { opacity: .82; transform: translate3d(0,0,0) scale(.023); }
+  23% { opacity: .88; transform: translate3d(0,0,0) scale(.039); }
+  31% { opacity: .86; transform: translate3d(0,0,0) scale(.067); }
+  40% { opacity: .8; transform: translate3d(0,0,0) scale(.113); }
+  49% { opacity: .71; transform: translate3d(0,0,0) scale(.18); }
+  58% { opacity: .6; transform: translate3d(0,0,0) scale(.272); }
+  67% { opacity: .47; transform: translate3d(0,0,0) scale(.39); }
+  75% { opacity: .34; transform: translate3d(0,0,0) scale(.515); }
+  82% { opacity: .22; transform: translate3d(0,0,0) scale(.635); }
+  88% { opacity: .12; transform: translate3d(0,0,0) scale(.74); }
+  93% { opacity: .05; transform: translate3d(0,0,0) scale(.83); }
+  100% { opacity: 0; transform: translate3d(0,0,0) scale(.94); }
 }
 
 @keyframes completion-gold-ripple-flash {
-  0% { opacity: 0; transform: translate(-50%,-50%) scale(.12); }
-  8% { opacity: .45; transform: translate(-50%,-50%) scale(.28); }
-  18% { opacity: .72; transform: translate(-50%,-50%) scale(.62); }
-  32% { opacity: .68; transform: translate(-50%,-50%) scale(1.25); }
-  50% { opacity: .5; transform: translate(-50%,-50%) scale(2.35); }
-  72% { opacity: .24; transform: translate(-50%,-50%) scale(4.1); }
-  100% { opacity: 0; transform: translate(-50%,-50%) scale(7); }
+  0% { opacity: 0; transform: translate3d(0,0,0) scale(.01); }
+  8% { opacity: .26; transform: translate3d(0,0,0) scale(.018); }
+  17% { opacity: .52; transform: translate3d(0,0,0) scale(.035); }
+  27% { opacity: .58; transform: translate3d(0,0,0) scale(.07); }
+  38% { opacity: .52; transform: translate3d(0,0,0) scale(.135); }
+  50% { opacity: .4; transform: translate3d(0,0,0) scale(.235); }
+  62% { opacity: .28; transform: translate3d(0,0,0) scale(.36); }
+  74% { opacity: .16; transform: translate3d(0,0,0) scale(.5); }
+  86% { opacity: .06; transform: translate3d(0,0,0) scale(.64); }
+  100% { opacity: 0; transform: translate3d(0,0,0) scale(.78); }
 }
 
 @keyframes completion-gold-speed-line {
-  0% { opacity: 0; transform: rotate(var(--line-angle)) translateX(2vmin) scaleX(.05); }
-  10% { opacity: .35; transform: rotate(var(--line-angle)) translateX(5vmin) scaleX(.14); }
-  24% { opacity: .7; transform: rotate(var(--line-angle)) translateX(11vmin) scaleX(.35); }
-  42% { opacity: .68; transform: rotate(var(--line-angle)) translateX(20vmin) scaleX(.64); }
-  62% { opacity: .48; transform: rotate(var(--line-angle)) translateX(31vmin) scaleX(.9); }
-  80% { opacity: .22; transform: rotate(var(--line-angle)) translateX(40vmin) scaleX(1.1); }
-  100% { opacity: 0; transform: rotate(var(--line-angle)) translateX(48vmin) scaleX(1.3); }
+  0% { opacity: 0; transform: rotate(var(--line-angle)) translate3d(2vmin,0,0) scaleX(.05); }
+  8% { opacity: .22; transform: rotate(var(--line-angle)) translate3d(4vmin,0,0) scaleX(.1); }
+  17% { opacity: .46; transform: rotate(var(--line-angle)) translate3d(7vmin,0,0) scaleX(.2); }
+  28% { opacity: .62; transform: rotate(var(--line-angle)) translate3d(12vmin,0,0) scaleX(.36); }
+  40% { opacity: .6; transform: rotate(var(--line-angle)) translate3d(18vmin,0,0) scaleX(.54); }
+  53% { opacity: .5; transform: rotate(var(--line-angle)) translate3d(25vmin,0,0) scaleX(.72); }
+  66% { opacity: .37; transform: rotate(var(--line-angle)) translate3d(32vmin,0,0) scaleX(.88); }
+  78% { opacity: .23; transform: rotate(var(--line-angle)) translate3d(39vmin,0,0) scaleX(1.02); }
+  89% { opacity: .1; transform: rotate(var(--line-angle)) translate3d(44vmin,0,0) scaleX(1.14); }
+  100% { opacity: 0; transform: rotate(var(--line-angle)) translate3d(48vmin,0,0) scaleX(1.22); }
 }
 
 @keyframes completion-bubble-fall {
