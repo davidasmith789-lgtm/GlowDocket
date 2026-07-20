@@ -34,3 +34,19 @@ export function communityBodyBlocks(body) {
   flushParagraph(); flushList();
   return blocks;
 }
+
+export function getCommunityFormattingMarker(kind, body = "", cursor = String(body).length) {
+  if (kind === "heading") return "## ";
+  if (kind === "bullet") return "- ";
+  if (kind !== "numbered") return "";
+
+  const beforeCursor = String(body).slice(0, cursor);
+  const currentLineStart = beforeCursor.lastIndexOf("\n") + 1;
+  const currentLinePrefix = beforeCursor.slice(currentLineStart);
+  if (currentLinePrefix.trim()) return "1. ";
+
+  const previousText = beforeCursor.slice(0, Math.max(0, currentLineStart - 1));
+  const previousLine = previousText.slice(previousText.lastIndexOf("\n") + 1);
+  const previousNumber = previousLine.match(/^\s*(\d+)[.)]\s+/);
+  return `${previousNumber ? Number(previousNumber[1]) + 1 : 1}. `;
+}

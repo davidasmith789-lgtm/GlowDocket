@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { communityBodyBlocks, parseCommunityTags, validateCommunityPost } from "../src/communityUtils.js";
+import { communityBodyBlocks, getCommunityFormattingMarker, parseCommunityTags, validateCommunityPost } from "../src/communityUtils.js";
 
 test("community tags are trimmed, unique, and capped", () => {
   assert.deepEqual(parseCommunityTags(" algebra, study, algebra, exam "), ["algebra", "study", "exam"]);
@@ -15,4 +15,14 @@ test("community post validation enforces body and confirmation", () => {
 test("safe formatter produces data blocks and never HTML", () => {
   const blocks = communityBodyBlocks("## Heading\n- One\n- <script>alert(1)</script>\n\nParagraph");
   assert.equal(blocks[0].type, "heading"); assert.equal(blocks[1].type, "bullets"); assert.equal(blocks[1].items[1], "<script>alert(1)</script>");
+});
+test("format controls insert markers without placeholder words", () => {
+  assert.equal(getCommunityFormattingMarker("heading"), "## ");
+  assert.equal(getCommunityFormattingMarker("bullet"), "- ");
+  assert.equal(getCommunityFormattingMarker("numbered", "", 0), "1. ");
+});
+test("adjacent numbered list markers continue and gaps restart numbering", () => {
+  assert.equal(getCommunityFormattingMarker("numbered", "1. First\n", 9), "2. ");
+  assert.equal(getCommunityFormattingMarker("numbered", "1. First\n2. Second\n", 19), "3. ");
+  assert.equal(getCommunityFormattingMarker("numbered", "1. First\n\n", 10), "1. ");
 });
