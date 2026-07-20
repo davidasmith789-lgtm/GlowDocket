@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  COMMUNITY_POST_TYPES,
   communityBodyBlocks,
   getCommunityFormattingMarker,
   parseCommunityTags,
@@ -33,6 +34,17 @@ test("community post validation enforces body and confirmation", () => {
     validateCommunityPost({ ...post, body: "Useful text" }, true),
     "",
   );
+});
+
+test("community post categories include Other", () => {
+  assert.ok(COMMUNITY_POST_TYPES.includes("Other"));
+  assert.equal(validateCommunityPost({
+    course_name: "General",
+    post_type: "Other",
+    title: "A useful post",
+    body: "Community information",
+    topic_tags: [],
+  }, true), "");
 });
 test("safe formatter produces data blocks and never HTML", () => {
   const blocks = communityBodyBlocks(

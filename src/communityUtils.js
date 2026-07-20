@@ -1,4 +1,4 @@
-export const COMMUNITY_POST_TYPES = ["Course Advice", "Study Guide", "Concept Explanation", "Class Tips"];
+export const COMMUNITY_POST_TYPES = ["Course Advice", "Study Guide", "Concept Explanation", "Class Tips", "Other"];
 export const COMMUNITY_REPORT_REASONS = ["Cheating or answer key", "Copyrighted material", "Personal information", "Harassment or harmful content", "Spam", "Other"];
 export const COMMUNITY_LIMITS = { course: 100, title: 140, body: 10000, tags: 8, tag: 30 };
 
