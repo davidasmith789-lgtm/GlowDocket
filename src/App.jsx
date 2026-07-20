@@ -4383,6 +4383,11 @@ function App() {
   };
 
   // Completing a repeating task also appends its next incomplete occurrence.
+  const getCelebrationOrigin = (element) => {
+    const bounds = element?.getBoundingClientRect?.();
+    return bounds ? { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 } : null;
+  };
+
   const handleComplete = (id, context = {}) => {
     const completedTask = tasks.find((task) => task.id === id);
     if (!completedTask || completedTask.isCompleted) return;
@@ -4399,7 +4404,7 @@ function App() {
     handleAddFieldSettingChange("gamification", nextGamification);
     completionCelebrationSequenceRef.current += 1;
     const selectedStyleColors = getCelebrationColorsForStyle(userSettings.celebrationColors, nextGamification.selectedConfetti);
-    if (nextGamification.selectedConfetti !== "none") setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
+    if (nextGamification.selectedConfetti !== "none") setCompletionCelebration({ id: `${id}-${completionCelebrationSequenceRef.current}`, title: completedTask.title, achievementIds: newAchievementIds, confetti: nextGamification.selectedConfetti, courseColor: getCourseColor(getTaskCourseOrCategory(completedTask)), celebrationOrigin: context.celebrationOrigin || null, celebrationColors: celebrationStudioProgress.unlocked && Object.keys(selectedStyleColors).length ? selectedStyleColors : null });
     setTasks(updated);
     saveTasksForCurrentUser(updated);
     if (userSettings.externalPushEnabled && completedTask) { const reminder = getExternalReminderForTask(completedTask); if (reminder) runImmediateReminderMutation(completedTask.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
@@ -4460,11 +4465,11 @@ function App() {
     closeFocusSession(elapsedSeconds, reduceEstimate);
   };
 
-  const completeFocusTask = (elapsedSeconds, reduceEstimate) => {
+  const completeFocusTask = (elapsedSeconds, reduceEstimate, celebrationOrigin) => {
     const id = focusTaskId;
     if (!id) return;
     setFocusTaskId(null);
-    handleComplete(id, { source: "focus", elapsedSeconds, reduceEstimate });
+    handleComplete(id, { source: "focus", elapsedSeconds, reduceEstimate, celebrationOrigin });
   };
 
   const toggleFocusSubtask = (subtaskId, elapsedSeconds, reduceEstimate) => {
@@ -7660,7 +7665,7 @@ function App() {
         <button
           type="button"
           className="btn btn-primary"
-          onClick={(event) => stopCardClick(event, () => handleComplete(task.id))}
+          onClick={(event) => stopCardClick(event, () => handleComplete(task.id, { celebrationOrigin: getCelebrationOrigin(event.currentTarget) }))}
         >
           Complete ✅
         </button>
@@ -7692,7 +7697,7 @@ function App() {
         <button type="button" className="btn btn-primary focus-session-start-button" onClick={(event) => stopCardClick(event, () => handleFocusStart(task.id))}>Focus</button>
         <div className="task-action-pair task-action-pair-left">
           <button type="button" className="btn btn-warning status-action-button" onClick={(event) => stopCardClick(event, () => handleMoveToTodo(task.id))}>Back to To Do</button>
-          <button type="button" className="btn btn-primary" onClick={(event) => stopCardClick(event, () => handleComplete(task.id))}>Complete ✅</button>
+          <button type="button" className="btn btn-primary" onClick={(event) => stopCardClick(event, () => handleComplete(task.id, { celebrationOrigin: getCelebrationOrigin(event.currentTarget) }))}>Complete ✅</button>
         </div>
         {renderVoiceUndoAction(task)}
         <div className="task-action-pair task-action-pair-right">
@@ -8836,7 +8841,7 @@ function App() {
                                   className="btn btn-primary"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleComplete(task.id);
+                                    handleComplete(task.id, { celebrationOrigin: getCelebrationOrigin(e.currentTarget) });
                                   }}
                                   style={{
                                     padding: "5px 10px",
@@ -8984,7 +8989,7 @@ function App() {
                                   className="btn btn-primary"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleComplete(task.id);
+                                    handleComplete(task.id, { celebrationOrigin: getCelebrationOrigin(e.currentTarget) });
                                   }}
                                   style={{
                                     padding: "5px 10px",
@@ -11318,7 +11323,7 @@ function App() {
         <div
           key={completionCelebration.id}
           className={`completion-celebration celebration-${completionCelebration.confetti || "standard"}${completionCelebration.celebrationColors ? " has-custom-colors" : ""}${completionCelebration.celebrationColors?.accent ? " has-custom-toast-accent" : ""}${completionCelebration.celebrationColors?.toastBackground ? " has-custom-toast-background" : ""}${completionCelebration.celebrationColors?.toastText ? " has-custom-toast-text" : ""}`}
-          style={completionCelebration.celebrationColors ? { "--celebration-1": completionCelebration.celebrationColors.palette1 || "#f43f5e", "--celebration-2": completionCelebration.celebrationColors.palette2 || "#f59e0b", "--celebration-3": completionCelebration.celebrationColors.palette3 || "#facc15", "--celebration-4": completionCelebration.celebrationColors.palette4 || "#22c55e", "--celebration-5": completionCelebration.celebrationColors.palette5 || "#06b6d4", "--celebration-6": completionCelebration.celebrationColors.palette6 || "#a855f7", "--celebration-accent": completionCelebration.celebrationColors.accent || "#8b5cf6", "--celebration-toast-bg": completionCelebration.celebrationColors.toastBackground || "#111827", "--celebration-toast-text": completionCelebration.celebrationColors.toastText || "#ffffff" } : undefined}
+          style={{ "--ripple-x": completionCelebration.celebrationOrigin ? `${completionCelebration.celebrationOrigin.x}px` : "50vw", "--ripple-y": completionCelebration.celebrationOrigin ? `${completionCelebration.celebrationOrigin.y}px` : "50vh", ...(completionCelebration.celebrationColors ? { "--celebration-1": completionCelebration.celebrationColors.palette1 || "#f43f5e", "--celebration-2": completionCelebration.celebrationColors.palette2 || "#f59e0b", "--celebration-3": completionCelebration.celebrationColors.palette3 || "#d4a72c", "--celebration-4": completionCelebration.celebrationColors.palette4 || "#22c55e", "--celebration-5": completionCelebration.celebrationColors.palette5 || "#06b6d4", "--celebration-6": completionCelebration.celebrationColors.palette6 || "#a855f7", "--celebration-accent": completionCelebration.celebrationColors.accent || "#8b5cf6", "--celebration-toast-bg": completionCelebration.celebrationColors.toastBackground || "#111827", "--celebration-toast-text": completionCelebration.celebrationColors.toastText || "#ffffff" } : {}) }}
           role="status"
           aria-live="polite"
         >

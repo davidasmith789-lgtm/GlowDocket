@@ -4734,7 +4734,7 @@ a,
 .celebration-color-preview.preview-fireworks i:nth-child(3n+1) { left: 25%; }
 .celebration-color-preview.preview-fireworks i:nth-child(3n+2) { left: 50%; }
 .celebration-color-preview.preview-fireworks i:nth-child(3n) { left: 75%; }
-.celebration-color-preview.preview-gold-ripple i { display: none; top: 50%; left: 50%; width: 18px; height: 18px; border: 2px solid var(--preview-color, #facc15); border-radius: 50%; background: transparent; box-shadow: 0 0 8px color-mix(in srgb, var(--preview-color, #facc15) 75%, transparent), inset 0 0 6px color-mix(in srgb, var(--preview-color, #facc15) 55%, transparent); animation: celebration-preview-gold-ripple 760ms cubic-bezier(.08,.7,.2,1) infinite; }
+.celebration-color-preview.preview-gold-ripple i { display: none; top: 50%; left: 50%; width: 18px; height: 18px; border: 2px solid var(--preview-color, #d4a72c); border-radius: 50%; background: transparent; box-shadow: 0 0 5px color-mix(in srgb, var(--preview-color, #d4a72c) 58%, transparent), inset 0 0 4px color-mix(in srgb, var(--preview-color, #d4a72c) 38%, transparent); animation: celebration-preview-gold-ripple 1100ms cubic-bezier(.12,.58,.22,1) infinite; }
 .celebration-color-preview.preview-gold-ripple i:nth-child(-n+7) { display: block; }
 .celebration-color-preview.preview-gold-ripple i:nth-child(1) { animation-delay: 0ms; }
 .celebration-color-preview.preview-gold-ripple i:nth-child(2) { animation-delay: 90ms; }
@@ -4756,7 +4756,7 @@ a,
 @keyframes celebration-preview-bubble { 0% { opacity: 0; transform: translate3d(0,0,0) scale(.65); } 10% { opacity: .9; } 30% { transform: translate3d(10px,38px,0) scale(1.08); } 60% { transform: translate3d(-9px,82px,0) scale(.88); } 85% { opacity: .9; transform: translate3d(11px,116px,0) scale(1.12); } 100% { opacity: 0; transform: translate3d(-5px,142px,0) scale(.94); } }
 @keyframes celebration-preview-leaf { 0% { opacity: 0; transform: translate3d(0,0,0) rotate(-30deg); } 8% { opacity: 1; } 24% { transform: translate3d(13px,30px,0) rotate(42deg); } 48% { transform: translate3d(-12px,65px,0) rotate(-40deg); } 72% { transform: translate3d(14px,101px,0) rotate(44deg); } 100% { opacity: 0; transform: translate3d(-9px,142px,0) rotate(-32deg); } }
 @keyframes celebration-preview-firework { 0% { opacity: 0; transform: translate3d(0,142px,0) scale(.3); } 18% { opacity: 1; } 42% { transform: translate3d(0,48px,0) scale(.55); } 52% { transform: translate3d(0,38px,0) scale(1.6); } 70% { opacity: 1; transform: translate3d(var(--preview-drift),68px,0) scale(1); } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * 1.8),112px,0) scale(.2); } }
-@keyframes celebration-preview-gold-ripple { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.15); } 12% { opacity: 1; } 72% { opacity: .9; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(6.8); } }
+@keyframes celebration-preview-gold-ripple { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.15); } 10% { opacity: .55; } 24% { opacity: .9; transform: translate(-50%,-50%) scale(1.1); } 42% { opacity: .78; transform: translate(-50%,-50%) scale(2.4); } 62% { opacity: .52; transform: translate(-50%,-50%) scale(4); } 82% { opacity: .22; transform: translate(-50%,-50%) scale(5.7); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(7.2); } }
 @media (max-width: 650px) { .celebration-studio-preview-row { grid-template-columns: 1fr; } .celebration-color-preview { width: 100%; } }
 .reduce-motion .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); }
 @media (prefers-reduced-motion: reduce) { .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); } }
@@ -6524,10 +6524,10 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .completion-firework > b { position: absolute; z-index: 2; width: 9px; height: 9px; border: 2px solid white; border-radius: 50%; background: var(--celebration-3, #facc15); box-shadow: 0 0 12px var(--celebration-3, #facc15); opacity: 0; transform: translate(-50%, -50%) scale(.2); animation: completion-firework-core 500ms ease-out var(--burst-delay) both; }
 .completion-firework > i { position: absolute; top: -1px; left: 0; width: clamp(34px, 5.5vw, 86px); height: 3px; border-radius: 999px; background: linear-gradient(90deg, var(--burst-color), color-mix(in srgb, var(--burst-color) 70%, white), transparent); opacity: 0; transform: rotate(var(--burst-angle)) translateX(0) scaleX(.05); transform-origin: 0 50%; will-change: transform, opacity; animation: completion-firework-ray 500ms cubic-bezier(.12,.62,.28,1) var(--burst-delay) both; }
 .completion-gold-ripple { position: absolute; inset: 0; overflow: hidden; contain: strict; pointer-events: none; perspective: 900px; }
-.completion-gold-ripple > i { position: absolute; top: 50%; left: 50%; width: 8vmin; height: 8vmin; border: clamp(3px, .55vmin, 8px) solid var(--celebration-3, #facc15); border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 7px var(--celebration-3, #facc15)) drop-shadow(0 0 20px color-mix(in srgb, var(--celebration-3, #facc15) 74%, transparent)); transform: translate(-50%,-50%) scale(.08) rotateX(62deg); will-change: transform, opacity; animation: completion-gold-ripple 720ms cubic-bezier(.05,.72,.18,1) var(--ripple-delay) both; }
-.gold-ripple-flash { position: absolute; top: 50%; left: 50%; width: 16vmin; height: 16vmin; border-radius: 50%; background: radial-gradient(circle, white 0 4%, var(--celebration-3, #facc15) 5% 12%, color-mix(in srgb, var(--celebration-3, #facc15) 52%, transparent) 22%, transparent 64%); mix-blend-mode: screen; opacity: 0; transform: translate(-50%,-50%) scale(.15); animation: completion-gold-ripple-flash 820ms cubic-bezier(.1,.72,.18,1) both; }
-.gold-ripple-speed-lines { position: absolute; top: 50%; left: 50%; width: 1px; height: 1px; }
-.gold-ripple-speed-lines b { position: absolute; left: 0; top: -1px; width: clamp(60px, 16vw, 270px); height: clamp(2px, .25vw, 5px); border-radius: 999px; background: linear-gradient(90deg, transparent, var(--celebration-3, #facc15) 28%, white 62%, transparent); opacity: 0; transform: rotate(var(--line-angle)) translateX(3vmin) scaleX(.05); transform-origin: 0 50%; animation: completion-gold-speed-line 640ms cubic-bezier(.06,.75,.2,1) var(--line-delay) both; }
+.completion-gold-ripple > i { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 8vmin; height: 8vmin; border: clamp(2px, .42vmin, 6px) solid var(--celebration-3, #d4a72c); border-radius: 50%; opacity: 0; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--celebration-3, #d4a72c) 68%, transparent)) drop-shadow(0 0 12px color-mix(in srgb, var(--celebration-3, #d4a72c) 42%, transparent)); transform: translate(-50%,-50%) scale(.08) rotateX(50deg); will-change: transform, opacity; animation: completion-gold-ripple 1120ms cubic-bezier(.12,.58,.22,1) var(--ripple-delay) both; }
+.gold-ripple-flash { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 16vmin; height: 16vmin; border-radius: 50%; background: radial-gradient(circle, #fff4c2 0 3%, var(--celebration-3, #d4a72c) 5% 10%, color-mix(in srgb, var(--celebration-3, #d4a72c) 34%, transparent) 20%, transparent 62%); opacity: 0; transform: translate(-50%,-50%) scale(.15); animation: completion-gold-ripple-flash 1180ms cubic-bezier(.14,.58,.22,1) both; }
+.gold-ripple-speed-lines { position: absolute; top: var(--ripple-y); left: var(--ripple-x); width: 1px; height: 1px; }
+.gold-ripple-speed-lines b { position: absolute; left: 0; top: -1px; width: clamp(60px, 16vw, 270px); height: clamp(1px, .18vw, 3px); border-radius: 999px; background: linear-gradient(90deg, transparent, var(--celebration-3, #d4a72c) 32%, #f5df91 64%, transparent); opacity: 0; transform: rotate(var(--line-angle)) translateX(3vmin) scaleX(.05); transform-origin: 0 50%; animation: completion-gold-speed-line 980ms cubic-bezier(.12,.62,.22,1) var(--line-delay) both; }
 
 .completion-confetti i {
   position: absolute;
@@ -6598,7 +6598,7 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .celebration-leaves .completion-celebration-toast { border-color: #22c55e; background: linear-gradient(135deg, color-mix(in srgb, #22c55e 16%, var(--surface-color)), color-mix(in srgb, #f59e0b 10%, var(--surface-color))); }
 .celebration-snow .completion-celebration-toast { border-color: #7dd3fc; background: linear-gradient(145deg, color-mix(in srgb, #e0f2fe 18%, var(--surface-color)), color-mix(in srgb, #7dd3fc 9%, var(--surface-color))); }
 .celebration-fireworks .completion-celebration-toast { border-color: #f43f5e; background: linear-gradient(115deg, color-mix(in srgb, #f43f5e 13%, var(--surface-color)), color-mix(in srgb, #facc15 12%, var(--surface-color)), color-mix(in srgb, #8b5cf6 13%, var(--surface-color))); }
-.celebration-gold-ripple .completion-celebration-toast { border-color: var(--celebration-3, #facc15); background: linear-gradient(125deg, color-mix(in srgb, var(--celebration-3, #facc15) 26%, var(--surface-color)), color-mix(in srgb, #fff7c2 12%, var(--surface-color))); box-shadow: 0 0 0 2px color-mix(in srgb, var(--celebration-3, #facc15) 28%, transparent), 0 18px 60px color-mix(in srgb, var(--celebration-3, #facc15) 42%, transparent); }
+.celebration-gold-ripple .completion-celebration-toast { border-color: var(--celebration-3, #d4a72c); background: linear-gradient(125deg, color-mix(in srgb, var(--celebration-3, #d4a72c) 18%, var(--surface-color)), color-mix(in srgb, #ead99a 8%, var(--surface-color))); box-shadow: 0 0 0 1px color-mix(in srgb, var(--celebration-3, #d4a72c) 20%, transparent), 0 18px 50px color-mix(in srgb, var(--celebration-3, #d4a72c) 26%, transparent); }
 .celebration-hearts .completion-celebration-toast { border-color: #fb7185; background: radial-gradient(circle at 15% 20%, color-mix(in srgb, #fb7185 22%, var(--surface-color)), var(--surface-color) 52%); }
 .celebration-pixels .completion-celebration-toast { border-color: #60a5fa; background: linear-gradient(135deg, color-mix(in srgb, #60a5fa 15%, var(--surface-color)), color-mix(in srgb, #a78bfa 12%, var(--surface-color))); }
 .celebration-crowns .completion-celebration-toast { border-color: #fbbf24; background: linear-gradient(135deg, color-mix(in srgb, #fbbf24 20%, var(--surface-color)), color-mix(in srgb, #f59e0b 8%, var(--surface-color))); }
@@ -7080,22 +7080,34 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
 @keyframes completion-gold-ripple {
   0% { opacity: 0; transform: translate(-50%,-50%) scale(.08) rotateX(62deg); }
-  8% { opacity: 1; }
-  46% { opacity: 1; border-width: clamp(4px, .75vmin, 11px); }
+  6% { opacity: .32; transform: translate(-50%,-50%) scale(.14) rotateX(58deg); }
+  14% { opacity: .78; transform: translate(-50%,-50%) scale(.35) rotateX(51deg); }
+  24% { opacity: .92; transform: translate(-50%,-50%) scale(.9) rotateX(42deg); }
+  36% { opacity: .9; transform: translate(-50%,-50%) scale(2.1) rotateX(32deg); }
+  50% { opacity: .76; transform: translate(-50%,-50%) scale(4.5) rotateX(22deg); }
+  64% { opacity: .58; transform: translate(-50%,-50%) scale(8.4) rotateX(14deg); }
+  78% { opacity: .34; transform: translate(-50%,-50%) scale(14.5) rotateX(7deg); }
+  90% { opacity: .14; transform: translate(-50%,-50%) scale(22) rotateX(2deg); }
   100% { opacity: 0; transform: translate(-50%,-50%) scale(34) rotateX(0deg); }
 }
 
 @keyframes completion-gold-ripple-flash {
   0% { opacity: 0; transform: translate(-50%,-50%) scale(.12); }
-  10% { opacity: 1; }
-  45% { opacity: .92; transform: translate(-50%,-50%) scale(2.4); }
+  8% { opacity: .45; transform: translate(-50%,-50%) scale(.28); }
+  18% { opacity: .72; transform: translate(-50%,-50%) scale(.62); }
+  32% { opacity: .68; transform: translate(-50%,-50%) scale(1.25); }
+  50% { opacity: .5; transform: translate(-50%,-50%) scale(2.35); }
+  72% { opacity: .24; transform: translate(-50%,-50%) scale(4.1); }
   100% { opacity: 0; transform: translate(-50%,-50%) scale(7); }
 }
 
 @keyframes completion-gold-speed-line {
   0% { opacity: 0; transform: rotate(var(--line-angle)) translateX(2vmin) scaleX(.05); }
-  10% { opacity: 1; }
-  58% { opacity: .95; }
+  10% { opacity: .35; transform: rotate(var(--line-angle)) translateX(5vmin) scaleX(.14); }
+  24% { opacity: .7; transform: rotate(var(--line-angle)) translateX(11vmin) scaleX(.35); }
+  42% { opacity: .68; transform: rotate(var(--line-angle)) translateX(20vmin) scaleX(.64); }
+  62% { opacity: .48; transform: rotate(var(--line-angle)) translateX(31vmin) scaleX(.9); }
+  80% { opacity: .22; transform: rotate(var(--line-angle)) translateX(40vmin) scaleX(1.1); }
   100% { opacity: 0; transform: rotate(var(--line-angle)) translateX(48vmin) scaleX(1.3); }
 }
 
