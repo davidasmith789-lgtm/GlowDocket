@@ -95,3 +95,19 @@ test("Community uses its Full Color Studio accent", () => {
     /--button-primary-color: var\(--community-action-text\)/,
   );
 });
+
+test("Community posts use styled course and category pills", () => {
+  const hub = readFileSync(
+    new URL("../src/components/CommunityHub.jsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../src/components/CommunityHub.css", import.meta.url),
+    "utf8",
+  );
+  assert.match(hub, /community-course-pill/);
+  assert.match(hub, /community-type-pill/);
+  assert.match(hub, /community-card-footer/);
+  assert.match(styles, /\.community-card::before/);
+  assert.match(styles, /backdrop-filter: blur\(8px\)/);
+});

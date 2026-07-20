@@ -590,23 +590,27 @@ export default function CommunityHub({ userId, isMobile = false }) {
               }}
             >
               <div className="community-card-meta">
-                <span>{post.course_name}</span>
-                <span>{post.post_type}</span>
-                {post.author_id === userId && <b>Your Post</b>}
-                {post.status === "hidden" && <b>Pending Review</b>}
+                <span className="community-course-pill">{post.course_name}</span>
+                <span className="community-type-pill">{post.post_type}</span>
+                {post.author_id === userId && <b className="community-owner-pill">Your Post</b>}
+                {post.status === "hidden" && <b className="community-status-pill">Pending Review</b>}
               </div>
-              <h2>{post.title}</h2>
-              <Body text={post.body} preview />
+              <div className="community-card-content">
+                <h2>{post.title}</h2>
+                <Body text={post.body} preview />
+              </div>
               <div className="community-tags">
                 {(post.topic_tags || []).map((tag) => (
-                  <span key={tag}>{tag}</span>
+                  <span key={tag}>#{tag}</span>
                 ))}
               </div>
-              <p className="community-byline">
-                {post.author_id === userId ? "Your Post" : "GlowDocket Student"}{" "}
-                · {new Date(post.created_at).toLocaleDateString()}
-              </p>
-              {renderActions(post)}
+              <div className="community-card-footer">
+                <p className="community-byline">
+                  <strong>{post.author_id === userId ? "You" : "GlowDocket Student"}</strong>
+                  <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                </p>
+                {renderActions(post)}
+              </div>
             </article>
           ))}
         </div>
@@ -854,12 +858,13 @@ export default function CommunityHub({ userId, isMobile = false }) {
                 </footer>
               </form>
             ) : (
-              <article>
-                <header>
-                  <div>
-                    <span>
-                      {selected.course_name} · {selected.post_type}
-                    </span>
+              <article className="community-post-detail">
+                <header className="community-detail-header">
+                  <div className="community-detail-heading">
+                    <div className="community-card-meta">
+                      <span className="community-course-pill">{selected.course_name}</span>
+                      <span className="community-type-pill">{selected.post_type}</span>
+                    </div>
                     <h2 id="community-dialog-title">{selected.title}</h2>
                   </div>
                   <button type="button" onClick={closeDialog}>
@@ -881,14 +886,12 @@ export default function CommunityHub({ userId, isMobile = false }) {
                 )}
                 <div className="community-tags">
                   {(selected.topic_tags || []).map((tag) => (
-                    <span key={tag}>{tag}</span>
+                    <span key={tag}>#{tag}</span>
                   ))}
                 </div>
-                <p>
-                  {selected.author_id === userId
-                    ? "Your Post"
-                    : "GlowDocket Student"}{" "}
-                  · {new Date(selected.created_at).toLocaleString()}
+                <p className="community-detail-byline">
+                  <strong>{selected.author_id === userId ? "You" : "GlowDocket Student"}</strong>
+                  <span>{new Date(selected.created_at).toLocaleString()}</span>
                 </p>
                 {renderActions(selected)}
                 <footer>
