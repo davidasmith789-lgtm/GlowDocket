@@ -801,6 +801,15 @@ body {
 
 .App {
   min-height: 100vh;
+  background: var(--page-bg);
+}
+
+.App.page-color-wash {
+  background:
+    radial-gradient(circle at 7% 11%, color-mix(in srgb, var(--page-color-wash) 20%, transparent), transparent min(34rem, 42vw)),
+    radial-gradient(circle at 94% 58%, color-mix(in srgb, var(--page-color-wash) 13%, transparent), transparent min(38rem, 46vw)),
+    linear-gradient(150deg, color-mix(in srgb, var(--page-bg) 95%, var(--page-color-wash)), var(--page-bg) 46%, color-mix(in srgb, var(--page-bg) 97%, var(--page-color-wash)));
+  background-attachment: fixed;
 }
 
 .app-shell {
@@ -1246,6 +1255,31 @@ textarea {
   .badge-flash-first-helpful.is-mastery-animated .achievement-medallion::after { animation: flash-mastery-thumbs-up 1.7s ease-in-out infinite; }
   .badge-flash-ten-helpful.is-mastery-animated .achievement-ornament { animation: flash-mastery-medal 2.1s cubic-bezier(.4,0,.2,1) infinite; }
   .badge-flash-community-creator.is-mastery-animated .achievement-rays { animation: flash-mastery-network 2.8s ease-in-out infinite; }
+}
+
+.page-color-wash-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .55fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.page-color-wash-picker input[type="color"] {
+  width: 54px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+.page-color-wash-picker input[type="color"]:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+@media (max-width: 650px) {
+  .page-color-wash-settings {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Flashcard mastery begins as soon as a badge renders, including mobile Cosmetics. */

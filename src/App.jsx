@@ -105,6 +105,8 @@ const DEFAULT_USER_SETTINGS = {
   interfaceDensity: "comfortable",
   taskActionLayout: "wrap",
   showHeaderSubtitle: true,
+  pageColorWashEnabled: true,
+  pageColorWashColor: "#6366f1",
   reduceMotion: false,
   gamification: DEFAULT_GAMIFICATION,
   calendarWeekStartsOn: "sunday",
@@ -8269,7 +8271,10 @@ function App() {
     </ul>
   );
   return (
-    <div className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}>
+    <div
+      className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.pageColorWashEnabled !== false ? " page-color-wash" : ""}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}
+      style={{ "--page-color-wash": userSettings.pageColorWashColor || "#6366f1" }}
+    >
       <div className="app-shell">
         <a className="skip-link" href={isMobileUi ? "#mobile-main-content" : "#workspace-main-content"}>Skip to main content</a>
         {isMobileUi && currentUser && (
@@ -9708,6 +9713,26 @@ function App() {
                           onChange={(e) => handleAddFieldSettingChange("showHeaderSubtitle", e.target.checked)}
                         />
                       </label>
+                      <div className="page-color-wash-settings">
+                        <label className="settings-toggle settings-toggle-copy">
+                          <span><strong>Page color wash</strong><small>Add a soft layer of color behind the GlowDocket workspace.</small></span>
+                          <input
+                            type="checkbox"
+                            checked={userSettings.pageColorWashEnabled !== false}
+                            onChange={(e) => handleAddFieldSettingChange("pageColorWashEnabled", e.target.checked)}
+                          />
+                        </label>
+                        <label className="settings-select-row page-color-wash-picker">
+                          <span>Background accent</span>
+                          <input
+                            type="color"
+                            value={userSettings.pageColorWashColor || "#6366f1"}
+                            disabled={userSettings.pageColorWashEnabled === false}
+                            onChange={(e) => handleAddFieldSettingChange("pageColorWashColor", e.target.value)}
+                            aria-label="Page background accent color"
+                          />
+                        </label>
+                      </div>
                       <label className="settings-toggle settings-toggle-copy">
                         <span><strong>Reduce motion</strong><small>Turn off interface animation and smooth scrolling.</small></span>
                         <input

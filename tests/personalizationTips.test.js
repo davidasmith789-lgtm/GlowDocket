@@ -33,6 +33,23 @@ test("personalization tips can be searched and filtered by useful topics", async
   assert.match(display, /\{category\}/);
 });
 
+test("the page color wash is editable, optional, and saved with personalization", async () => {
+  const [app, styles] = await Promise.all([
+    read("../src/App.jsx"),
+    read("../src/App.css"),
+  ]);
+
+  assert.match(app, /pageColorWashEnabled: true/);
+  assert.match(app, /pageColorWashColor: "#6366f1"/);
+  assert.match(app, /handleAddFieldSettingChange\("pageColorWashEnabled"/);
+  assert.match(app, /handleAddFieldSettingChange\("pageColorWashColor"/);
+  assert.match(app, /type="color"/);
+  assert.match(app, /aria-label="Page background accent color"/);
+  assert.match(app, /pageColorWashEnabled !== false \? " page-color-wash"/);
+  assert.match(styles, /\.App\.page-color-wash\s*\{[\s\S]*radial-gradient[\s\S]*--page-color-wash/);
+  assert.match(styles, /\.App\s*\{[\s\S]*background: var\(--page-bg\)/);
+});
+
 test("assignment field and workflow settings expand horizontally on wider screens", async () => {
   const [app, styles] = await Promise.all([
     read("../src/App.jsx"),
