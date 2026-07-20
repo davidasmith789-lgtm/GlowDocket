@@ -179,9 +179,9 @@
 }
 .flash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: 15px;
-  margin-top: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: 11px;
+  margin-top: 14px;
 }
 .flash-page progress,
 .flash-study progress {
@@ -207,7 +207,7 @@
 }
 .flash-grid article,
 .flash-card-editor {
-  padding: 17px;
+  padding: 13px;
   border: 1px solid var(--border-color);
   border-radius: 17px;
   background: var(--card-bg);
@@ -243,7 +243,7 @@
 .flash-deck-tile {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   color: var(--text-color);
   cursor: pointer;
@@ -285,13 +285,19 @@
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
+.flash-deck-tile > p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .flash-deck-tile h2 {
-  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-size: clamp(1.05rem, 1.7vw, 1.3rem);
   letter-spacing: -0.025em;
 }
 .flash-deck-progress {
   display: grid;
-  gap: 7px;
+  gap: 5px;
 }
 .flash-deck-progress > span {
   color: var(--muted-text, var(--text-color));
@@ -302,17 +308,18 @@
 }
 .flash-deck-progress progress {
   width: 100%;
-  height: 9px;
+  height: 7px;
 }
 .flash-deck-tile footer {
   align-self: end;
   flex-wrap: wrap;
   justify-content: flex-start;
-  margin-top: 4px;
+  gap: 7px;
+  margin-top: 2px;
 }
 .flash-study-deck-button {
-  min-width: 150px;
-  font-size: 1rem;
+  min-width: 120px;
+  font-size: 0.9rem;
   font-weight: 850;
 }
 .flash-notice {
@@ -458,7 +465,10 @@
   overflow: auto;
   padding: clamp(16px, 4vw, 48px);
   text-align: center;
-  background: var(--page-bg);
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--primary-color) 22%, transparent), transparent 29%),
+    radial-gradient(circle at 88% 76%, color-mix(in srgb, var(--secondary-color, var(--primary-color)) 18%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--page-bg) 88%, #172554), var(--page-bg) 48%, color-mix(in srgb, var(--page-bg) 88%, #312e81));
   width: 100%;
   max-width: none;
   margin: 0;
@@ -511,7 +521,9 @@
   overflow: auto;
   padding: clamp(24px, 5vw, 56px);
   color: var(--text-color);
-  background: var(--card-bg);
+  background:
+    radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--primary-color) 15%, transparent), transparent 28%),
+    linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 94%, white), var(--card-bg));
   border: 2px solid
     color-mix(in srgb, var(--primary-color) 72%, var(--border-color));
   border-radius: 24px;
@@ -519,8 +531,23 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
+.flash-card-face::after {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  width: 56px;
+  height: 42px;
+  border-right: 2px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--primary-color) 28%, transparent);
+  border-radius: 0 0 18px;
+  content: "";
+  pointer-events: none;
+}
 .flash-card-back {
   transform: rotateY(180deg);
+  background:
+    radial-gradient(circle at 18% 82%, color-mix(in srgb, var(--primary-color) 20%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--card-bg) 90%, #312e81), color-mix(in srgb, var(--card-bg) 95%, #0f766e));
 }
 .flash-card-face small {
   position: absolute;
@@ -656,8 +683,8 @@
     gap: 12px;
   }
   .flash-grid article {
-    padding: 16px;
-    border-radius: 18px;
+    padding: 13px;
+    border-radius: 16px;
   }
   .flash-deck-meta {
     align-items: center;
@@ -718,7 +745,7 @@
     margin: -4px auto 14px;
   }
   .flash-ratings button {
-    flex: 1 1 40%;
+    flex: 1 1 calc(50% - 5px);
   }
   .flash-deck-tile footer > button,
   .flash-study-deck-button {

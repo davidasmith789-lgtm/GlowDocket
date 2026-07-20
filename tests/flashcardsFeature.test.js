@@ -82,14 +82,16 @@ test("deck tiles open study setup and Next records Good", () => {
   assert.match(hub, /openDeck\(d, "study"\)/);
   assert.match(hub, /Study this deck/);
   assert.match(hub, /onClick=\{\(\) => rate\("Good"\)\}/);
-  assert.match(hub, /Counts as Good/);
+  assert.match(hub, /Continue confidently/);
+  assert.match(hub, /const STUDY_ACTIONS = \["Again", "Hard"\]/);
+  assert.doesNotMatch(hub, /STUDY_ACTIONS\.map[\s\S]{0,200}Easy/);
   assert.match(hub, /e\.key === "ArrowLeft"/);
   assert.match(hub, /e\.key === "ArrowRight"/);
   assert.match(hub, /flash-card-navigation/);
   assert.match(hub, /study\.index \+ 1.*study\.cards\.length/s);
 });
 
-test("study progress follows the card and mobile is browse-and-study only", () => {
+test("study progress follows the card and personal decks offer study or edit", () => {
   assert.match(
     hub,
     /className={`flash-card[\s\S]*className="flash-study-progress"/,
@@ -98,7 +100,8 @@ test("study progress follows the card and mobile is browse-and-study only", () =
     hub,
     /\{!isMobile && \(\s*<div className="flash-header-actions">/,
   );
-  assert.match(hub, /section === "mine" && !isMobile/);
+  assert.match(hub, /section === "mine" && \(/);
+  assert.doesNotMatch(hub, /New \{d\.new_count\}|Learning \{d\.learning_count\}|Familiar \{d\.familiar_count\}|Strong \{d\.strong_count\}|\{d\.total_sessions\} sessions/);
   assert.match(hub, /!isMobile && \([\s\S]*Copy to My Decks/);
   assert.match(
     hubStyles,

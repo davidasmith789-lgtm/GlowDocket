@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "../supabaseClient.js";
 import {
-  RATINGS,
   confidenceFor,
   deckProgress,
   parseFlashcardImport,
@@ -11,6 +10,8 @@ import {
 import FlashcardSharedActions from "./FlashcardSharedActions.jsx";
 import FlashcardConfirmDialog from "./FlashcardConfirmDialog.jsx";
 import "./FlashcardsHub.css";
+const STUDY_ACTIONS = ["Again", "Hard"];
+const STUDY_SUMMARY_ACTIONS = ["Again", "Hard", "Good"];
 const blankCard = () => ({
   id: crypto.randomUUID(),
   front: "",
@@ -381,7 +382,7 @@ export default function FlashcardsHub({
           Math.floor((reward.total_xp || 0) / 100) >
           Math.floor((rewardSummary?.total_xp || 0) / 100);
         setRewardSummary(reward);
-        rewardsCallbackRef.current(reward.badges || []);
+        rewardsCallbackRef.current(reward);
       } catch (e) {
         setNotice(`Session could not sync: ${e.message}`);
         return;
@@ -422,8 +423,8 @@ export default function FlashcardsHub({
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         moveStudyCard(1);
-      } else if (flipped && /[1-4]/.test(e.key))
-        rate(RATINGS[Number(e.key) - 1]);
+      } else if (flipped && /[1-3]/.test(e.key))
+        rate(["Again", "Hard", "Good"][Number(e.key) - 1]);
       else if (e.key.toLowerCase() === "s") {
         const card = study.cards[study.index];
         toggleStar(card);
@@ -573,7 +574,7 @@ export default function FlashcardsHub({
             </button>
           </div>
           <p className="flash-keyboard-hint">
-            Use ← and → to move · Space to flip
+            Use ← and → to move · Space to flip · 1 Again · 2 Hard · 3 Next
           </p>
           {!flipped && card.hint && (
             <details>
@@ -587,7 +588,7 @@ export default function FlashcardsHub({
           {flipped ? (
             <div className="flash-review-actions">
               <div className="flash-ratings" aria-label="Rate your confidence">
-                {RATINGS.map((r, i) => (
+                {STUDY_ACTIONS.map((r, i) => (
                   <button key={r} onClick={() => rate(r)}>
                     {i + 1} · {r}
                   </button>
@@ -598,7 +599,7 @@ export default function FlashcardsHub({
                 onClick={() => rate("Good")}
               >
                 Next <span aria-hidden="true">→</span>
-                <small>Counts as Good</small>
+                <small>Continue confidently · 3</small>
               </button>
             </div>
           ) : (
@@ -630,10 +631,10 @@ export default function FlashcardsHub({
             ✨ You reviewed {summary.cards} cards in {summary.seconds} seconds.
           </p>
           <div>
-            {RATINGS.map((r) => (
+            {STUDY_SUMMARY_ACTIONS.map((r) => (
               <span key={r}>
                 <b>{summary.counts[r]}</b>
-                {r}
+                {r === "Good" ? "Next" : r}
               </span>
             ))}
           </div>
@@ -1157,49 +1158,6 @@ export default function FlashcardsHub({
                     aria-label={`${d.title}: ${d.understanding_percent || 0}% understood`}
                   />
                 </div>
-                {section === "mine" && (
-                  <div className="flash-progress-details">
-                    <span>New {d.new_count}</span>
-                    <span>Learning {d.learning_count}</span>
-                    <span>Familiar {d.familiar_count}</span>
-                    <span>Strong {d.strong_count}</span>
-                    <span>Starred {d.starred_count}</span>
-                    <span>{d.total_sessions} sessions</span>
-                    {d.last_studied_at && (
-                      <span>
-                        Studied{" "}
-                        {new Date(d.last_studied_at).toLocaleDateString()}
-                      </span>
-                    )}
-                    {d.linked_assignment_id && <span>Linked assignment</span>}
-                    <button
-                      aria-pressed={d.is_favorite}
-                      onClick={async () => {
-                        const old = d.is_favorite;
-                        setDecks((x) =>
-                          x.map((a) =>
-                            a.id === d.id ? { ...a, is_favorite: !old } : a,
-                          ),
-                        );
-                        const c = await getSupabaseBrowserClient();
-                        const { error } = await c.rpc(
-                          "set_flashcard_deck_favorite",
-                          { target_deck_id: d.id, favorite: !old },
-                        );
-                        if (error) {
-                          setDecks((x) =>
-                            x.map((a) =>
-                              a.id === d.id ? { ...a, is_favorite: old } : a,
-                            ),
-                          );
-                          setNotice(error.message);
-                        }
-                      }}
-                    >
-                      {d.is_favorite ? "★ Favorite" : "☆ Favorite"}
-                    </button>
-                  </div>
-                )}
                 <footer>
                   <button
                     className="btn btn-primary flash-study-deck-button"
@@ -1207,7 +1165,7 @@ export default function FlashcardsHub({
                   >
                     Study this deck
                   </button>
-                  {section === "mine" && !isMobile && (
+                  {section === "mine" && (
                     <button onClick={() => openDeck(d, "edit")}>
                       Edit Deck
                     </button>
