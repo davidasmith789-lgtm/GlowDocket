@@ -111,7 +111,9 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const publicFlashcardProfile = {
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
-    badgeId: profileSettings.sharedFlashcardBadge || profileSettings.selectedBadge || "",
+    badgeId: !profileSettings.sharedFlashcardBadge || profileSettings.sharedFlashcardBadge === "current"
+      ? profileSettings.selectedBadge || ""
+      : profileSettings.sharedFlashcardBadge,
     level: getFlashcardLevel(flashcardXp).level,
     name: displayName,
   };

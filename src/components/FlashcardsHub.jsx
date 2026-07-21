@@ -83,7 +83,9 @@ export default function FlashcardsHub({
   const publicProfile = useMemo(() => ({
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
-    badgeId: profileSettings.sharedFlashcardBadge || profileSettings.selectedBadge || "",
+    badgeId: !profileSettings.sharedFlashcardBadge || profileSettings.sharedFlashcardBadge === "current"
+      ? profileSettings.selectedBadge || ""
+      : profileSettings.sharedFlashcardBadge,
     level: flashLevel.level,
     name: displayName,
   }), [displayName, flashLevel.level, profileSettings.selectedBadge, profileSettings.shareFlashcardLevel, profileSettings.sharedFlashcardBadge, profileSettings.showFlashcardName]);
@@ -1095,8 +1097,8 @@ export default function FlashcardsHub({
             <details className="flash-profile-sharing">
               <summary>Share level and badge</summary>
               <label><span>Show my Flashcards level and badge on Shared Decks and Community posts</span><input type="checkbox" checked={profileSettings.shareFlashcardLevel === true} onChange={(event) => onProfileSettingsChange({ shareFlashcardLevel: event.target.checked })} /></label>
-              <label><span>Badge shown with my level</span><select value={profileSettings.sharedFlashcardBadge || profileSettings.selectedBadge || ""} disabled={!earnedBadgeOptions.length} onChange={(event) => onProfileSettingsChange({ sharedFlashcardBadge: event.target.value })}>{!earnedBadgeOptions.length && <option value="">Earn a badge first</option>}{earnedBadgeOptions.map((badge) => <option key={badge.id} value={badge.id}>{badge.title}</option>)}</select></label>
-              <label><span>Show my account name separately</span><input type="checkbox" checked={profileSettings.showFlashcardName === true} onChange={(event) => onProfileSettingsChange({ showFlashcardName: event.target.checked })} /></label>
+              <label><span>Badge shown with my level</span><select value={profileSettings.sharedFlashcardBadge || "current"} onChange={(event) => onProfileSettingsChange({ sharedFlashcardBadge: event.target.value })}><option value="current">Current</option>{earnedBadgeOptions.map((badge) => <option key={badge.id} value={badge.id}>{badge.title}</option>)}</select></label>
+              <label><span>Show my account name publicly</span><input type="checkbox" checked={profileSettings.showFlashcardName === true} onChange={(event) => onProfileSettingsChange({ showFlashcardName: event.target.checked })} /></label>
               <FlashcardProfileChip tags={buildFlashcardProfileTags([], publicProfile)} />
             </details>
           </section>

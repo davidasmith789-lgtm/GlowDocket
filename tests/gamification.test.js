@@ -25,6 +25,8 @@ test("Flashcards public profile preferences normalize independently", () => {
   assert.equal(settings.showFlashcardName, false);
   assert.equal(settings.sharedFlashcardBadge, "flash-first-session");
   assert.equal(normalizeGamification({ showFlashcardName: true }).showFlashcardName, true);
+  assert.equal(normalizeGamification({}).sharedFlashcardBadge, "current");
+  assert.equal(normalizeGamification({ earnedAchievementIds: ["flash-first-session"], selectedBadge: "flash-first-session", sharedFlashcardBadge: "current" }).sharedFlashcardBadge, "current");
 });
 
 test("achievements unlock from totals, weekly consistency, and completion context without duplicates", () => {

@@ -38,7 +38,9 @@ test("public Flashcards profiles store level badge and name independently in hid
   assert.deepEqual(stripFlashcardProfileTags(tags), ["history"]);
   const named = buildFlashcardProfileTags([], { shareFlashcardLevel: false, showFlashcardName: true, level: 7, name: "Taylor" });
   assert.deepEqual(parseFlashcardProfile(named), { level: null, badgeId: "", name: "Taylor" });
-  assert.match(hub, /Show my account name separately/);
+  assert.match(hub, /<option value="current">Current<\/option>/);
+  assert.match(hub, /Show my account name publicly/);
+  assert.doesNotMatch(hub, /Show my account name separately/);
   assert.match(communityHub, /FlashcardProfileChip/);
 });
 
