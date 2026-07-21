@@ -153,6 +153,10 @@ test("Community editor supports document keyboard formatting", () => {
   assert.match(hub, /runEditorCommand\("italic"\)/);
   assert.match(hub, /runEditorCommand\("underline"\)/);
   assert.match(hub, /runEditorCommand\("undo"\)/);
+  assert.match(hub, /document\.queryCommandValue\("fontSize"\)/);
+  assert.match(hub, /document\.queryCommandValue\("formatBlock"\)/);
+  assert.match(hub, /document\.queryCommandState\("bold"\)/);
+  assert.match(hub, /value=\{editorToolbarState\.size\}/);
   assert.match(hub, /<InlineText text=\{item\}/);
   assert.match(hub, /event\.shiftKey \? "outdent" : "indent"/);
   assert.match(hub, /HIGHLIGHT_PALETTE\.flatMap/);

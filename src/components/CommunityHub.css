@@ -286,6 +286,11 @@
 .community-toolbar-group { display: inline-flex; align-items: center; gap: 2px; padding-right: 6px; border-right: 1px solid var(--border-color); }
 .community-rich-toolbar button { min-width: 38px; border-color: transparent; background: transparent; font-size: .94rem; }
 .community-rich-toolbar button:hover { background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-alt)); }
+.community-rich-toolbar button.is-active {
+  border-color: color-mix(in srgb, var(--primary-color) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--surface-alt));
+  color: var(--primary-color);
+}
 .community-toolbar-color { position: relative; display: grid; width: 38px; height: 38px; place-items: center; cursor: pointer; font-weight: 900; }
 .community-toolbar-color input { position: absolute; inset: auto 5px 2px; width: 28px; height: 5px; padding: 0; border: 0; }
 .community-highlight-control { position: relative; }

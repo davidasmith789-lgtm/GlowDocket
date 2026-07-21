@@ -53,6 +53,12 @@ const highlightTextColor = (color) => {
   const [red, green, blue] = [0, 2, 4].map((start) => Number.parseInt(hex.slice(start, start + 2), 16));
   return (red * 299 + green * 587 + blue * 114) / 1000 > 150 ? "#111827" : "#ffffff";
 };
+const browserColorToHex = (value, fallback = "#172033") => {
+  if (/transparent|rgba\([^)]*,\s*0(?:\.0+)?\s*\)/i.test(String(value || ""))) return fallback;
+  const rgb = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgb) return `#${rgb.slice(1, 4).map((channel) => Number(channel).toString(16).padStart(2, "0")).join("")}`;
+  return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? String(value).toLowerCase() : fallback;
+};
 const InlineText = ({ text }) => {
   const namedLink = String(text).match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/i);
   if (namedLink && isSafeCommunityLink(namedLink[2])) return <a href={namedLink[2]} target="_blank" rel="noreferrer">{namedLink[1]}</a>;
@@ -134,6 +140,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const [flashcardXp, setFlashcardXp] = useState(0);
   const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
   const [highlightColor, setHighlightColor] = useState("#fff8c5");
+  const [editorToolbarState, setEditorToolbarState] = useState({ block: "p", font: "Arial", size: "3", bold: false, italic: false, underline: false, textColor: "#172033", highlighted: false });
   const matchingCourseOptions = matchCommunityCourses(courseOptions, draft.course_name);
   const publicFlashcardProfile = {
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
@@ -585,6 +592,34 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     selection.removeAllRanges();
     selection.addRange(editorRangeRef.current);
   };
+  const readEditorToolbarState = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount || !bodyRef.current?.contains(selection.anchorNode)) return;
+    const rawBlock = String(document.queryCommandValue("formatBlock") || "p").replace(/[<>]/g, "").toLowerCase();
+    const rawFont = String(document.queryCommandValue("fontName") || "Arial").replace(/["']/g, "");
+    const font = ["Arial", "Georgia", "Verdana", "Trebuchet MS", "Courier New"].find((option) => rawFont.toLowerCase().includes(option.toLowerCase())) || "Arial";
+    const size = String(document.queryCommandValue("fontSize") || "3");
+    const rawHighlight = document.queryCommandValue("hiliteColor") || document.queryCommandValue("backColor");
+    const highlighted = Boolean(rawHighlight) && !/transparent|rgba\([^)]*,\s*0(?:\.0+)?\s*\)/i.test(String(rawHighlight));
+    const nextHighlight = browserColorToHex(rawHighlight, highlightColor);
+    if (highlighted) setHighlightColor(nextHighlight);
+    setEditorToolbarState({
+      block: ["h2", "blockquote"].includes(rawBlock) ? rawBlock : "p",
+      font,
+      size: ["2", "3", "4", "5"].includes(size) ? size : "3",
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline"),
+      textColor: browserColorToHex(document.queryCommandValue("foreColor")),
+      highlighted,
+    });
+  }, [highlightColor]);
+  useEffect(() => {
+    if (!formMode) return undefined;
+    const update = () => readEditorToolbarState();
+    document.addEventListener("selectionchange", update);
+    return () => document.removeEventListener("selectionchange", update);
+  }, [formMode, readEditorToolbarState]);
   const syncEditorDraft = () => {
     const body = communityEditorToMarkup(bodyRef.current).slice(0, COMMUNITY_LIMITS.body);
     setDraft((current) => ({ ...current, body }));
@@ -595,6 +630,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     bodyRef.current?.focus();
     document.execCommand(command, false, value);
     syncEditorDraft();
+    readEditorToolbarState();
   };
   const chooseHighlightColor = (color) => {
     setHighlightColor(color);
@@ -965,27 +1001,27 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                         <button type="button" title="Undo (Ctrl+Z)" aria-label="Undo" onClick={() => runEditorCommand("undo")}>↶</button>
                         <button type="button" title="Redo (Ctrl+Y)" aria-label="Redo" onClick={() => runEditorCommand("redo")}>↷</button>
                       </div>
-                      <select aria-label="Paragraph style" defaultValue="p" onChange={(event) => runEditorCommand("formatBlock", event.target.value)}>
+                      <select aria-label="Paragraph style" value={editorToolbarState.block} onChange={(event) => runEditorCommand("formatBlock", event.target.value)}>
                         <option value="p">Normal text</option>
                         <option value="h2">Heading</option>
                         <option value="blockquote">Quote</option>
                       </select>
-                      <select aria-label="Font" defaultValue="Arial" onChange={(event) => runEditorCommand("fontName", event.target.value)}>
+                      <select aria-label="Font" value={editorToolbarState.font} onChange={(event) => runEditorCommand("fontName", event.target.value)}>
                         <option>Arial</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Courier New</option>
                       </select>
-                      <select aria-label="Text size" defaultValue="3" onChange={(event) => runEditorCommand("fontSize", event.target.value)}>
+                      <select aria-label="Text size" value={editorToolbarState.size} onChange={(event) => runEditorCommand("fontSize", event.target.value)}>
                         <option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">Title</option>
                       </select>
                       <div className="community-toolbar-group" aria-label="Text formatting">
-                        <button type="button" title="Bold (Ctrl+B)" aria-label="Bold" onClick={() => runEditorCommand("bold")}><strong>B</strong></button>
-                        <button type="button" title="Italic (Ctrl+I)" aria-label="Italic" onClick={() => runEditorCommand("italic")}><em>I</em></button>
-                        <button type="button" title="Underline (Ctrl+U)" aria-label="Underline" onClick={() => runEditorCommand("underline")}><u>U</u></button>
-                        <label className="community-toolbar-color" title="Text color"><span>A</span><input type="color" defaultValue="#172033" aria-label="Text color" onChange={(event) => runEditorCommand("foreColor", event.target.value)} /></label>
+                        <button type="button" className={editorToolbarState.bold ? "is-active" : ""} aria-pressed={editorToolbarState.bold} title="Bold (Ctrl+B)" aria-label="Bold" onClick={() => runEditorCommand("bold")}><strong>B</strong></button>
+                        <button type="button" className={editorToolbarState.italic ? "is-active" : ""} aria-pressed={editorToolbarState.italic} title="Italic (Ctrl+I)" aria-label="Italic" onClick={() => runEditorCommand("italic")}><em>I</em></button>
+                        <button type="button" className={editorToolbarState.underline ? "is-active" : ""} aria-pressed={editorToolbarState.underline} title="Underline (Ctrl+U)" aria-label="Underline" onClick={() => runEditorCommand("underline")}><u>U</u></button>
+                        <label className="community-toolbar-color" title="Text color"><span>A</span><input type="color" value={editorToolbarState.textColor} aria-label="Text color" onChange={(event) => runEditorCommand("foreColor", event.target.value)} /></label>
                       </div>
                       <div className="community-highlight-control">
                         <button
                           type="button"
-                          className="community-highlight-button"
+                          className={`community-highlight-button${editorToolbarState.highlighted ? " is-active" : ""}`}
                           aria-expanded={highlightMenuOpen}
                           aria-controls="community-highlight-palette"
                           onClick={() => {
