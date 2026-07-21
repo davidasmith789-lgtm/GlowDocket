@@ -389,17 +389,12 @@
   font-size: .72rem;
 }
 .community-editor-status span:first-child { color: var(--primary-color); font-weight: 850; }
-.community-preview,
 .community-rules {
   margin: 16px 0;
   padding: 14px;
   border: 1px solid var(--border-color);
   border-radius: 14px;
   background: var(--surface-alt);
-}
-.community-preview h3 {
-  margin-top: 0;
-  color: var(--text-color);
 }
 .community-rules li {
   margin: 5px 0;
@@ -429,8 +424,7 @@
 .community-draft-restored > div:first-child { flex-direction: column; gap: 2px; }
 .community-draft-restored span,
 .community-draft-status { color: var(--muted-text); font-size: .78rem; }
-.community-draft-restored button,
-.community-composer-switch button {
+.community-draft-restored button {
   min-height: 38px;
   padding: 7px 11px;
   border: 1px solid var(--border-color);
@@ -447,18 +441,6 @@
 }
 .community-draft-status.is-saving { color: var(--primary-color); }
 .community-draft-status.is-saved::before { content: "✓ "; color: var(--primary-color); font-weight: 900; }
-.community-composer-switch {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 11px;
-  background: var(--surface-alt);
-}
-.community-composer-switch button.active {
-  color: var(--button-primary-color);
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-}
 .community-dialog footer {
   margin-top: 18px;
   justify-content: flex-end;
@@ -956,7 +938,6 @@
   .community-draft-restored { align-items: stretch; flex-direction: column; }
   .community-draft-restored > div:last-child { display: grid; grid-template-columns: 1fr 1fr; }
   .community-draft-toolbar { align-items: stretch; flex-direction: column; }
-  .community-composer-switch { display: grid; grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .community-card,

@@ -216,12 +216,12 @@ test("Community drafts discard empty, malformed, oversized, and old data", () =>
   assert.equal(loaded.draft.body.length, 10000);
 });
 
-test("Community composer exposes draft status and mobile preview controls", () => {
+test("Community composer exposes draft status without a redundant preview", () => {
   const hub = readFileSync(new URL("../src/components/CommunityHub.jsx", import.meta.url), "utf8");
   assert.match(hub, /Draft restored/);
   assert.match(hub, /Saving draft…/);
   assert.match(hub, /Draft saved · Saved on this device/);
-  assert.match(hub, /mobileComposerView === "preview"/);
+  assert.doesNotMatch(hub, /community-preview|mobileComposerView/);
   assert.match(hub, /formMode !== "create"/);
   assert.match(hub, /latestFormModeRef\.current === "create"/);
   assert.match(hub, /saveCommunityDraft\(window\.localStorage, userId, latestDraftRef\.current\)/);

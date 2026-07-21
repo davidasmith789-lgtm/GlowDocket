@@ -127,7 +127,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const [draftStatus, setDraftStatus] = useState("");
   const [draftSavedAt, setDraftSavedAt] = useState(null);
   const [draftRestored, setDraftRestored] = useState(false);
-  const [mobileComposerView, setMobileComposerView] = useState("edit");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
@@ -178,7 +177,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     setDraft(EMPTY);
     setDraftStatus("");
     setDraftRestored(false);
-    setMobileComposerView("edit");
     setHighlightMenuOpen(false);
     setTimeout(() => triggerRef.current?.focus(), 0);
   }, []);
@@ -282,7 +280,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     setDraftSavedAt(saved?.savedAt || null);
     setDraftRestored(Boolean(saved));
     setDraftStatus(saved ? "saved" : "");
-    setMobileComposerView("edit");
     setConfirmed(false);
     setFormMode("create");
   };
@@ -319,7 +316,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     setDraftSavedAt(null);
     setDraftRestored(false);
     setDraftStatus("");
-    setMobileComposerView("edit");
     if (bodyRef.current) bodyRef.current.innerHTML = "";
   };
   useEffect(() => {
@@ -577,11 +573,11 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     }
   };
   useEffect(() => {
-    if (!formMode || (isMobile && mobileComposerView !== "edit") || !bodyRef.current) return;
+    if (!formMode || !bodyRef.current) return;
     bodyRef.current.innerHTML = communityMarkupToEditorHtml(draft.body);
   // Draft changes originate inside the editor; reloading them would reset the caret.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formMode, mobileComposerView]);
+  }, [formMode]);
   const rememberEditorRange = () => {
     const selection = window.getSelection();
     if (selection?.rangeCount && bodyRef.current?.contains(selection.anchorNode)) editorRangeRef.current = selection.getRangeAt(0).cloneRange();
@@ -920,15 +916,8 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                     <span className={`community-draft-status${draftStatus ? ` is-${draftStatus}` : ""}`} aria-live="polite">
                       {draftStatus === "saving" ? "Saving draft…" : draftStatus === "saved" ? "Draft saved · Saved on this device" : "Drafts save on this device"}
                     </span>
-                    {isMobile && (
-                      <div className="community-composer-switch" aria-label="Post composer view">
-                        <button type="button" className={mobileComposerView === "edit" ? "active" : ""} aria-pressed={mobileComposerView === "edit"} onClick={() => setMobileComposerView("edit")}>Edit</button>
-                        <button type="button" className={mobileComposerView === "preview" ? "active" : ""} aria-pressed={mobileComposerView === "preview"} onClick={() => setMobileComposerView("preview")}>Preview</button>
-                      </div>
-                    )}
                   </div>
                 )}
-                {(!isMobile || mobileComposerView === "edit") && (
                 <div className="community-form-grid">
                   <label>
                     Course name{" "}
@@ -1108,15 +1097,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                     {draft.links.length < 5 && <button type="button" className="community-add-link" onClick={() => setDraft({ ...draft, links: [...draft.links, { name: "", url: "" }] })}>Add link</button>}
                   </fieldset>
                 </div>
-                )}
-                {(!isMobile || mobileComposerView === "preview") && <section className="community-preview">
-                  <h3>Preview</h3>
-                  <Body
-                    text={
-                      draft.body || "Your formatted preview will appear here."
-                    }
-                  />
-                </section>}
                 <aside className="community-rules">
                   <strong>Community rules</strong>
                   <ul>
