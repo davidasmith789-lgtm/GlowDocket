@@ -252,8 +252,14 @@
 .community-form-grid .community-post-type-field {
   align-self: start;
 }
+.community-field-heading {
+  display: flex;
+  min-height: 1.45em;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 .community-form-grid label small {
-  justify-self: end;
   color: var(--muted-text);
   font-weight: 500;
 }

@@ -2523,6 +2523,48 @@ select optgroup {
 
 select { color-scheme: inherit; }
 
+/* Chromium's customizable select surface stays inside the app's composited
+   theme layer instead of briefly falling back to the native white popup. */
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  ::picker(select) {
+    max-height: min(320px, 60dvh);
+    margin-block: 4px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--backdrop-color) 30%, transparent);
+  }
+
+  select option,
+  select optgroup {
+    min-height: 40px;
+    padding: 9px 12px;
+    background: var(--input-bg);
+    color: var(--text-color);
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background: color-mix(in srgb, var(--primary-color) 16%, var(--input-bg));
+    color: var(--text-color);
+  }
+
+  select::picker-icon {
+    color: var(--muted-text);
+    transition: transform var(--motion-fast, 120ms) ease;
+  }
+
+  select:open::picker-icon { transform: rotate(180deg); }
+}
+
 body,
 html,
 #root,

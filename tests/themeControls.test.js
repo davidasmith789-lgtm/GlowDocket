@@ -17,5 +17,6 @@ test("native controls use the active theme without a light dropdown flash", asyn
   assert.match(mountStyles, /:root\[data-theme="dark"\]\s*\{\s*color-scheme: dark;/);
   assert.match(appStyles, /html \{ color-scheme: light; \}\s*html\[data-theme="dark"\] \{ color-scheme: dark; \}/);
   assert.match(appStyles, /select,\s*select option,\s*select optgroup\s*\{[^}]*background-color: var\(--input-bg\);[^}]*color: var\(--text-color\);/);
+  assert.match(appStyles, /@supports \(appearance: base-select\)[\s\S]*?::picker\(select\)[\s\S]*?background: var\(--input-bg\);/);
   assert.doesNotMatch(appStyles, /html \{ color-scheme: light dark; \}/);
 });

@@ -921,10 +921,10 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                 )}
                 <div className="community-form-grid">
                   <label>
-                    Course name{" "}
-                    <small>
-                      {COMMUNITY_LIMITS.course - draft.course_name.length}
-                    </small>
+                    <span className="community-field-heading">
+                      <span>Course name</span>
+                      <small>{COMMUNITY_LIMITS.course - draft.course_name.length}</small>
+                    </span>
                     <input
                       required
                       maxLength={COMMUNITY_LIMITS.course}
@@ -951,7 +951,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                     </span>
                   </label>
                   <label className="community-post-type-field">
-                    Post type
+                    <span className="community-field-heading"><span>Post type</span></span>
                     <select
                       value={draft.post_type}
                       onChange={(e) =>
@@ -964,8 +964,10 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                     </select>
                   </label>
                   <label className="wide">
-                    Title{" "}
-                    <small>{COMMUNITY_LIMITS.title - draft.title.length}</small>
+                    <span className="community-field-heading">
+                      <span>Title</span>
+                      <small>{COMMUNITY_LIMITS.title - draft.title.length}</small>
+                    </span>
                     <input
                       required
                       maxLength={COMMUNITY_LIMITS.title}
