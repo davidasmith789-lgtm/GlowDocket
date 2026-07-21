@@ -152,6 +152,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   };
   const dialogRef = useRef(null);
   const bodyRef = useRef(null);
+  const highlightPaletteRef = useRef(null);
   const editorRangeRef = useRef(null);
   const closeDialogRef = useRef(null);
   const triggerRef = useRef(null);
@@ -631,7 +632,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const chooseHighlightColor = (color) => {
     setHighlightColor(color);
     runEditorCommand("hiliteColor", color);
-    setHighlightMenuOpen(false);
+    highlightPaletteRef.current?.hidePopover();
   };
   const pickHighlightFromScreen = async () => {
     if (!("EyeDropper" in window)) return;
@@ -1016,14 +1017,21 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                           aria-controls="community-highlight-palette"
                           onClick={() => {
                             rememberEditorRange();
-                            setHighlightMenuOpen((open) => !open);
+                            highlightPaletteRef.current?.togglePopover();
                           }}
                         >
                           <span aria-hidden="true" style={{ backgroundColor: highlightColor }}>A</span>
                           Highlight color
                         </button>
-                        {highlightMenuOpen && (
-                          <div id="community-highlight-palette" className="community-highlight-palette" role="dialog" aria-label="Highlight colors">
+                          <div
+                            ref={highlightPaletteRef}
+                            id="community-highlight-palette"
+                            className="community-highlight-palette"
+                            role="dialog"
+                            aria-label="Highlight colors"
+                            popover="auto"
+                            onToggle={(event) => setHighlightMenuOpen(event.currentTarget.matches(":popover-open"))}
+                          >
                             <strong>Highlight color</strong>
                             <div className="community-highlight-swatches" aria-label="Preset highlight colors">
                               {HIGHLIGHT_PALETTE.flatMap((row, rowIndex) => row.map((color, columnIndex) => (
@@ -1043,7 +1051,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                                 <span>Custom color</span>
                                 <input type="color" value={highlightColor} onChange={(event) => chooseHighlightColor(event.target.value)} />
                               </label>
-                              <button type="button" className="community-highlight-transparent" onClick={() => { runEditorCommand("hiliteColor", "transparent"); setHighlightMenuOpen(false); }} title="Remove highlighting from selected text or future typing">
+                              <button type="button" className="community-highlight-transparent" onClick={() => { runEditorCommand("hiliteColor", "transparent"); highlightPaletteRef.current?.hidePopover(); }} title="Remove highlighting from selected text or future typing">
                                 <span aria-hidden="true">A</span> Transparent
                               </button>
                               <button type="button" onClick={pickHighlightFromScreen} disabled={!("EyeDropper" in window)} title={("EyeDropper" in window) ? "Choose a color from anywhere on your screen" : "Screen color picking is not supported by this browser"}>
@@ -1051,7 +1059,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                               </button>
                             </div>
                           </div>
-                        )}
                       </div>
                       <div className="community-toolbar-group" aria-label="Insert and arrange">
                         <button type="button" title="Add link" aria-label="Add link" onClick={() => { const url = window.prompt("Paste a web address"); if (url && isSafeCommunityLink(url)) runEditorCommand("createLink", url); }}><span aria-hidden="true">↗</span></button>
