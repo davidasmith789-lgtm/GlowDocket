@@ -53,6 +53,9 @@ test("Community deletion uses an explicit server-authorized RPC", () => {
   assert.match(migration, /get diagnostics deleted_count = row_count/i);
   assert.match(hub, /rpc\("delete_community_post"/);
   assert.match(hub, /if \(!deleted\) throw new Error/);
+  assert.match(hub, /moderate_community_post/);
+  assert.match(hub, /new_status: "removed"/);
+  assert.match(hub, /row\.status !== "removed"/);
 });
 
 test("moderation uses Community moderator authorization", () => {

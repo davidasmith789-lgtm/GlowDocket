@@ -110,7 +110,7 @@ export default function CommunityHub({ userId, isMobile = false }) {
           saved_only: savedOnly,
         });
         if (error) throw error;
-        const rows = data || [];
+        const rows = (data || []).filter((row) => row.status !== "removed");
         setPosts((current) =>
           append
             ? [
@@ -337,9 +337,18 @@ export default function CommunityHub({ userId, isMobile = false }) {
       return;
     try {
       const client = await getSupabaseBrowserClient();
-      const { data: deleted, error } = await client.rpc("delete_community_post", {
+      let { data: deleted, error } = await client.rpc("delete_community_post", {
         target_post_id: post.id,
       });
+      if (error && isModerator && (error.code === "PGRST202" || /delete_community_post/i.test(error.message || ""))) {
+        const fallback = await client.rpc("moderate_community_post", {
+          target_post_id: post.id,
+          new_status: "removed",
+          clear_reports: true,
+        });
+        error = fallback.error;
+        deleted = !fallback.error;
+      }
       if (error) throw error;
       if (!deleted) throw new Error("The post was not deleted.");
       closeDialog();
