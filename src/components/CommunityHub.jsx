@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "../supabaseClient.js";
 import CommunityFlashcardActions from "./CommunityFlashcardActions.jsx";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
+import FlashcardProfileSharingControls from "./FlashcardProfileSharingControls.jsx";
 import { buildFlashcardProfileTags, getFlashcardLevel } from "../flashcardUtils.js";
 import {
   COMMUNITY_LIMITS,
@@ -78,7 +79,7 @@ const Body = ({ text, preview = false }) => (
   </div>
 );
 
-export default function CommunityHub({ userId, courses = [], displayName = "", profileSettings = {}, isMobile = false }) {
+export default function CommunityHub({ userId, courses = [], displayName = "", profileSettings = {}, onProfileSettingsChange = () => {}, isMobile = false }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -617,6 +618,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
             Find tips, explanations, and study guides shared by other students.
           </p>
         </div>
+        <FlashcardProfileSharingControls profileSettings={profileSettings} onChange={onProfileSettingsChange} level={getFlashcardLevel(flashcardXp).level} displayName={displayName} />
         <button
           className="btn btn-primary"
           type="button"

@@ -10,10 +10,10 @@ import {
   selectStudyCards,
   stripFlashcardProfileTags,
 } from "../flashcardUtils.js";
-import { GAMIFICATION_ACHIEVEMENTS } from "../gamificationUtils.js";
 import FlashcardSharedActions from "./FlashcardSharedActions.jsx";
 import FlashcardConfirmDialog from "./FlashcardConfirmDialog.jsx";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
+import FlashcardProfileSharingControls from "./FlashcardProfileSharingControls.jsx";
 import "./FlashcardsHub.css";
 const STUDY_ACTIONS = ["Again", "Hard"];
 const STUDY_SUMMARY_ACTIONS = ["Again", "Hard", "Good"];
@@ -80,7 +80,6 @@ export default function FlashcardsHub({
   const rewardsCallbackRef = useRef(onRewards);
   rewardsCallbackRef.current = onRewards;
   const flashLevel = getFlashcardLevel(rewardSummary?.total_xp || 0);
-  const earnedBadgeOptions = GAMIFICATION_ACHIEVEMENTS.filter((badge) => (profileSettings.earnedAchievementIds || []).includes(badge.id));
   const publicProfile = useMemo(() => ({
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
@@ -1112,13 +1111,7 @@ export default function FlashcardsHub({
               <progress max={flashLevel.xpNeeded} value={flashLevel.xpIntoLevel}>{flashLevel.progress}%</progress>
               <small>Today: {rewardSummary.today_xp ?? rewardSummary.xp_earned ?? 0}/{rewardSummary.daily_cap || 100} XP</small>
             </div>
-            <details className="flash-profile-sharing">
-              <summary>Share level and badge</summary>
-              <label><span>Show my Flashcards level and badge on Shared Decks and Community posts</span><input type="checkbox" checked={profileSettings.shareFlashcardLevel === true} onChange={(event) => onProfileSettingsChange({ shareFlashcardLevel: event.target.checked })} /></label>
-              <label><span>Badge shown with my level</span><select value={profileSettings.sharedFlashcardBadge || "current"} onChange={(event) => onProfileSettingsChange({ sharedFlashcardBadge: event.target.value })}><option value="current">Current</option>{earnedBadgeOptions.map((badge) => <option key={badge.id} value={badge.id}>{badge.title}</option>)}</select></label>
-              <label><span>Show my account name publicly</span><input type="checkbox" checked={profileSettings.showFlashcardName === true} onChange={(event) => onProfileSettingsChange({ showFlashcardName: event.target.checked })} /></label>
-              <FlashcardProfileChip tags={buildFlashcardProfileTags([], publicProfile)} />
-            </details>
+            <FlashcardProfileSharingControls profileSettings={profileSettings} onChange={onProfileSettingsChange} level={flashLevel.level} displayName={displayName} />
           </section>
         )}
         {notice && (

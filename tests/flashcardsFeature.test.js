@@ -14,6 +14,7 @@ const hubStyles = read("src/components/FlashcardsHub.css");
 const appSource = read("src/App.jsx");
 const communityHub = read("src/components/CommunityHub.jsx");
 const developerMigration = read("supabase/migrations/202607200004_dev_moderator_shared_decks.sql");
+const profileSharing = read("src/components/FlashcardProfileSharingControls.jsx");
 
 test("ratings and reports are enforced server-side", () => {
   assert.match(sql, /primary key\(deck_id,user_id\)/i);
@@ -46,10 +47,12 @@ test("public Flashcards profiles store level badge and name independently in hid
   assert.deepEqual(stripFlashcardProfileTags(tags), ["history"]);
   const named = buildFlashcardProfileTags([], { shareFlashcardLevel: false, showFlashcardName: true, level: 7, name: "Taylor" });
   assert.deepEqual(parseFlashcardProfile(named), { level: null, badgeId: "", name: "Taylor" });
-  assert.match(hub, /<option value="current">Current<\/option>/);
-  assert.match(hub, /Show my account name publicly/);
-  assert.doesNotMatch(hub, /Show my account name separately/);
+  assert.match(profileSharing, /<option value="current">Current<\/option>/);
+  assert.match(profileSharing, /Share Flashcard level &amp; badge/);
+  assert.match(profileSharing, /Show my account name publicly/);
+  assert.doesNotMatch(profileSharing, /Show my account name separately/);
   assert.match(communityHub, /FlashcardProfileChip/);
+  assert.match(communityHub, /FlashcardProfileSharingControls/);
 });
 
 test("public deck and Community attachment visibility require active shared decks", () => {

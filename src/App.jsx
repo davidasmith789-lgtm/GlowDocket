@@ -8491,7 +8491,7 @@ function App() {
                 <section className="mobile-app-card">{renderCourseColorsWidget()}</section>
               </>
             )}
-            {communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} isMobile />}
+            {communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} isMobile />}
             {flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} isMobile reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(summary) => { const withBadges = normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...(summary.badges || [])])] }); handleAddFieldSettingChange("gamification", applyFlashcardMasterySummary(withBadges, summary)); }} />}
           </main>
         )}
@@ -8507,7 +8507,7 @@ function App() {
           <main id="workspace-main-content" className="workspace-main" ref={workspaceMainRef} tabIndex="-1">
 
         {currentTab === "dashboard" && renderWorkspaceForTab("dashboard")}
-        {!isMobileUi && communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} />}
+        {!isMobileUi && communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} />}
         {!isMobileUi && flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={(summary) => { const withBadges = normalizeGamification({ ...userSettings.gamification, earnedAchievementIds: [...new Set([...(userSettings.gamification?.earnedAchievementIds || []), ...(summary.badges || [])])] }); handleAddFieldSettingChange("gamification", applyFlashcardMasterySummary(withBadges, summary)); }} />}
         {!isMobileUi && currentTab !== "dashboard" && currentTab !== "calendar" && renderWorkspaceExtrasForTab(currentTab)}
 
