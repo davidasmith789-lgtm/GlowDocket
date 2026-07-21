@@ -4,6 +4,7 @@ import CommunityFlashcardActions from "./CommunityFlashcardActions.jsx";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
 import FlashcardProfileSharingControls from "./FlashcardProfileSharingControls.jsx";
 import { buildFlashcardProfileTags, getFlashcardLevel } from "../flashcardUtils.js";
+import { communityEditorToMarkup, communityMarkupToEditorHtml } from "../communityEditorUtils.js";
 import {
   COMMUNITY_LIMITS,
   COMMUNITY_POST_TYPES,
@@ -12,7 +13,6 @@ import {
   communityBodyBlocks,
   hasMeaningfulCommunityDraft,
   loadCommunityDraft,
-  getCommunityFormattingMarker,
   isSafeCommunityLink,
   matchCommunityCourses,
   normalizeCommunityLinks,
@@ -56,12 +56,19 @@ const highlightTextColor = (color) => {
 const InlineText = ({ text }) => {
   const namedLink = String(text).match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/i);
   if (namedLink && isSafeCommunityLink(namedLink[2])) return <a href={namedLink[2]} target="_blank" rel="noreferrer">{namedLink[1]}</a>;
-  return String(text).split(/(\^\^#[0-9a-f]{6}\|.*?\^\^|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*)/gi).filter(Boolean).map((part, index) => {
+  return String(text).split(/(\^\^#[0-9a-f]{6}\|.*?\^\^|@@(?:c:#[0-9a-f]{6}|f:[^|@]+|s:[1-7]|a:(?:left|center|right))\|.*?@@|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*)/gi).filter(Boolean).map((part, index) => {
     const highlight = part.match(/^\^\^(#[0-9a-f]{6})\|(.*?)\^\^$/i);
-    if (highlight) return <mark key={index} style={{ backgroundColor: highlight[1], color: highlightTextColor(highlight[1]) }}>{highlight[2]}</mark>;
-    if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (/^__[^_]+__$/.test(part)) return <u key={index}>{part.slice(2, -2)}</u>;
-    if (/^\*[^*]+\*$/.test(part)) return <em key={index}>{part.slice(1, -1)}</em>;
+    if (highlight) return <mark key={index} style={{ backgroundColor: highlight[1], color: highlightTextColor(highlight[1]) }}><InlineText text={highlight[2]} /></mark>;
+    const styled = part.match(/^@@(c:#[0-9a-f]{6}|f:[^|@]+|s:[1-7]|a:(?:left|center|right))\|(.*?)@@$/i);
+    if (styled) {
+      const [kind, value] = styled[1].split(":");
+      const fontSizes = { 1: ".75em", 2: ".875em", 3: "1em", 4: "1.2em", 5: "1.5em", 6: "2em", 7: "2.5em" };
+      const style = kind === "c" ? { color: value } : kind === "f" ? { fontFamily: value } : kind === "a" ? { display: "block", textAlign: value } : { fontSize: fontSizes[value] };
+      return <span key={index} style={style}><InlineText text={styled[2]} /></span>;
+    }
+    if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={index}><InlineText text={part.slice(2, -2)} /></strong>;
+    if (/^__[^_]+__$/.test(part)) return <u key={index}><InlineText text={part.slice(2, -2)} /></u>;
+    if (/^\*[^*]+\*$/.test(part)) return <em key={index}><InlineText text={part.slice(1, -1)} /></em>;
     return <span key={index}>{part}</span>;
   });
 };
@@ -127,7 +134,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const [flashcardXp, setFlashcardXp] = useState(0);
   const [highlightMenuOpen, setHighlightMenuOpen] = useState(false);
   const [highlightColor, setHighlightColor] = useState("#fff8c5");
-  const [highlightHint, setHighlightHint] = useState("");
   const matchingCourseOptions = matchCommunityCourses(courseOptions, draft.course_name);
   const publicFlashcardProfile = {
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
@@ -140,7 +146,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   };
   const dialogRef = useRef(null);
   const bodyRef = useRef(null);
-  const bodySelectionRef = useRef({ start: 0, end: 0 });
+  const editorRangeRef = useRef(null);
   const closeDialogRef = useRef(null);
   const triggerRef = useRef(null);
   const latestDraftRef = useRef(EMPTY);
@@ -167,7 +173,6 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     setDraftRestored(false);
     setMobileComposerView("edit");
     setHighlightMenuOpen(false);
-    setHighlightHint("");
     setTimeout(() => triggerRef.current?.focus(), 0);
   }, []);
   const closeDialog = useCallback(() => {
@@ -308,6 +313,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
     setDraftRestored(false);
     setDraftStatus("");
     setMobileComposerView("edit");
+    if (bodyRef.current) bodyRef.current.innerHTML = "";
   };
   useEffect(() => {
     if (!formMode) return;
@@ -563,73 +569,41 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
       setNotice(messageFor(error, "The moderation action failed."));
     }
   };
-  const insertMarker = (kind) => {
-    const field = bodyRef.current;
-    const start = field?.selectionStart ?? draft.body.length;
-    const marker = getCommunityFormattingMarker(kind, draft.body, start);
-    const next =
-      `${draft.body.slice(0, start)}${marker}${draft.body.slice(start)}`.slice(
-        0,
-        COMMUNITY_LIMITS.body,
-      );
-    setDraft({ ...draft, body: next });
-    requestAnimationFrame(() => {
-      field?.focus();
-      field?.setSelectionRange(start + marker.length, start + marker.length);
-    });
+  useEffect(() => {
+    if (!formMode || (isMobile && mobileComposerView !== "edit") || !bodyRef.current) return;
+    bodyRef.current.innerHTML = communityMarkupToEditorHtml(draft.body);
+  // Draft changes originate inside the editor; reloading them would reset the caret.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formMode, mobileComposerView]);
+  const rememberEditorRange = () => {
+    const selection = window.getSelection();
+    if (selection?.rangeCount && bodyRef.current?.contains(selection.anchorNode)) editorRangeRef.current = selection.getRangeAt(0).cloneRange();
   };
-  const rememberBodySelection = () => {
-    const field = bodyRef.current;
-    if (field) bodySelectionRef.current = { start: field.selectionStart, end: field.selectionEnd };
+  const restoreEditorRange = () => {
+    if (!editorRangeRef.current) return;
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(editorRangeRef.current);
   };
-  const editBodySelection = (kind, color = highlightColor) => {
-    const field = bodyRef.current;
-    if (!field) return;
-    const activeSelection = document.activeElement === field
-      ? { start: field.selectionStart, end: field.selectionEnd }
-      : bodySelectionRef.current;
-    const { start, end } = activeSelection;
-    const selectedText = draft.body.slice(start, end);
-    if (kind === "highlight" && !selectedText) {
-      setHighlightHint("Select text in the editor before choosing a highlight color.");
-      return;
-    }
-    let insertion = selectedText;
-    let selectionOffset = 0;
-    if (kind === "indent" || kind === "outdent") {
-      insertion = selectedText.split("\n").map((line) => kind === "indent" ? `  ${line}` : line.replace(/^ {1,2}/, "")).join("\n");
-      selectionOffset = kind === "indent" ? 2 : 0;
-    } else if (kind === "bold") {
-      insertion = `**${selectedText}**`;
-      selectionOffset = 2;
-    } else if (kind === "highlight") {
-      insertion = selectedText.split("\n").map((line) => line ? `^^${color}|${line}^^` : "").join("\n");
-      selectionOffset = `^^${color}|`.length;
-    } else {
-      const wrappers = { italic: ["*", "*"], underline: ["__", "__"] };
-      const [before, after] = wrappers[kind] || ["", ""];
-      insertion = `${before}${selectedText}${after}`;
-      selectionOffset = before.length;
-    }
-    const next = `${draft.body.slice(0, start)}${insertion}${draft.body.slice(end)}`.slice(0, COMMUNITY_LIMITS.body);
-    setDraft({ ...draft, body: next });
-    setHighlightHint("");
-    setHighlightMenuOpen(false);
-    requestAnimationFrame(() => {
-      field.focus();
-      const selectionStart = start + selectionOffset;
-      const selectionEnd = ["indent", "outdent", "highlight"].includes(kind) ? start + insertion.length : selectionStart + selectedText.length;
-      field.setSelectionRange(selectionStart, selectionEnd);
-      rememberBodySelection();
-    });
+  const syncEditorDraft = () => {
+    const body = communityEditorToMarkup(bodyRef.current).slice(0, COMMUNITY_LIMITS.body);
+    setDraft((current) => ({ ...current, body }));
+    rememberEditorRange();
+  };
+  const runEditorCommand = (command, value = null) => {
+    restoreEditorRange();
+    bodyRef.current?.focus();
+    document.execCommand(command, false, value);
+    syncEditorDraft();
   };
   const chooseHighlightColor = (color) => {
     setHighlightColor(color);
-    editBodySelection("highlight", color);
+    runEditorCommand("hiliteColor", color);
+    setHighlightMenuOpen(false);
   };
   const pickHighlightFromScreen = async () => {
     if (!("EyeDropper" in window)) return;
-    rememberBodySelection();
+    rememberEditorRange();
     try {
       const result = await new window.EyeDropper().open();
       if (result?.sRGBHex) chooseHighlightColor(result.sRGBHex);
@@ -640,13 +614,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const handleBodyKeyDown = (event) => {
     if (event.key === "Tab") {
       event.preventDefault();
-      editBodySelection(event.shiftKey ? "outdent" : "indent");
-    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
-      event.preventDefault();
-      editBodySelection("bold");
-    } else if ((event.ctrlKey || event.metaKey) && ["i", "u"].includes(event.key.toLowerCase())) {
-      event.preventDefault();
-      editBodySelection({ i: "italic", u: "underline" }[event.key.toLowerCase()]);
+      runEditorCommand(event.shiftKey ? "outdent" : "indent");
     }
   };
   const renderActions = (post) => (
@@ -987,12 +955,33 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                       <small>{COMMUNITY_LIMITS.body - draft.body.length}</small>
                     </label>
                     <div
-                      className="community-format-toolbar"
+                      className="community-format-toolbar community-rich-toolbar"
                       aria-label="Formatting toolbar"
                       onMouseDown={(event) => {
                         if (event.target.closest("button")) event.preventDefault();
                       }}
                     >
+                      <div className="community-toolbar-group" aria-label="History">
+                        <button type="button" title="Undo (Ctrl+Z)" aria-label="Undo" onClick={() => runEditorCommand("undo")}>↶</button>
+                        <button type="button" title="Redo (Ctrl+Y)" aria-label="Redo" onClick={() => runEditorCommand("redo")}>↷</button>
+                      </div>
+                      <select aria-label="Paragraph style" defaultValue="p" onChange={(event) => runEditorCommand("formatBlock", event.target.value)}>
+                        <option value="p">Normal text</option>
+                        <option value="h2">Heading</option>
+                        <option value="blockquote">Quote</option>
+                      </select>
+                      <select aria-label="Font" defaultValue="Arial" onChange={(event) => runEditorCommand("fontName", event.target.value)}>
+                        <option>Arial</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Courier New</option>
+                      </select>
+                      <select aria-label="Text size" defaultValue="3" onChange={(event) => runEditorCommand("fontSize", event.target.value)}>
+                        <option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">Title</option>
+                      </select>
+                      <div className="community-toolbar-group" aria-label="Text formatting">
+                        <button type="button" title="Bold (Ctrl+B)" aria-label="Bold" onClick={() => runEditorCommand("bold")}><strong>B</strong></button>
+                        <button type="button" title="Italic (Ctrl+I)" aria-label="Italic" onClick={() => runEditorCommand("italic")}><em>I</em></button>
+                        <button type="button" title="Underline (Ctrl+U)" aria-label="Underline" onClick={() => runEditorCommand("underline")}><u>U</u></button>
+                        <label className="community-toolbar-color" title="Text color"><span>A</span><input type="color" defaultValue="#172033" aria-label="Text color" onChange={(event) => runEditorCommand("foreColor", event.target.value)} /></label>
+                      </div>
                       <div className="community-highlight-control">
                         <button
                           type="button"
@@ -1000,7 +989,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                           aria-expanded={highlightMenuOpen}
                           aria-controls="community-highlight-palette"
                           onClick={() => {
-                            rememberBodySelection();
+                            rememberEditorRange();
                             setHighlightMenuOpen((open) => !open);
                           }}
                         >
@@ -1035,50 +1024,32 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                           </div>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => insertMarker("heading")}
-                      >
-                        Heading
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarker("bullet")}
-                      >
-                        Bullet
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarker("numbered")}
-                      >
-                        Numbered
-                      </button>
-                      <button type="button" onClick={() => editBodySelection("bold")}>
-                        <strong>Bold</strong>
-                      </button>
-                      <button type="button" onClick={() => editBodySelection("italic")}>
-                        <em>Italic</em>
-                      </button>
-                      <button type="button" onClick={() => editBodySelection("underline")}>
-                        <u>Underline</u>
-                      </button>
+                      <div className="community-toolbar-group" aria-label="Insert and arrange">
+                        <button type="button" title="Add link" aria-label="Add link" onClick={() => { const url = window.prompt("Paste a web address"); if (url && isSafeCommunityLink(url)) runEditorCommand("createLink", url); }}>🔗</button>
+                        <button type="button" title="Bulleted list" aria-label="Bulleted list" onClick={() => runEditorCommand("insertUnorderedList")}>•≡</button>
+                        <button type="button" title="Numbered list" aria-label="Numbered list" onClick={() => runEditorCommand("insertOrderedList")}>1≡</button>
+                        <button type="button" title="Decrease indent (Shift+Tab)" aria-label="Decrease indent" onClick={() => runEditorCommand("outdent")}>⇤</button>
+                        <button type="button" title="Increase indent (Tab)" aria-label="Increase indent" onClick={() => runEditorCommand("indent")}>⇥</button>
+                        <button type="button" title="Align left" aria-label="Align left" onClick={() => runEditorCommand("justifyLeft")}>☰</button>
+                        <button type="button" title="Align center" aria-label="Align center" onClick={() => runEditorCommand("justifyCenter")}>≡</button>
+                        <button type="button" title="Clear formatting" aria-label="Clear formatting" onClick={() => runEditorCommand("removeFormat")}>Tx</button>
+                      </div>
                     </div>
-                    {highlightHint && <p className="community-highlight-hint" role="status">{highlightHint}</p>}
-                    <textarea
+                    <div
                       ref={bodyRef}
                       id="community-body"
-                      required
-                      maxLength={COMMUNITY_LIMITS.body}
-                      rows="12"
-                      placeholder="Title"
-                      value={draft.body}
+                      className="community-rich-editor"
+                      contentEditable
+                      role="textbox"
+                      aria-multiline="true"
+                      aria-label="Main text"
+                      data-placeholder="Start writing your post…"
+                      suppressContentEditableWarning
                       onKeyDown={handleBodyKeyDown}
-                      onSelect={rememberBodySelection}
-                      onClick={rememberBodySelection}
-                      onKeyUp={rememberBodySelection}
-                      onChange={(e) =>
-                        setDraft({ ...draft, body: e.target.value })
-                      }
+                      onInput={syncEditorDraft}
+                      onMouseUp={rememberEditorRange}
+                      onKeyUp={rememberEditorRange}
+                      onFocus={rememberEditorRange}
                     />
                   </div>
                   <fieldset className="wide community-link-editor">

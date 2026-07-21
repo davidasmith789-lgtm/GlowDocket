@@ -261,6 +261,32 @@
   gap: 7px;
   margin: 6px 0;
 }
+.community-rich-toolbar {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-alt) 94%, transparent);
+  box-shadow: 0 5px 15px #0001;
+}
+.community-rich-toolbar select {
+  width: auto;
+  min-width: 92px;
+  min-height: 38px;
+  padding: 6px 28px 6px 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-color);
+  font-weight: 700;
+}
+.community-toolbar-group { display: inline-flex; align-items: center; gap: 2px; padding-right: 6px; border-right: 1px solid var(--border-color); }
+.community-rich-toolbar button { min-width: 38px; border-color: transparent; background: transparent; font-size: .94rem; }
+.community-rich-toolbar button:hover { background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-alt)); }
+.community-toolbar-color { position: relative; display: grid; width: 38px; height: 38px; place-items: center; cursor: pointer; font-weight: 900; }
+.community-toolbar-color input { position: absolute; inset: auto 5px 2px; width: 28px; height: 5px; padding: 0; border: 0; }
 .community-highlight-control { position: relative; }
 .community-format-toolbar .community-highlight-button {
   display: inline-flex;
@@ -701,7 +727,7 @@
   line-height: 1.65;
   text-align: left;
 }
-.community-form-grid textarea#community-body {
+.community-form-grid .community-rich-editor {
   min-height: 310px;
   padding: 24px clamp(18px, 5vw, 54px);
   border-radius: 4px;
@@ -712,7 +738,13 @@
   line-height: 1.65;
   box-shadow: 0 8px 24px #0002;
   resize: vertical;
+  overflow: auto;
+  outline: none;
 }
+.community-rich-editor:empty::before { color: var(--muted-text); content: attr(data-placeholder); pointer-events: none; }
+.community-rich-editor:focus { border-color: var(--focus-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-color) 24%, transparent), 0 8px 24px #0002; }
+.community-rich-editor :is(p, h2, blockquote) { margin: 0 0 .75em; }
+.community-rich-editor :is(ul, ol) { margin: .5em 0 .8em 1.5em; }
 .community-link-editor {
   display: grid;
   gap: 10px;
@@ -878,7 +910,7 @@
   .community-detail-header > button { position: absolute; top: 0; right: 0; }
   .community-link-row { grid-template-columns: 1fr; }
   .community-link-row button { width: 100%; }
-  .community-form-grid textarea#community-body { padding: 18px; }
+  .community-form-grid .community-rich-editor { padding: 18px; }
   .community-draft-restored { align-items: stretch; flex-direction: column; }
   .community-draft-restored > div:last-child { display: grid; grid-template-columns: 1fr 1fr; }
   .community-draft-toolbar { align-items: stretch; flex-direction: column; }

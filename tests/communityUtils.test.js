@@ -15,6 +15,7 @@ import {
   saveCommunityDraft,
   validateCommunityPost,
 } from "../src/communityUtils.js";
+import { communityMarkupToEditorHtml } from "../src/communityEditorUtils.js";
 
 test("community tags are trimmed, unique, and capped", () => {
   assert.deepEqual(parseCommunityTags(" algebra, study, algebra, exam "), [
@@ -140,22 +141,31 @@ test("Community replaces tags with safe named links and document-style lists", (
   assert.match(hub, /namedLink\[1\]/);
   assert.doesNotMatch(hub, /Topic tags/);
   assert.match(styles, /\.community-body :is\(ul, ol\)/);
-  assert.match(styles, /textarea#community-body/);
+  assert.match(styles, /community-rich-editor/);
 });
 
 test("Community editor supports document keyboard formatting", () => {
   const hub = readFileSync(new URL("../src/components/CommunityHub.jsx", import.meta.url), "utf8");
+  assert.match(hub, /contentEditable/);
   assert.match(hub, /onKeyDown=\{handleBodyKeyDown\}/);
   assert.match(hub, /event\.key === "Tab"/);
-  assert.match(hub, /event\.key\.toLowerCase\(\) === "b"/);
-  assert.match(hub, /placeholder="Title"/);
+  assert.match(hub, /runEditorCommand\("bold"\)/);
+  assert.match(hub, /runEditorCommand\("italic"\)/);
+  assert.match(hub, /runEditorCommand\("underline"\)/);
+  assert.match(hub, /runEditorCommand\("undo"\)/);
   assert.match(hub, /<InlineText text=\{item\}/);
-  assert.match(hub, /\*\*\$\{selectedText\}\*\*/);
-  assert.match(hub, /\["i", "u"\]\.includes/);
   assert.match(hub, /event\.shiftKey \? "outdent" : "indent"/);
-  assert.match(hub, /\^\^\$\{color\}\|/);
   assert.match(hub, /HIGHLIGHT_PALETTE\.flatMap/);
   assert.match(hub, /new window\.EyeDropper\(\)\.open\(\)/);
+});
+
+test("Community rich text becomes safe visual editor content", () => {
+  const html = communityMarkupToEditorHtml("## Notes\n**Bold** and ^^#fff8c5|highlighted^^ <script>alert(1)</script>");
+  assert.match(html, /<h2>Notes<\/h2>/);
+  assert.match(html, /<strong>Bold<\/strong>/);
+  assert.match(html, /<mark style="background-color:#fff8c5">highlighted<\/mark>/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
 });
 
 test("Community composer retains focus while a draft changes", () => {
