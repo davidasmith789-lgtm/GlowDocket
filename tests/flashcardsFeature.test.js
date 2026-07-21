@@ -32,6 +32,14 @@ test("Flashcards XP has escalating account levels", () => {
   assert.match(hub, /XP to Level/);
 });
 
+test("Flashcards header includes a closed expandable XP guide", () => {
+  assert.match(hub, /\[xpGuideOpen, setXpGuideOpen\] = useState\(false\)/);
+  assert.match(hub, /How XP and levels work/);
+  assert.match(hub, /aria-expanded=\{xpGuideOpen\}/);
+  assert.match(hub, /up to 100 XP per day/);
+  assert.match(hubStyles, /\.flash-xp-guide-toggle/);
+});
+
 test("public Flashcards profiles store level badge and name independently in hidden tags", () => {
   const tags = buildFlashcardProfileTags(["history"], { shareFlashcardLevel: true, showFlashcardName: false, level: 7, badgeId: "flash-first-session", name: "Private Name" });
   assert.deepEqual(parseFlashcardProfile(tags), { level: 7, badgeId: "flash-first-session", name: "" });

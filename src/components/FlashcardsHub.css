@@ -976,6 +976,58 @@
   background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--primary-color) 18%, transparent), transparent 45%), var(--card-bg);
   box-shadow: 0 14px 34px color-mix(in srgb, var(--primary-color) 12%, transparent), var(--shadow);
 }
+.flash-xp-guide {
+  width: min(390px, 100%);
+  align-self: center;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--primary-color) 9%, var(--card-bg));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary-color) 10%, transparent);
+  transition: width 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+.flash-xp-guide.is-open {
+  background: color-mix(in srgb, var(--primary-color) 13%, var(--card-bg));
+  box-shadow: 0 16px 38px color-mix(in srgb, var(--primary-color) 16%, transparent);
+}
+.flash-xp-guide-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border: 0;
+  border-radius: inherit;
+  color: var(--text-color);
+  background: transparent;
+  text-align: left;
+}
+.flash-xp-guide-toggle > span { display: grid; gap: 2px; }
+.flash-xp-guide-toggle small { color: var(--muted-text); font-size: .68rem; }
+.flash-xp-guide-toggle > b {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--primary-color);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--primary-color) 35%, transparent);
+}
+.flash-xp-guide-content {
+  padding: 0 17px 16px;
+  color: color-mix(in srgb, var(--text-color) 88%, var(--muted-text));
+  font-size: .79rem;
+  line-height: 1.55;
+}
+.flash-xp-guide-content p { margin: 8px 0; }
+.flash-xp-guide-content ul { margin: 10px 0; padding-left: 1.25rem; }
+.flash-xp-guide-content li { margin: 5px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .flash-xp-guide { transition: none; }
+}
 .flash-level-orb {
   display: grid;
   width: 76px;

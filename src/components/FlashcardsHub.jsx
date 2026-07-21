@@ -73,6 +73,7 @@ export default function FlashcardsHub({
     [summary, setSummary] = useState(null),
     [progress, setProgress] = useState({}),
     [rewardSummary, setRewardSummary] = useState(null),
+    [xpGuideOpen, setXpGuideOpen] = useState(false),
     [confirmRequest, setConfirmRequest] = useState(null),
     [celebrating, setCelebrating] = useState(false);
   const saveTimer = useRef();
@@ -1077,6 +1078,23 @@ export default function FlashcardsHub({
               daily card deadlines.
             </p>
           </div>
+          <aside className={`flash-xp-guide${xpGuideOpen ? " is-open" : ""}`}>
+            <button type="button" className="flash-xp-guide-toggle" aria-expanded={xpGuideOpen} aria-controls="flash-xp-guide-content" onClick={() => setXpGuideOpen((open) => !open)}>
+              <span><strong>How XP and levels work</strong><small>{xpGuideOpen ? "Hide guide" : "Open guide"}</small></span>
+              <b aria-hidden="true">{xpGuideOpen ? "↑" : "↓"}</b>
+            </button>
+            {xpGuideOpen && (
+              <div id="flash-xp-guide-content" className="flash-xp-guide-content">
+                <p>Complete meaningful study sessions to earn Flashcards XP. Thoughtful reviews, improving a card’s confidence, finishing a session, and studying before a target date can all add XP.</p>
+                <ul>
+                  <li><strong>Review cards:</strong> 2 XP per eligible card review each day.</li>
+                  <li><strong>Improve confidence:</strong> 5 XP when a card moves forward.</li>
+                  <li><strong>Finish studying:</strong> session and completion bonuses, plus a target-date bonus when eligible.</li>
+                </ul>
+                <p>You can earn up to 100 XP per day. Lifetime XP never resets. Fill the level bar to level up; each new level takes slightly more XP than the previous one.</p>
+              </div>
+            )}
+          </aside>
           <div className="flash-header-actions">
             <button
               className="btn btn-primary"
