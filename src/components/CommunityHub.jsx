@@ -1017,6 +1017,9 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
                                 <span>Custom color</span>
                                 <input type="color" value={highlightColor} onChange={(event) => chooseHighlightColor(event.target.value)} />
                               </label>
+                              <button type="button" className="community-highlight-transparent" onClick={() => { runEditorCommand("hiliteColor", "transparent"); setHighlightMenuOpen(false); }} title="Remove highlighting from selected text or future typing">
+                                <span aria-hidden="true">A</span> Transparent
+                              </button>
                               <button type="button" onClick={pickHighlightFromScreen} disabled={!("EyeDropper" in window)} title={("EyeDropper" in window) ? "Choose a color from anywhere on your screen" : "Screen color picking is not supported by this browser"}>
                                 Pick from screen
                               </button>

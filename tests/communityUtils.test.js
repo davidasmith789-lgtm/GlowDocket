@@ -156,6 +156,8 @@ test("Community editor supports document keyboard formatting", () => {
   assert.match(hub, /<InlineText text=\{item\}/);
   assert.match(hub, /event\.shiftKey \? "outdent" : "indent"/);
   assert.match(hub, /HIGHLIGHT_PALETTE\.flatMap/);
+  assert.match(hub, /community-highlight-transparent/);
+  assert.match(hub, /runEditorCommand\("hiliteColor", "transparent"\)/);
   assert.match(hub, /new window\.EyeDropper\(\)\.open\(\)/);
 });
 

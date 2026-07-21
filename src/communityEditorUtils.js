@@ -35,6 +35,7 @@ export function communityMarkupToEditorHtml(value) {
 }
 
 const rgbToHex = (value) => {
+  if (/transparent|rgba\([^)]*,\s*0(?:\.0+)?\s*\)/i.test(String(value || ""))) return "";
   const match = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
   if (!match) return /^#[0-9a-f]{6}$/i.test(value || "") ? value.toLowerCase() : "";
   return `#${match.slice(1, 4).map((channel) => Number(channel).toString(16).padStart(2, "0")).join("")}`;

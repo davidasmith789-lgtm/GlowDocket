@@ -215,7 +215,7 @@
   );
 }
 .community-dialog {
-  width: min(850px, 100%);
+  width: min(1120px, 100%);
   max-height: calc(100dvh - 40px);
   overflow: auto;
   padding: 24px;
@@ -262,9 +262,10 @@
   margin: 6px 0;
 }
 .community-rich-toolbar {
-  position: sticky;
+  position: relative;
   z-index: 4;
-  top: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   padding: 8px;
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -347,6 +348,11 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
+}
+.community-highlight-transparent > span {
+  padding-inline: 2px;
+  background: linear-gradient(135deg, transparent 43%, var(--danger-color) 45% 55%, transparent 57%);
+  font-weight: 900;
 }
 .community-highlight-custom label { display: grid; gap: 4px; font-size: .76rem; }
 .community-highlight-custom input[type="color"] { width: 52px; height: 38px; padding: 3px; }
