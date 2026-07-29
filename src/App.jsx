@@ -8351,32 +8351,28 @@ function App() {
         <button type="button" className="account-cosmetics-card" onClick={() => setGamificationOpen(true)}>
           <span aria-hidden="true">✦</span><div><strong>Cosmetics</strong><small>Choose badges, titles, and celebrations</small></div><b aria-hidden="true">→</b>
         </button>
-        <div className="account-momentum-card"><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><span>Weekly momentum</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
+        <div className="account-momentum-card"><div><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><details><summary aria-label="What is weekly momentum?">→</summary><p>How many assignments you’ve completed this week.</p></details></div><span>Weekly momentum</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
         <div className="account-badge-count-card"><strong>{earnedAchievements.size}</strong><span>Badges earned</span></div>
       </section>
 
       <div className="account-dashboard-grid">
-        <section className="account-dashboard-card">
-          <header><div><span>Profile</span><h3>Preferred name</h3></div></header>
-          <p>This is the name shown in greetings, reminders, and your account header.</p>
-          <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
+        <section className="account-dashboard-card account-profile-card">
+          <header><div><span>Profile</span><h3>Name and email</h3></div></header>
+          <p>Press Enter or click outside a field to save your change.</p>
+          <form className="account-inline-field" onSubmit={handleAccountDisplayNameUpdate}>
             <label htmlFor="dashboard-display-name">Preferred name</label>
-            <input id="dashboard-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
-            <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button>
+            <input id="dashboard-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} onBlur={(event) => { if (accountDisplayNameDraft.trim() && accountDisplayNameDraft.trim() !== displayName) handleAccountDisplayNameUpdate(event); }} />
+            <small aria-live="polite">{accountUpdateBusy === "display-name" ? "Saving…" : ""}</small>
           </form>
+          {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <form className="account-inline-field account-email-field" onSubmit={handleAccountEmailUpdate}>
+            <label htmlFor="dashboard-account-email">Email</label>
+            <input id="dashboard-account-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} onBlur={(event) => { if (accountEmailDraft.trim() && accountEmailDraft.trim() !== accountEmail) handleAccountEmailUpdate(event); }} />
+            <em className={accountEmailVerified ? "is-verified" : "is-unverified"}>{accountUpdateBusy === "email" ? "Saving…" : accountEmailVerified ? "Verified" : "Needs verification"}</em>
+          </form>}
+          {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && !accountEmailVerified && <button type="button" className="btn btn-secondary account-resend-verification" disabled={Boolean(accountUpdateBusy) || !accountEmail} onClick={handleResendVerification}>{accountUpdateBusy === "verification" ? "Sending…" : "Resend Verification Email"}</button>}
         </section>
 
         {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
-          <section className="account-dashboard-card">
-            <header><div><span>Sign-in</span><h3>Email address</h3></div><em className={accountEmailVerified ? "is-verified" : "is-unverified"}>{accountEmailVerified ? "Verified" : "Needs verification"}</em></header>
-            <p>Your current sign-in email is <strong>{accountEmail || "still loading"}</strong>.</p>
-            {!accountEmailVerified && <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy) || !accountEmail} onClick={handleResendVerification}>{accountUpdateBusy === "verification" ? "Sending…" : "Resend Verification Email"}</button>}
-            <form className="account-settings-form" onSubmit={handleAccountEmailUpdate}>
-              <label htmlFor="dashboard-account-email">New email</label>
-              <input id="dashboard-account-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} />
-              <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim()}>{accountUpdateBusy === "email" ? "Sending confirmation…" : "Change Email"}</button>
-            </form>
-          </section>
           <section className="account-dashboard-card">
             <header><div><span>Security</span><h3>Change password</h3></div></header>
             <p>Choose a new password for this GlowDocket account.</p>
@@ -8449,7 +8445,7 @@ function App() {
 
           <div className="hero-status-stack">
             <button type="button" className="account-header-button" onClick={openAccountDashboard} aria-label={`Open account dashboard for ${displayName || "GlowDocket user"}`}>
-              <span className={`account-header-badge badge-${selectedAchievement?.id || "empty"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span>
+              <span className={`account-header-badge badge-${selectedAchievement?.id || "empty"} tone-${selectedAchievement?.tone || "gold"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><span className="achievement-medallion"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={selectedAchievement?.id} /></span></span><span className="achievement-ornament">✦</span></span></span>
               <span className="account-header-copy"><small>{currentUser ? "Signed in as" : "Guest mode"}</small><strong>{displayName || "GlowDocket user"}</strong><em>{selectedProfileTitle}</em></span>
               <span className="account-header-progress"><b>{gamification.totalXp} XP</b><small>{weeklyMomentum.completed}/{weeklyMomentum.goal} this week</small></span>
               <span className="account-header-arrow" aria-hidden="true">→</span>

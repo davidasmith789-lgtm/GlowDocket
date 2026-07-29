@@ -196,8 +196,16 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(app, /const renderAccountDashboard = \(\) =>/);
   assert.match(app, /Your GlowDocket account/);
   assert.match(app, /Choose badges, titles, and celebrations/);
+  assert.match(app, /How many assignments you’ve completed this week/);
+  assert.match(app, /account-inline-field account-email-field/);
+  assert.match(app, /accountDisplayNameDraft\.trim\(\) !== displayName/);
+  assert.match(app, /accountEmailDraft\.trim\(\) !== accountEmail/);
+  assert.match(app, /account-header-badge[\s\S]{0,500}achievement-medallion/);
   assert.match(app, /currentTab === "account" && renderAccountDashboard\(\)/);
   assert.match(css, /\.account-dashboard-hero/);
   assert.match(css, /\.account-dashboard-grid/);
   assert.match(css, /\.mobile-account-button/);
+  assert.match(css, /\.account-dashboard-identity h2[^}]*color: var\(--text-color\)/);
+  assert.match(css, /\.account-inline-field[^}]*grid-template-columns: 116px/);
+  assert.match(css, /\.account-dashboard-card[^}]*overflow: hidden/);
 });

@@ -1123,8 +1123,8 @@ textarea {
 .account-header-button { display: grid; width: min(440px, 100%); min-height: 94px; grid-template-columns: 64px minmax(0, 1fr) auto 24px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--hero-text) 30%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--card-bg) 16%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); transition: transform var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease; }
 .account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); transform: translateY(-2px); }
 .account-header-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hero-text) 55%, transparent); outline-offset: 3px; }
-.account-header-badge { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid color-mix(in srgb, var(--hero-text) 35%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--card-bg) 22%, transparent); }
-.account-header-badge .achievement-emblem { width: 39px; height: 39px; }
+.account-header-badge { position: relative; display: grid; width: 64px; height: 72px; place-items: center; overflow: visible; }
+.account-header-badge .achievement-medallion { transform: scale(.5); }
 .account-header-copy { display: grid; min-width: 0; gap: 1px; }
 .account-header-copy small, .account-header-copy em, .account-header-progress small { color: inherit; opacity: .78; font-style: normal; }
 .account-header-copy strong { overflow: hidden; font-size: 1.02rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -6490,7 +6490,7 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-dashboard-badge .achievement-medallion { transform: scale(.9); }
 .account-dashboard-identity { position: relative; z-index: 1; display: grid; min-width: 0; gap: 4px; }
 .account-dashboard-identity .eyebrow { margin: 0 0 3px; color: var(--primary-color); }
-.account-dashboard-identity h2 { margin: 0; overflow-wrap: anywhere; font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.05; }
+.account-dashboard-identity h2 { margin: 0; overflow-wrap: anywhere; color: var(--text-color); font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.05; }
 .account-dashboard-identity > strong { color: var(--primary-color); font-size: 1rem; }
 .account-dashboard-identity > span { margin-top: 5px; color: var(--muted-text); }
 .account-dashboard-level { position: relative; z-index: 1; display: grid; gap: 4px; padding: 16px; border: 1px solid var(--border-color); border-radius: 17px; background: color-mix(in srgb, var(--card-bg) 82%, transparent); }
@@ -6504,10 +6504,16 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-cosmetics-card > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--primary-color) 15%, var(--surface-alt)); color: var(--primary-color); font-size: 1.4rem; }
 .account-cosmetics-card div, .account-momentum-card, .account-badge-count-card { display: grid; gap: 4px; }
 .account-cosmetics-card small, .account-momentum-card span, .account-badge-count-card span { color: var(--muted-text); }
+.account-momentum-card > div { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
+.account-momentum-card details { position: relative; flex: 0 0 auto; }
+.account-momentum-card summary { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--surface-alt); color: var(--primary-color); cursor: pointer; font-size: 1rem; font-weight: 900; list-style: none; }
+.account-momentum-card summary::-webkit-details-marker { display: none; }
+.account-momentum-card details[open] summary { transform: rotate(90deg); }
+.account-momentum-card details p { position: absolute; z-index: 3; width: min(230px, 60vw); right: 0; top: 30px; margin: 0; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 11px; background: color-mix(in srgb, var(--card-bg) 92%, transparent); color: var(--muted-text); box-shadow: var(--shadow-card); font-size: .75rem; font-weight: 600; line-height: 1.4; }
 .account-momentum-card strong, .account-badge-count-card strong { font-size: 1.6rem; }
 .account-momentum-card progress { width: 100%; margin-top: 6px; accent-color: var(--success-color); }
 .account-dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
-.account-dashboard-card { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--card-bg); box-shadow: var(--shadow-card); }
+.account-dashboard-card { display: grid; min-width: 0; max-width: 100%; gap: 14px; padding: 22px; overflow: hidden; border: 1px solid var(--border-color); border-radius: 20px; background: var(--card-bg); box-shadow: var(--shadow-card); }
 .account-dashboard-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .account-dashboard-card > header div { display: grid; gap: 3px; }
 .account-dashboard-card > header span { color: var(--primary-color); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
@@ -6516,6 +6522,15 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-dashboard-card > header em { padding: 5px 9px; border-radius: 999px; background: var(--surface-alt); font-size: .7rem; font-style: normal; font-weight: 900; }
 .account-dashboard-card > header em.is-verified { color: var(--success-color); }
 .account-dashboard-card > header em.is-unverified { color: var(--warning-color); }
+.account-inline-field { display: grid; min-width: 0; grid-template-columns: 116px minmax(0, 1fr) minmax(68px, auto); align-items: center; gap: 10px; }
+.account-inline-field label { min-width: 0; color: var(--text-color); font-weight: 800; }
+.account-inline-field input { width: 100%; min-width: 0; max-width: 100%; }
+.account-inline-field small { min-width: 0; color: var(--muted-text); font-weight: 700; }
+.account-inline-field em { min-width: 0; padding: 5px 8px; border-radius: 999px; background: var(--surface-alt); font-size: .68rem; font-style: normal; font-weight: 900; text-align: center; white-space: nowrap; }
+.account-inline-field em.is-verified { color: var(--success-color); }
+.account-inline-field em.is-unverified { color: var(--warning-color); }
+.account-resend-verification { width: fit-content; max-width: 100%; margin-left: 126px; white-space: normal; }
+.account-dashboard :where(p, span, small, strong, em, label, h2, h3) { max-width: 100%; overflow-wrap: anywhere; }
 .account-dashboard-security-card { grid-column: 1 / -1; }
 .account-dashboard-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-top: 3px; }
 @media (max-width: 850px) {
@@ -6538,6 +6553,10 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
   .account-dashboard-shortcuts { grid-template-columns: 1fr 1fr; gap: 9px; }
   .account-dashboard-shortcuts > * { min-height: 88px; padding: 13px; border-radius: 15px; }
   .account-dashboard-card { padding: 16px; border-radius: 17px; }
+  .account-inline-field { grid-template-columns: 1fr; gap: 6px; }
+  .account-inline-field small:empty { display: none; }
+  .account-inline-field em { width: fit-content; }
+  .account-resend-verification { margin-left: 0; }
   .account-dashboard-footer { padding: 0 10px 24px; }
   .account-dashboard-footer .btn { flex: 1 1 150px; }
 }
