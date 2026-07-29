@@ -216,9 +216,9 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(css, /\.account-header-badge-center[^}]*inset: 0/);
   assert.match(css, /\.account-dashboard-grid[^}]*align-items: stretch/);
   assert.match(css, /\.account-profile-card, \.account-password-card \{ height: 100%/);
-  assert.match(css, /\.account-momentum-card details\[open\] p[^}]*white-space: normal/);
-  assert.match(css, /\.account-momentum-heading > strong[^}]*font-size: \.88rem[^}]*white-space: nowrap/);
-  assert.match(css, /\.account-header-badge[^}]*align-self: start[^}]*translate\(-4px, -6px\)/);
+  assert.match(css, /\.account-momentum-details p[^}]*white-space: normal/);
+  assert.match(css, /\.account-momentum-card summary strong[^}]*font-size: \.76rem[^}]*white-space: nowrap/);
+  assert.match(css, /\.account-header-badge[^}]*align-self: center[^}]*translateX\(-6px\)/);
   assert.match(css, /\.account-password-card \.account-password-form[^}]*grid-template-columns: 120px/);
   assert.match(css, /\.account-password-actions em\.is-unsaved[^}]*var\(--danger-color\)/);
   assert.match(css, /\.account-password-actions em\.is-saved[^}]*var\(--success-color\)/);

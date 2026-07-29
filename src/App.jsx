@@ -8351,7 +8351,7 @@ function App() {
         <button type="button" className="account-cosmetics-card" onClick={() => setGamificationOpen(true)}>
           <span aria-hidden="true">✦</span><div><strong>Cosmetics</strong><small>Choose badges, titles, and celebrations</small></div><b aria-hidden="true">→</b>
         </button>
-        <div className="account-momentum-card"><div className="account-momentum-heading"><strong>Weekly momentum</strong><details><summary aria-label="What is weekly momentum?">→</summary><p>How many assignments you’ve completed this week.</p></details></div><span className="account-momentum-total">{weeklyMomentum.completed}/{weeklyMomentum.goal} completed</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
+        <div className="account-momentum-card"><details className="account-momentum-details"><summary><strong>Weekly momentum</strong><b aria-hidden="true">→</b></summary><p>How many assignments you’ve completed this week.</p></details><span className="account-momentum-total">{weeklyMomentum.completed}/{weeklyMomentum.goal} completed</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
         <div className="account-badge-count-card"><strong>{earnedAchievements.size}</strong><span>Badges earned</span></div>
       </section>
 
