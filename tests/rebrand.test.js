@@ -82,7 +82,7 @@ test("logo appears in loading, public home, signed-in headers, and Color Studio"
   assert.match(app, /welcome-page[\s\S]{0,500}<header className="hero-card welcome-top-header">[\s\S]{0,500}<GlowDocketLogo decorative/);
   assert.match(app, /mobile-app-brand[\s\S]{0,300}<GlowDocketLogo decorative/);
   assert.match(app, /brand-lockup hero-brand[^>]*><GlowDocketLogo/);
-  assert.match(app, /Signed in as \$\{displayName \|\| "GlowDocket user"\}/);
+  assert.match(app, /<small>\{currentUser \? "Signed in as" : "Guest mode"\}<\/small>/);
   assert.match(app, /logo-color-preview"><GlowDocketLogo label="Custom logo color preview"/);
   assert.match(app, /icon: "\/glowdocket-icon-192\.png"/);
 });

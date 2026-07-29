@@ -1120,6 +1120,19 @@ textarea {
   font: inherit;
 }
 .hero-status-stack { display: grid; justify-items: end; gap: 9px; }
+.account-header-button { display: grid; width: min(440px, 100%); min-height: 94px; grid-template-columns: 64px minmax(0, 1fr) auto 24px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--hero-text) 30%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--card-bg) 16%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); transition: transform var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease; }
+.account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); transform: translateY(-2px); }
+.account-header-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hero-text) 55%, transparent); outline-offset: 3px; }
+.account-header-badge { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid color-mix(in srgb, var(--hero-text) 35%, transparent); border-radius: 50%; background: color-mix(in srgb, var(--card-bg) 22%, transparent); }
+.account-header-badge .achievement-emblem { width: 39px; height: 39px; }
+.account-header-copy { display: grid; min-width: 0; gap: 1px; }
+.account-header-copy small, .account-header-copy em, .account-header-progress small { color: inherit; opacity: .78; font-style: normal; }
+.account-header-copy strong { overflow: hidden; font-size: 1.02rem; text-overflow: ellipsis; white-space: nowrap; }
+.account-header-copy em { font-size: .76rem; }
+.account-header-progress { display: grid; justify-items: end; gap: 3px; white-space: nowrap; }
+.account-header-progress b { font-size: .82rem; }
+.account-header-progress small { font-size: .7rem; }
+.account-header-arrow { font-size: 1.2rem; font-weight: 900; }
 .momentum-header-summary { position: relative; display: grid; width: min(420px, 100%); min-height: 124px; grid-template-columns: minmax(0, 1fr) 78px; grid-template-rows: 76px 7px; align-content: start; align-items: center; gap: 9px 18px; padding: 12px 14px 20px; overflow: visible; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 18px; background: color-mix(in srgb, var(--card-bg) 18%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); }
 .momentum-summary-copy { display: grid; min-width: 0; gap: 2px; }
 .momentum-header-summary small { color: inherit; opacity: .86; }
@@ -1134,6 +1147,13 @@ textarea {
 .momentum-earned-badge em { position: absolute; right: -5px; bottom: -4px; display: grid; min-width: 20px; height: 20px; padding: 0 4px; place-items: center; border-radius: 999px; background: var(--success-color); color: var(--button-primary-color); font-size: .68rem; font-style: normal; font-weight: 900; }
 .mobile-momentum-summary { position: relative; display: grid; min-width: 76px; min-height: 44px; padding: 5px 9px; place-items: center; border: 1px solid var(--border-color); border-radius: 13px; background: var(--surface-alt); color: var(--text-color); }
 .mobile-momentum-summary small { color: var(--muted-text); font-size: .62rem; }
+.mobile-account-button { position: relative; display: grid; min-width: 0; max-width: 168px; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 7px; padding: 5px 9px; border: 1px solid var(--border-color); border-radius: 13px; background: var(--surface-alt); color: var(--text-color); text-align: left; }
+.mobile-account-button > span:last-child { display: grid; min-width: 0; }
+.mobile-account-button strong, .mobile-account-button small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-account-button strong { font-size: .75rem; }
+.mobile-account-button small { color: var(--muted-text); font-size: .61rem; }
+.mobile-account-button .mobile-momentum-badge { position: static; width: 34px; height: 34px; }
+.mobile-account-button .mobile-momentum-badge .achievement-emblem { width: 23px; height: 23px; }
 .mobile-momentum-badge { position: absolute; top: -7px; right: -5px; display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--surface-alt); color: var(--primary-color); }
 .mobile-momentum-badge .achievement-emblem { width: 17px; height: 17px; }
 
@@ -6463,6 +6483,64 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-danger-zone { border-color: color-mix(in srgb, var(--danger-color) 38%, var(--border-color)); }
 @media (max-width: 700px) { .account-management-action { flex-direction: column; } .account-management-action .btn { width: 100%; } }
 .account-top-card { width: 100%; }
+.account-dashboard { display: grid; width: min(1180px, calc(100% - 32px)); gap: 18px; margin: 20px auto 42px; }
+.account-dashboard-hero { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) minmax(180px, 260px); align-items: center; gap: 24px; padding: clamp(22px, 4vw, 38px); overflow: hidden; border: 1px solid color-mix(in srgb, var(--primary-color) 34%, var(--border-color)); border-radius: 26px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 18%, var(--card-bg)), var(--card-bg) 54%, color-mix(in srgb, var(--secondary-color) 12%, var(--card-bg))); box-shadow: var(--shadow-card); }
+.account-dashboard-hero::after { position: absolute; width: 240px; height: 240px; right: -95px; bottom: -145px; border-radius: 50%; background: color-mix(in srgb, var(--primary-color) 14%, transparent); content: ""; }
+.account-dashboard-badge { position: relative; z-index: 1; display: grid; width: 124px; height: 124px; place-items: center; }
+.account-dashboard-badge .achievement-medallion { transform: scale(.9); }
+.account-dashboard-identity { position: relative; z-index: 1; display: grid; min-width: 0; gap: 4px; }
+.account-dashboard-identity .eyebrow { margin: 0 0 3px; color: var(--primary-color); }
+.account-dashboard-identity h2 { margin: 0; overflow-wrap: anywhere; font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.05; }
+.account-dashboard-identity > strong { color: var(--primary-color); font-size: 1rem; }
+.account-dashboard-identity > span { margin-top: 5px; color: var(--muted-text); }
+.account-dashboard-level { position: relative; z-index: 1; display: grid; gap: 4px; padding: 16px; border: 1px solid var(--border-color); border-radius: 17px; background: color-mix(in srgb, var(--card-bg) 82%, transparent); }
+.account-dashboard-level > span, .account-dashboard-level > small { color: var(--muted-text); }
+.account-dashboard-level > strong { font-size: 1.15rem; }
+.account-dashboard-level progress { width: 100%; margin-top: 7px; accent-color: var(--success-color); }
+.account-dashboard-shortcuts { display: grid; grid-template-columns: minmax(280px, 1.65fr) repeat(2, minmax(150px, .7fr)); gap: 14px; }
+.account-dashboard-shortcuts > * { min-height: 100px; padding: 17px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--card-bg); box-shadow: var(--shadow-card); }
+.account-cosmetics-card { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 13px; color: var(--text-color); cursor: pointer; text-align: left; }
+.account-cosmetics-card:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+.account-cosmetics-card > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--primary-color) 15%, var(--surface-alt)); color: var(--primary-color); font-size: 1.4rem; }
+.account-cosmetics-card div, .account-momentum-card, .account-badge-count-card { display: grid; gap: 4px; }
+.account-cosmetics-card small, .account-momentum-card span, .account-badge-count-card span { color: var(--muted-text); }
+.account-momentum-card strong, .account-badge-count-card strong { font-size: 1.6rem; }
+.account-momentum-card progress { width: 100%; margin-top: 6px; accent-color: var(--success-color); }
+.account-dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; }
+.account-dashboard-card { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--card-bg); box-shadow: var(--shadow-card); }
+.account-dashboard-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.account-dashboard-card > header div { display: grid; gap: 3px; }
+.account-dashboard-card > header span { color: var(--primary-color); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.account-dashboard-card h3 { margin: 0; font-size: 1.2rem; }
+.account-dashboard-card > p { margin: 0; color: var(--muted-text); line-height: 1.5; }
+.account-dashboard-card > header em { padding: 5px 9px; border-radius: 999px; background: var(--surface-alt); font-size: .7rem; font-style: normal; font-weight: 900; }
+.account-dashboard-card > header em.is-verified { color: var(--success-color); }
+.account-dashboard-card > header em.is-unverified { color: var(--warning-color); }
+.account-dashboard-security-card { grid-column: 1 / -1; }
+.account-dashboard-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-top: 3px; }
+@media (max-width: 850px) {
+  .account-dashboard-hero { grid-template-columns: 96px minmax(0, 1fr); }
+  .account-dashboard-badge { width: 90px; height: 90px; }
+  .account-dashboard-badge .achievement-medallion { transform: scale(.68); }
+  .account-dashboard-level { grid-column: 1 / -1; }
+  .account-dashboard-shortcuts { grid-template-columns: 1fr 1fr; }
+  .account-cosmetics-card { grid-column: 1 / -1; }
+  .account-dashboard-grid { grid-template-columns: 1fr; }
+  .account-dashboard-security-card { grid-column: 1; }
+}
+@media (max-width: 560px) {
+  .account-dashboard { width: 100%; gap: 12px; margin: 0; }
+  .account-dashboard-hero { grid-template-columns: 72px minmax(0, 1fr); gap: 13px; padding: 18px 14px; border-radius: 0 0 22px 22px; }
+  .account-dashboard-badge { width: 68px; height: 68px; }
+  .account-dashboard-badge .achievement-medallion { transform: scale(.5); }
+  .account-dashboard-identity h2 { font-size: 1.55rem; }
+  .account-dashboard-shortcuts, .account-dashboard-grid { padding-inline: 10px; }
+  .account-dashboard-shortcuts { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .account-dashboard-shortcuts > * { min-height: 88px; padding: 13px; border-radius: 15px; }
+  .account-dashboard-card { padding: 16px; border-radius: 17px; }
+  .account-dashboard-footer { padding: 0 10px 24px; }
+  .account-dashboard-footer .btn { flex: 1 1 150px; }
+}
 .recovery-action-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .storage-quota-card { display: grid; gap: 14px; }
 .storage-quota-summary { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); }

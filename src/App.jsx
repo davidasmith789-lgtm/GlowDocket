@@ -8189,6 +8189,7 @@ function App() {
   const masteryUnlocked = GAMIFICATION_ACHIEVEMENTS.every((achievement) => earnedAchievements.has(achievement.id));
   const masteredBadges = new Set(gamification.masteredBadgeIds);
   const selectedAchievement = GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === gamification.selectedBadge);
+  const selectedProfileTitle = GAMIFICATION_TITLES.find((option) => option.id === gamification.selectedTitle)?.label || "Getting Started";
   const selectedBadgeAnimated = Boolean(selectedAchievement && masteredBadges.has(selectedAchievement.id) && gamification.badgeAnimationPreferences[selectedAchievement.id] !== false);
   const lockedTitleOptions = GAMIFICATION_TITLES.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
   const lockedCelebrationOptions = GAMIFICATION_CONFETTI.filter((option) => option.requirement && !earnedAchievements.has(option.requirement)).map((option) => ({ ...option, achievement: GAMIFICATION_ACHIEVEMENTS.find((achievement) => achievement.id === option.requirement) }));
@@ -8206,7 +8207,7 @@ function App() {
   };
   const communityEnabled = import.meta.env.VITE_COMMUNITY_HUB_ENABLED === "true" && accountMode === "cloud";
   const flashcardsEnabled = import.meta.env.VITE_FLASHCARDS_ENABLED === "true" && accountMode === "cloud";
-  const mobileOwnedTabs = ["dashboard", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses", ...(communityEnabled ? ["community"] : []), ...(flashcardsEnabled ? ["flashcards"] : [])];
+  const mobileOwnedTabs = ["dashboard", "account", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses", ...(communityEnabled ? ["community"] : []), ...(flashcardsEnabled ? ["flashcards"] : [])];
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
   const mobileTaskTabActive = ["todo", "inProgress", "completed"].includes(currentTab);
   const mobileMoreActive = ["settings", "recommendations", "mobile-tools", "mobile-courses", "community", "flashcards"].includes(currentTab);
@@ -8322,6 +8323,86 @@ function App() {
     setCalendarAddOpen(false);
     setCurrentTab(mobileReturnTab || "dashboard");
   };
+  const openAccountDashboard = () => {
+    setMobileMoreOpen(false);
+    setCurrentTab("account");
+  };
+  const renderAccountDashboard = () => (
+    <div className="account-dashboard">
+      <section className="account-dashboard-hero">
+        <div className={`account-dashboard-badge badge-${selectedAchievement?.id || "empty"} tone-${selectedAchievement?.tone || "gold"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true">
+          <span className="achievement-medallion"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={selectedAchievement?.id} /></span></span><span className="achievement-ornament">✦</span></span>
+        </div>
+        <div className="account-dashboard-identity">
+          <p className="eyebrow">Your GlowDocket account</p>
+          <h2>{displayName || "GlowDocket user"}</h2>
+          <strong>{selectedProfileTitle}</strong>
+          <span>{accountMode === "cloud" ? accountEmail || "Loading account email…" : "Saved on this browser"}</span>
+        </div>
+        <div className="account-dashboard-level">
+          <span>Level {gamificationLevel.level}</span>
+          <strong>{gamificationLevel.name}</strong>
+          <small>{gamification.totalXp} XP</small>
+          <progress max={gamificationLevel.xpNeeded} value={gamificationLevel.xpIntoLevel}>{gamificationLevel.progress}%</progress>
+        </div>
+      </section>
+
+      <section className="account-dashboard-shortcuts" aria-label="Account shortcuts">
+        <button type="button" className="account-cosmetics-card" onClick={() => setGamificationOpen(true)}>
+          <span aria-hidden="true">✦</span><div><strong>Cosmetics</strong><small>Choose badges, titles, and celebrations</small></div><b aria-hidden="true">→</b>
+        </button>
+        <div className="account-momentum-card"><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><span>Weekly momentum</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
+        <div className="account-badge-count-card"><strong>{earnedAchievements.size}</strong><span>Badges earned</span></div>
+      </section>
+
+      <div className="account-dashboard-grid">
+        <section className="account-dashboard-card">
+          <header><div><span>Profile</span><h3>Preferred name</h3></div></header>
+          <p>This is the name shown in greetings, reminders, and your account header.</p>
+          <form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}>
+            <label htmlFor="dashboard-display-name">Preferred name</label>
+            <input id="dashboard-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
+            <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button>
+          </form>
+        </section>
+
+        {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
+          <section className="account-dashboard-card">
+            <header><div><span>Sign-in</span><h3>Email address</h3></div><em className={accountEmailVerified ? "is-verified" : "is-unverified"}>{accountEmailVerified ? "Verified" : "Needs verification"}</em></header>
+            <p>Your current sign-in email is <strong>{accountEmail || "still loading"}</strong>.</p>
+            {!accountEmailVerified && <button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy) || !accountEmail} onClick={handleResendVerification}>{accountUpdateBusy === "verification" ? "Sending…" : "Resend Verification Email"}</button>}
+            <form className="account-settings-form" onSubmit={handleAccountEmailUpdate}>
+              <label htmlFor="dashboard-account-email">New email</label>
+              <input id="dashboard-account-email" type="email" value={accountEmailDraft} autoComplete="email" onChange={(event) => setAccountEmailDraft(event.target.value)} />
+              <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountEmailDraft.trim()}>{accountUpdateBusy === "email" ? "Sending confirmation…" : "Change Email"}</button>
+            </form>
+          </section>
+          <section className="account-dashboard-card">
+            <header><div><span>Security</span><h3>Change password</h3></div></header>
+            <p>Choose a new password for this GlowDocket account.</p>
+            <form className="account-settings-form account-password-form" onSubmit={handleAccountPasswordUpdate}>
+              <label htmlFor="dashboard-new-password">New password</label>
+              <div className="password-input-row"><input id="dashboard-new-password" type={showAccountPassword ? "text" : "password"} value={accountPasswordDraft} autoComplete="new-password" onChange={(event) => setAccountPasswordDraft(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPassword} aria-label={showAccountPassword ? "Hide new password" : "Show new password"} onClick={() => setShowAccountPassword((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPassword} /></button></div>
+              <label htmlFor="dashboard-confirm-password">Confirm new password</label>
+              <div className="password-input-row"><input id="dashboard-confirm-password" type={showAccountPasswordConfirm ? "text" : "password"} value={accountPasswordConfirm} autoComplete="new-password" onChange={(event) => setAccountPasswordConfirm(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPasswordConfirm} aria-label={showAccountPasswordConfirm ? "Hide password confirmation" : "Show password confirmation"} onClick={() => setShowAccountPasswordConfirm((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPasswordConfirm} /></button></div>
+              <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "password" ? "Updating…" : "Update Password"}</button>
+            </form>
+          </section>
+          <section className="account-dashboard-card account-dashboard-security-card">
+            <header><div><span>Account access</span><h3>Sessions and account</h3></div></header>
+            <div className="account-management-action"><div><strong>Sign out of all devices</strong><p>End this account's active sessions everywhere.</p></div><button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy)} onClick={handleSignOutAllDevices}>{accountUpdateBusy === "sign-out-all" ? "Signing out…" : "Sign Out All Devices"}</button></div>
+            <div className="account-management-action"><div><strong>Delete account permanently</strong><p>Delete this account and its cloud-synced planner data. This cannot be undone.</p></div><button type="button" className="btn btn-danger" disabled={Boolean(accountUpdateBusy)} onClick={handleDeleteAccount}>{accountUpdateBusy === "delete-account" ? "Deleting account…" : "Delete My Account"}</button></div>
+          </section>
+        </> : <section className="account-dashboard-card">
+          <header><div><span>Storage</span><h3>Browser-only profile</h3></div></header>
+          <p>Your assignments and preferences are saved on this device. Open Account in Settings to add an email and enable cross-device sync.</p>
+          <button type="button" className="btn btn-primary" onClick={() => { setSettingsSection("account"); setCurrentTab("settings"); }}>Open Account Settings</button>
+        </section>}
+      </div>
+      {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
+      <footer className="account-dashboard-footer"><button type="button" className="btn btn-secondary" onClick={() => { setSettingsSection("account"); setCurrentTab("settings"); }}>Advanced Account Settings</button><button type="button" className="btn btn-danger" onClick={handleSignOut}>Sign Out</button></footer>
+    </div>
+  );
   const renderMobileSummaryAssignments = () => mobileSummaryTasks.length === 0 ? (
     <p className="mobile-fullscreen-empty friendly-empty">There are no assignments in this category right now.</p>
   ) : (
@@ -8348,9 +8429,9 @@ function App() {
               <GlowDocketLogo decorative />
               <div><strong>GlowDocket</strong></div>
             </button>
-            {gamification.showHeaderSummary && <button type="button" className="mobile-momentum-summary" onClick={() => setGamificationOpen(true)} aria-label={`Weekly momentum: ${weeklyMomentum.completed} of ${weeklyMomentum.goal}. Displayed badge: ${selectedAchievement?.title || "none"}. ${earnedAchievements.size} badges earned. Open achievements.`}><span className={`mobile-momentum-badge badge-${selectedAchievement?.id || "empty"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><small>Momentum</small></button>}
-            <button type="button" className="mobile-app-profile-button" onClick={() => setMobileMoreOpen(true)} aria-label="Open account and more menu">
-              {safeDisplayName.charAt(0).toUpperCase()}
+            <button type="button" className="mobile-account-button" onClick={openAccountDashboard} aria-label={`Open account for ${displayName || "GlowDocket user"}`}>
+              <span className={`mobile-momentum-badge badge-${selectedAchievement?.id || "empty"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span>
+              <span><strong>{displayName || "GlowDocket user"}</strong><small>{selectedProfileTitle}</small></span>
             </button>
           </header>
         )}
@@ -8367,8 +8448,12 @@ function App() {
           </div>
 
           <div className="hero-status-stack">
-            <div className="user-pill">{currentUser ? `Signed in as ${displayName || "GlowDocket user"}` : "Guest Mode"}</div>
-            {gamification.showHeaderSummary && <button type="button" className="momentum-header-summary" onClick={() => setGamificationOpen(true)} aria-label={`${gamificationLevel.name}, level ${gamificationLevel.level}, ${gamification.totalXp} XP. Open achievements.`}><span className="momentum-summary-copy"><strong>{gamificationLevel.name} · Level {gamificationLevel.level}</strong><small>{gamification.totalXp} XP · {weeklyMomentum.completed}/{weeklyMomentum.goal} this week</small></span><span className={`momentum-badge-stage badge-${selectedAchievement?.id || "empty"} tone-${selectedAchievement?.tone || "gold"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} title={selectedAchievement ? `Displayed badge: ${selectedAchievement.title}` : "Complete an assignment to earn your first badge"} aria-hidden="true"><span className="achievement-medallion"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={selectedAchievement?.id} /></span></span><span className="achievement-ornament">✦</span></span></span><progress max="100" value={gamificationLevel.progress}>{gamificationLevel.progress}%</progress><em className="momentum-badge-count">{earnedAchievements.size}</em></button>}
+            <button type="button" className="account-header-button" onClick={openAccountDashboard} aria-label={`Open account dashboard for ${displayName || "GlowDocket user"}`}>
+              <span className={`account-header-badge badge-${selectedAchievement?.id || "empty"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><AchievementEmblem id={selectedAchievement?.id} /></span>
+              <span className="account-header-copy"><small>{currentUser ? "Signed in as" : "Guest mode"}</small><strong>{displayName || "GlowDocket user"}</strong><em>{selectedProfileTitle}</em></span>
+              <span className="account-header-progress"><b>{gamification.totalXp} XP</b><small>{weeklyMomentum.completed}/{weeklyMomentum.goal} this week</small></span>
+              <span className="account-header-arrow" aria-hidden="true">→</span>
+            </button>
           </div>
         </header>
 
@@ -8556,6 +8641,7 @@ function App() {
                 <section className="mobile-app-card">{renderCourseColorsWidget()}</section>
               </>
             )}
+            {currentTab === "account" && renderAccountDashboard()}
             {communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} isMobile />}
             {flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} isMobile reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={syncFlashcardRewards} />}
           </main>
@@ -8572,9 +8658,10 @@ function App() {
           <main id="workspace-main-content" className="workspace-main" ref={workspaceMainRef} tabIndex="-1">
 
         {currentTab === "dashboard" && renderWorkspaceForTab("dashboard")}
+        {!isMobileUi && currentTab === "account" && renderAccountDashboard()}
         {!isMobileUi && communityEnabled && currentTab === "community" && <CommunityHub userId={currentUser} courses={courses} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} />}
         {!isMobileUi && flashcardsEnabled && currentTab === "flashcards" && <FlashcardsHub userId={currentUser} courses={courses} assignments={tasks} displayName={displayName} profileSettings={gamification} onProfileSettingsChange={updateGamification} reduceMotion={userSettings.reduceMotion} initialDeckId={flashcardLaunchDeckId} onLaunchConsumed={() => setFlashcardLaunchDeckId("")} onRewards={syncFlashcardRewards} />}
-        {!isMobileUi && currentTab !== "dashboard" && currentTab !== "calendar" && renderWorkspaceExtrasForTab(currentTab)}
+        {!isMobileUi && !["dashboard", "calendar", "account"].includes(currentTab) && renderWorkspaceExtrasForTab(currentTab)}
 
         {/*
           DASHBOARD VIEW

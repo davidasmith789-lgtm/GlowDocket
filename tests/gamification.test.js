@@ -132,9 +132,9 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /Momentum & Achievements/);
   assert.match(css, /\.completion-celebration\s*\{[\s\S]*?inset: 0;/);
   assert.match(css, /translate3d\(var\(--confetti-drift\), 100vh/);
-  assert.match(app, /momentum-badge-stage/);
+  assert.match(app, /account-header-badge/);
   assert.ok(app.indexOf("const selectedAchievement =") < app.indexOf("const selectedBadgeAnimated ="));
-  assert.match(app, /momentum-badge-count/);
+  assert.match(app, /account-badge-count-card/);
   assert.match(app, /selectedBadge: achievement\.id/);
   assert.match(css, /\.achievement-card\.is-selected/);
   assert.match(css, /content-visibility: auto/);
@@ -184,4 +184,20 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /signInDays: normalizeSignInDays\(userSettings\.signInDays\)/);
   assert.match(css, /\.celebration-studio-progress/);
   assert.match(css, /\.completion-celebration\.has-custom-colors/);
+});
+
+test("the merged profile control opens a responsive account dashboard", async () => {
+  const [app, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(app, /className="account-header-button" onClick=\{openAccountDashboard\}/);
+  assert.match(app, /className="mobile-account-button" onClick=\{openAccountDashboard\}/);
+  assert.match(app, /const renderAccountDashboard = \(\) =>/);
+  assert.match(app, /Your GlowDocket account/);
+  assert.match(app, /Choose badges, titles, and celebrations/);
+  assert.match(app, /currentTab === "account" && renderAccountDashboard\(\)/);
+  assert.match(css, /\.account-dashboard-hero/);
+  assert.match(css, /\.account-dashboard-grid/);
+  assert.match(css, /\.mobile-account-button/);
 });
