@@ -212,7 +212,7 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(css, /\.account-inline-field[^}]*grid-template-columns: 116px/);
   assert.match(css, /\.account-dashboard-card[^}]*overflow: hidden/);
   assert.match(css, /\.account-header-button[^}]*grid-template-columns: 64px[^}]*gap: 12px[^}]*padding: 12px 14px/);
-  assert.match(css, /\.account-header-badge[^}]*position: relative[^}]*width: 58px[^}]*height: 58px/);
+  assert.match(css, /\.account-header-badge[^}]*position: relative[^}]*width: 58px[^}]*height: 58px[^}]*translate\(-28px, -18px\)/);
   assert.match(css, /\.account-header-badge-center[^}]*inset: 0/);
   assert.match(css, /\.account-dashboard-grid[^}]*align-items: stretch/);
   assert.match(css, /\.account-profile-card, \.account-password-card \{ height: 100%/);
