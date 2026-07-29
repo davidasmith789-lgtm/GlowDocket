@@ -8351,7 +8351,7 @@ function App() {
         <button type="button" className="account-cosmetics-card" onClick={() => setGamificationOpen(true)}>
           <span aria-hidden="true">✦</span><div><strong>Cosmetics</strong><small>Choose badges, titles, and celebrations</small></div><b aria-hidden="true">→</b>
         </button>
-        <div className="account-momentum-card"><div><strong>{weeklyMomentum.completed}/{weeklyMomentum.goal}</strong><details><summary aria-label="What is weekly momentum?">→</summary><p>How many assignments you’ve completed this week.</p></details></div><span>Weekly momentum</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
+        <div className="account-momentum-card"><div className="account-momentum-heading"><strong>Weekly momentum</strong><details><summary aria-label="What is weekly momentum?">→</summary><p>How many assignments you’ve completed this week.</p></details></div><span className="account-momentum-total">{weeklyMomentum.completed}/{weeklyMomentum.goal} completed</span><progress max="100" value={weeklyMomentum.progress}>{weeklyMomentum.progress}%</progress></div>
         <div className="account-badge-count-card"><strong>{earnedAchievements.size}</strong><span>Badges earned</span></div>
       </section>
 
@@ -8373,7 +8373,7 @@ function App() {
         </section>
 
         {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
-          <section className="account-dashboard-card">
+          <section className="account-dashboard-card account-password-card">
             <header><div><span>Security</span><h3>Change password</h3></div></header>
             <p>Choose a new password for this GlowDocket account.</p>
             <form className="account-settings-form account-password-form" onSubmit={handleAccountPasswordUpdate}>
