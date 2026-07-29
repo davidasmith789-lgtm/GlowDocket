@@ -33,7 +33,8 @@ test("assignment completion uses accessible dependency-free confetti with reduce
   assert.match(rippleCanvas, /prefers-reduced-motion: reduce/);
   assert.match(app, /event\.clientX/);
   assert.match(app, /startAdaptiveMotionMonitor/);
-  assert.match(adaptiveMotion, /LOW_FPS_THRESHOLD = 44/);
+  assert.match(adaptiveMotion, /VISIBLE_STUTTER_MS = 120/);
+  assert.doesNotMatch(adaptiveMotion, /LOW_FPS_THRESHOLD|slowFrameRatio/);
   assert.match(adaptiveMotion, /classList\.add\(LOW_MOTION_CLASS\)/);
   assert.doesNotMatch(adaptiveMotion, /classList\.remove\(LOW_MOTION_CLASS\)[\s\S]*requestAnimationFrame\(sample\)/);
   assert.match(css, /\.adaptive-low-motion \.App/);
