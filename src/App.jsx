@@ -8374,14 +8374,13 @@ function App() {
 
         {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
           <section className="account-dashboard-card account-password-card">
-            <header><div><span>Security</span><h3>Change password</h3></div></header>
+            <header><div><span>Security</span><h3>Change password</h3></div><div className="account-password-actions"><em className={accountPasswordDraft || accountPasswordConfirm ? "is-unsaved" : "is-saved"}>{accountPasswordDraft || accountPasswordConfirm ? "Not saved" : "Saved"}</em><button type="submit" form="dashboard-password-form" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "password" ? "Updating…" : "Update Password"}</button></div></header>
             <p>Choose a new password for this GlowDocket account.</p>
-            <form className="account-settings-form account-password-form" onSubmit={handleAccountPasswordUpdate}>
+            <form id="dashboard-password-form" className="account-settings-form account-password-form" onSubmit={handleAccountPasswordUpdate}>
               <label htmlFor="dashboard-new-password">New password</label>
               <div className="password-input-row"><input id="dashboard-new-password" type={showAccountPassword ? "text" : "password"} value={accountPasswordDraft} autoComplete="new-password" onChange={(event) => setAccountPasswordDraft(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPassword} aria-label={showAccountPassword ? "Hide new password" : "Show new password"} onClick={() => setShowAccountPassword((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPassword} /></button></div>
               <label htmlFor="dashboard-confirm-password">Confirm new password</label>
               <div className="password-input-row"><input id="dashboard-confirm-password" type={showAccountPasswordConfirm ? "text" : "password"} value={accountPasswordConfirm} autoComplete="new-password" onChange={(event) => setAccountPasswordConfirm(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPasswordConfirm} aria-label={showAccountPasswordConfirm ? "Hide password confirmation" : "Show password confirmation"} onClick={() => setShowAccountPasswordConfirm((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPasswordConfirm} /></button></div>
-              <button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountPasswordDraft || !accountPasswordConfirm}>{accountUpdateBusy === "password" ? "Updating…" : "Update Password"}</button>
             </form>
           </section>
           <section className="account-dashboard-card account-dashboard-security-card">
@@ -8445,7 +8444,7 @@ function App() {
 
           <div className="hero-status-stack">
             <button type="button" className="account-header-button" onClick={openAccountDashboard} aria-label={`Open account dashboard for ${displayName || "GlowDocket user"}`}>
-              <span className={`account-header-badge badge-${selectedAchievement?.id || "empty"} tone-${selectedAchievement?.tone || "gold"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`} aria-hidden="true"><span className="achievement-medallion"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={selectedAchievement?.id} /></span></span><span className="achievement-ornament">✦</span></span></span>
+              <span className="account-header-badge" aria-hidden="true"><span className={`account-header-badge-center badge-${selectedAchievement?.id || "empty"} tone-${selectedAchievement?.tone || "gold"}${selectedBadgeAnimated ? " is-mastery-animated" : ""}`}><span className="achievement-medallion"><span className="achievement-rays" /><span className="achievement-core"><span className="achievement-icon"><AchievementEmblem id={selectedAchievement?.id} /></span></span><span className="achievement-ornament">✦</span></span></span></span>
               <span className="account-header-copy"><small>{currentUser ? "Signed in as" : "Guest mode"}</small><strong>{displayName || "GlowDocket user"}</strong><em>{selectedProfileTitle}</em></span>
               <span className="account-header-progress"><b>{gamification.totalXp} XP</b><small>{weeklyMomentum.completed}/{weeklyMomentum.goal} this week</small></span>
               <span className="account-header-arrow" aria-hidden="true">→</span>

@@ -201,6 +201,9 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(app, /accountDisplayNameDraft\.trim\(\) !== displayName/);
   assert.match(app, /accountEmailDraft\.trim\(\) !== accountEmail/);
   assert.match(app, /account-header-badge[\s\S]{0,500}achievement-medallion/);
+  assert.match(app, /account-header-badge-center badge-\$\{selectedAchievement\?\.id/);
+  assert.match(app, /form="dashboard-password-form"/);
+  assert.match(app, /accountPasswordDraft \|\| accountPasswordConfirm \? "Not saved" : "Saved"/);
   assert.match(app, /currentTab === "account" && renderAccountDashboard\(\)/);
   assert.match(css, /\.account-dashboard-hero/);
   assert.match(css, /\.account-dashboard-grid/);
@@ -210,7 +213,11 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(css, /\.account-dashboard-card[^}]*overflow: hidden/);
   assert.match(css, /\.account-header-button[^}]*grid-template-columns: 88px/);
   assert.match(css, /\.account-header-badge[^}]*justify-self: center/);
+  assert.match(css, /\.account-header-badge-center[^}]*inset: 0/);
   assert.match(css, /\.account-dashboard-grid[^}]*align-items: stretch/);
   assert.match(css, /\.account-profile-card, \.account-password-card \{ height: 100%/);
   assert.match(css, /\.account-momentum-card details\[open\] p[^}]*white-space: normal/);
+  assert.match(css, /\.account-password-card \.account-password-form[^}]*grid-template-columns: 120px/);
+  assert.match(css, /\.account-password-actions em\.is-unsaved[^}]*var\(--danger-color\)/);
+  assert.match(css, /\.account-password-actions em\.is-saved[^}]*var\(--success-color\)/);
 });

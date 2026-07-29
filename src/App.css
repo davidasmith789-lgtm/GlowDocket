@@ -1124,7 +1124,8 @@ textarea {
 .account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); transform: translateY(-2px); }
 .account-header-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hero-text) 55%, transparent); outline-offset: 3px; }
 .account-header-badge { position: relative; display: grid; width: 88px; height: 72px; place-items: center; justify-self: center; overflow: visible; }
-.account-header-badge .achievement-medallion { transform: scale(.5); }
+.account-header-badge-center { position: absolute; inset: 0; display: grid; place-items: center; }
+.account-header-badge-center .achievement-medallion { transform: scale(.5); transform-origin: 50% 50%; }
 .account-header-copy { display: grid; min-width: 0; gap: 1px; }
 .account-header-copy small, .account-header-copy em, .account-header-progress small { color: inherit; opacity: .78; font-style: normal; }
 .account-header-copy strong { overflow: hidden; font-size: 1.02rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -6529,7 +6530,13 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-dashboard-card > header em.is-verified { color: var(--success-color); }
 .account-dashboard-card > header em.is-unverified { color: var(--warning-color); }
 .account-profile-card, .account-password-card { height: 100%; }
-.account-password-card .account-password-form { align-content: start; }
+.account-profile-card, .account-password-card { align-content: start; gap: 10px; padding-block: 18px; }
+.account-password-card .account-password-form { grid-template-columns: 120px minmax(0, 1fr); align-content: start; align-items: center; gap: 8px 10px; }
+.account-password-actions { display: flex !important; min-width: 0; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px !important; }
+.account-password-actions em { padding: 6px 9px; border-radius: 999px; background: var(--surface-alt); font-size: .7rem; font-style: normal; font-weight: 900; white-space: nowrap; }
+.account-password-actions em.is-unsaved { color: var(--danger-color); }
+.account-password-actions em.is-saved { color: var(--success-color); }
+.account-password-actions .btn { min-height: 36px; padding: 7px 10px; white-space: nowrap; }
 .account-inline-field { display: grid; min-width: 0; grid-template-columns: 116px minmax(0, 1fr) minmax(68px, auto); align-items: center; gap: 10px; }
 .account-inline-field label { min-width: 0; color: var(--text-color); font-weight: 800; }
 .account-inline-field input { width: 100%; min-width: 0; max-width: 100%; }
@@ -6566,6 +6573,9 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
   .account-dashboard-shortcuts { grid-template-columns: 1fr 1fr; gap: 9px; }
   .account-dashboard-shortcuts > * { min-height: 88px; padding: 13px; border-radius: 15px; }
   .account-dashboard-card { padding: 16px; border-radius: 17px; }
+  .account-password-card .account-password-form { grid-template-columns: 1fr; }
+  .account-password-card > header { align-items: stretch; flex-direction: column; }
+  .account-password-actions { justify-content: space-between; }
   .account-inline-field { grid-template-columns: 1fr; gap: 6px; }
   .account-inline-field small:empty { display: none; }
   .account-inline-field em { width: fit-content; }
