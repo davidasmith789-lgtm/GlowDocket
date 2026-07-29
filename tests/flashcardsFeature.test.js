@@ -143,7 +143,7 @@ test("XP and badges are server controlled and idempotent", () => {
 
 test("study remains confidence-based without queues or card due dates", () => {
   assert.match(hub, /Study starred cards/);
-  assert.match(hub, /Focus on Again or Hard/);
+  assert.match(hub, /Focus on Do Again\/Hard/);
   assert.match(hub, /Study cards not yet reviewed/);
   assert.doesNotMatch(
     `${sql}\n${hub}`,
@@ -158,7 +158,7 @@ test("deck tiles open full personal decks while Study starts study setup", () =>
   assert.match(hub, /Study this deck/);
   assert.match(hub, /onClick=\{\(\) => rate\("Good"\)\}/);
   assert.match(hub, /Continue confidently/);
-  assert.match(hub, /const STUDY_ACTIONS = \["Again", "Hard"\]/);
+  assert.match(hub, /const STUDY_ACTIONS = \[\{ label: "Do Again\/Hard", rating: "Hard" \}\]/);
   assert.doesNotMatch(hub, /STUDY_ACTIONS\.map[\s\S]{0,200}Easy/);
   assert.match(hub, /e\.key === "ArrowLeft"/);
   assert.match(hub, /e\.key === "ArrowRight"/);

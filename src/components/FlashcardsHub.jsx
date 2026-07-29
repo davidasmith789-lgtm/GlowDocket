@@ -14,8 +14,7 @@ import FlashcardConfirmDialog from "./FlashcardConfirmDialog.jsx";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
 import { getGamificationLevel } from "../gamificationUtils.js";
 import "./FlashcardsHub.css";
-const STUDY_ACTIONS = ["Again", "Hard"];
-const STUDY_SUMMARY_ACTIONS = ["Again", "Hard", "Good"];
+const STUDY_ACTIONS = [{ label: "Do Again/Hard", rating: "Hard" }];
 const isMissingLibraryFunction = (error) =>
   error?.code === "PGRST202" &&
   String(error.message || "").includes("flashcard_library_decks");
@@ -487,8 +486,8 @@ export default function FlashcardsHub({
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         moveStudyCard(1);
-      } else if (flipped && /[1-3]/.test(e.key))
-        rate(["Again", "Hard", "Good"][Number(e.key) - 1]);
+      } else if (flipped && /[1-2]/.test(e.key))
+        rate(e.key === "1" ? "Hard" : "Good");
       else if (e.key.toLowerCase() === "s") {
         const card = study.cards[study.index];
         toggleStar(card);
@@ -519,7 +518,7 @@ export default function FlashcardsHub({
             >
               <option value="all">Study all cards</option>
               <option value="starred">Study starred cards</option>
-              <option value="difficult">Focus on Again or Hard</option>
+              <option value="difficult">Focus on Do Again/Hard</option>
               <option value="new">Study cards not yet reviewed</option>
             </select>
           </label>
@@ -638,7 +637,7 @@ export default function FlashcardsHub({
             </button>
           </div>
           <p className="flash-keyboard-hint">
-            Use ← and → to move · Space to flip · 1 Again · 2 Hard · 3 Next
+            Use ← and → to move · Space to flip · 1 Do Again/Hard · 2 Next
           </p>
           {!flipped && card.hint && (
             <details>
@@ -652,9 +651,9 @@ export default function FlashcardsHub({
           {flipped ? (
             <div className="flash-review-actions">
               <div className="flash-ratings" aria-label="Rate your confidence">
-                {STUDY_ACTIONS.map((r, i) => (
-                  <button key={r} onClick={() => rate(r)}>
-                    {i + 1} · {r}
+                {STUDY_ACTIONS.map((action, i) => (
+                  <button key={action.label} onClick={() => rate(action.rating)}>
+                    {i + 1} · {action.label}
                   </button>
                 ))}
               </div>
@@ -663,7 +662,7 @@ export default function FlashcardsHub({
                 onClick={() => rate("Good")}
               >
                 Next <span aria-hidden="true">→</span>
-                <small>Continue confidently · 3</small>
+                <small>Continue confidently · 2</small>
               </button>
             </div>
           ) : (
@@ -695,12 +694,14 @@ export default function FlashcardsHub({
             ✨ You reviewed {summary.cards} cards in {summary.seconds} seconds.
           </p>
           <div>
-            {STUDY_SUMMARY_ACTIONS.map((r) => (
-              <span key={r}>
-                <b>{summary.counts[r]}</b>
-                {r === "Good" ? "Next" : r}
-              </span>
-            ))}
+            <span>
+              <b>{summary.counts.Again + summary.counts.Hard}</b>
+              Do Again/Hard
+            </span>
+            <span>
+              <b>{summary.counts.Good}</b>
+              Next
+            </span>
           </div>
           <h2>{summary.progress.percent}% understanding</h2>
           <p>
@@ -723,7 +724,7 @@ export default function FlashcardsHub({
               startStudy(summary.deck, { mode: "difficult", size: "all" })
             }
           >
-            Study Again/Hard Cards
+            Study Do Again/Hard Cards
           </button>
           <button onClick={() => startStudy(summary.deck)}>
             Restart Session
