@@ -211,14 +211,14 @@ test("the merged profile control opens a responsive account dashboard", async ()
   assert.match(css, /\.account-dashboard-identity h2[^}]*color: var\(--text-color\)/);
   assert.match(css, /\.account-inline-field[^}]*grid-template-columns: 116px/);
   assert.match(css, /\.account-dashboard-card[^}]*overflow: hidden/);
-  assert.match(css, /\.account-header-button[^}]*grid-template-columns: 78px/);
-  assert.match(css, /\.account-header-badge[^}]*justify-self: center/);
+  assert.match(css, /\.account-header-button[^}]*position: relative[^}]*padding: 12px 14px 12px 92px/);
+  assert.match(css, /\.account-header-badge[^}]*position: absolute[^}]*left: 7px[^}]*top: 50%/);
   assert.match(css, /\.account-header-badge-center[^}]*inset: 0/);
   assert.match(css, /\.account-dashboard-grid[^}]*align-items: stretch/);
   assert.match(css, /\.account-profile-card, \.account-password-card \{ height: 100%/);
   assert.match(css, /\.account-momentum-details p[^}]*white-space: normal/);
   assert.match(css, /\.account-momentum-card summary strong[^}]*font-size: \.76rem[^}]*white-space: nowrap/);
-  assert.match(css, /\.account-header-badge[^}]*align-self: center[^}]*translateX\(-6px\)/);
+  assert.match(css, /\.account-header-badge[^}]*translateY\(-50%\)/);
   assert.match(css, /\.account-password-card \.account-password-form[^}]*grid-template-columns: 120px/);
   assert.match(css, /\.account-password-actions em\.is-unsaved[^}]*var\(--danger-color\)/);
   assert.match(css, /\.account-password-actions em\.is-saved[^}]*var\(--success-color\)/);
