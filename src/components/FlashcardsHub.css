@@ -160,6 +160,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
+.flash-deck-fields { position: relative; }
 .flash-toolbar {
   align-items: end;
   margin-top: 14px;
@@ -198,15 +199,19 @@
   background: var(--card-bg);
 }
 .flash-deck-fields .flash-description-field {
-  height: 190px;
+  height: 100%;
   min-height: 42px;
-  max-height: 276px;
+  max-height: calc(100% + 86px);
   overflow-y: auto;
   resize: vertical;
 }
 .flash-deck-fields > label:nth-child(3) {
-  grid-column: 3;
-  grid-row: 1 / span 3;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: calc((100% - 24px) / 3);
+  grid-template-rows: 40px minmax(0, 1fr);
 }
 .flash-deck-fields > label:nth-child(4) { grid-column: 1; grid-row: 2; }
 .flash-deck-fields > label:nth-child(5) { grid-column: 2; grid-row: 2; }
@@ -814,7 +819,8 @@
 }
 @media (max-width: 650px) {
   .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
-  .flash-deck-fields > label:nth-child(n) { grid-column: 1; grid-row: auto; }
+  .flash-deck-fields > label:nth-child(n) { position: static; width: auto; grid-column: 1; grid-row: auto; }
+  .flash-deck-fields .flash-description-field { height: 120px; max-height: 240px; }
   .flash-page,
   .flash-editor,
   .flash-viewer {
