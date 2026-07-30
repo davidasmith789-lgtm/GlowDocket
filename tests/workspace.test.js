@@ -119,14 +119,17 @@ test("new widget types are added without resetting a saved layout", () => {
   assert.equal(normalized.locked.desktop, true);
 });
 
-test("version 1 customized layouts upgrade without losing their positions", () => {
+test("older customized layouts receive the corrected dashboard once without resetting other tabs", () => {
   const saved = createDefaultWorkspaceLayout();
-  saved.version = 1;
+  saved.version = 4;
   saved.userCustomized = true;
   saved.desktop.dashboard[0].x = 123;
+  saved.desktop.todo[0].x = 77;
   const normalized = normalizeWorkspaceLayout(saved, { preservePositions: true });
   assert.equal(normalized.version, DEFAULT_LAYOUT_VERSION);
-  assert.equal(normalized.desktop.dashboard[0].x, 123);
+  assert.equal(normalized.desktop.dashboard[0].x, 0);
+  assert.equal(normalized.desktop.todo[0].x, 77);
+  assert.equal(normalized.desktop.dashboard.find((item) => item.type === "recommended").width, 520);
 });
 
 test("invalid, unknown, and duplicate saved widgets are repaired", () => {

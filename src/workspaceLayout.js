@@ -5,7 +5,7 @@
  * creates defaults, repairs older saved layouts, enforces usable sizes, and
  * resolves placement without depending on React or the browser DOM.
  */
-export const DEFAULT_LAYOUT_VERSION = 4;
+export const DEFAULT_LAYOUT_VERSION = 5;
 export const WORKSPACE_LAYOUT_VERSION = DEFAULT_LAYOUT_VERSION;
 
 export const PROTECTED_WIDGETS = new Set([
@@ -48,21 +48,21 @@ const OLD_DEFAULT_DASHBOARD_MARKERS = [
 
 export const DEFAULT_DESKTOP_LAYOUT = {
   dashboard: [
-    { type: "recommended", width: 540, height: 430, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 337 },
-    { type: "quick-match", width: 540, height: 430, desktopX: 558, xRatio: 558 / 1680, desktopY: 0, zIndex: 340 },
-    { type: "mini-calendar", width: 540, height: 430, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 0, zIndex: 349 },
-    { type: "stat-active", width: 396, height: 145, desktopX: 0, xRatio: 0, desktopY: 448, zIndex: 336 },
-    { type: "stat-today", width: 396, height: 145, desktopX: 414, xRatio: 414 / 1680, desktopY: 448, zIndex: 331 },
-    { type: "stat-overdue", width: 396, height: 145, desktopX: 828, xRatio: 828 / 1680, desktopY: 448, zIndex: 332 },
-    { type: "stat-workload", width: 396, height: 145, desktopX: 1242, xRatio: 1242 / 1680, desktopY: 448, zIndex: 335 },
-    { type: "reminders", width: 540, height: 440, desktopX: 0, xRatio: 0, desktopY: 611, zIndex: 353 },
-    { type: "course-overview", width: 540, height: 440, desktopX: 558, xRatio: 558 / 1680, desktopY: 611, zIndex: 355 },
-    { type: "checklists", width: 540, height: 440, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 611, zIndex: 31 },
-    { type: "add-assignment", width: 1098, height: 620, desktopX: 0, xRatio: 0, desktopY: 1069, zIndex: 356 },
-    { type: "course-colors", width: 540, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1069, zIndex: 357, newUserOnly: true },
-    { type: "todo-master", width: 540, height: 620, desktopX: 0, xRatio: 0, desktopY: 1707, zIndex: 358, newUserOnly: true },
-    { type: "in-progress-master", width: 540, height: 620, desktopX: 558, xRatio: 558 / 1680, desktopY: 1707, zIndex: 359, newUserOnly: true },
-    { type: "completed-master", width: 540, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1707, zIndex: 360, newUserOnly: true },
+    { type: "recommended", width: 520, height: 430, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 337 },
+    { type: "quick-match", width: 520, height: 430, desktopX: 558, xRatio: 558 / 1680, desktopY: 0, zIndex: 340 },
+    { type: "mini-calendar", width: 520, height: 430, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 0, zIndex: 349 },
+    { type: "stat-active", width: 380, height: 145, desktopX: 0, xRatio: 0, desktopY: 448, zIndex: 336 },
+    { type: "stat-today", width: 380, height: 145, desktopX: 414, xRatio: 414 / 1680, desktopY: 448, zIndex: 331 },
+    { type: "stat-overdue", width: 380, height: 145, desktopX: 828, xRatio: 828 / 1680, desktopY: 448, zIndex: 332 },
+    { type: "stat-workload", width: 380, height: 145, desktopX: 1242, xRatio: 1242 / 1680, desktopY: 448, zIndex: 335 },
+    { type: "reminders", width: 520, height: 440, desktopX: 0, xRatio: 0, desktopY: 611, zIndex: 353 },
+    { type: "course-overview", width: 520, height: 440, desktopX: 558, xRatio: 558 / 1680, desktopY: 611, zIndex: 355 },
+    { type: "checklists", width: 520, height: 440, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 611, zIndex: 31 },
+    { type: "add-assignment", width: 1078, height: 620, desktopX: 0, xRatio: 0, desktopY: 1069, zIndex: 356 },
+    { type: "course-colors", width: 520, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1069, zIndex: 357, newUserOnly: true },
+    { type: "todo-master", width: 520, height: 620, desktopX: 0, xRatio: 0, desktopY: 1707, zIndex: 358, newUserOnly: true },
+    { type: "in-progress-master", width: 520, height: 620, desktopX: 558, xRatio: 558 / 1680, desktopY: 1707, zIndex: 359, newUserOnly: true },
+    { type: "completed-master", width: 520, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1707, zIndex: 360, newUserOnly: true },
   ],
   todo: [
     { type: "todo-master", width: 844, height: 650, desktopX: 418, xRatio: 418 / 1680, desktopY: 0, zIndex: 358 },
@@ -570,6 +570,15 @@ export function normalizeWorkspaceLayout(value, options = {}) {
   const userCustomized = Boolean(value.userCustomized);
   const modes = options.mode ? [options.mode] : ["desktop", "chromebook", "mobile"];
   const collapsedState = options.collapsed ?? value?.collapsed ?? {};
+
+  // Version 5 deploys the corrected, roomier dashboard to existing accounts
+  // exactly once. Other tabs and all non-layout account data remain untouched.
+  if (savedVersion < 5) {
+    for (const mode of modes) {
+      value[mode] = value[mode] || {};
+      value[mode].dashboard = structuredClone(defaults[mode].dashboard);
+    }
+  }
 
   for (const mode of modes) {
     value[mode] = value[mode] || {};
