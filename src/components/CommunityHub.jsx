@@ -142,6 +142,7 @@ export default function CommunityHub({ userId, courses = [], displayName = "", p
   const matchingCourseOptions = matchCommunityCourses(courseOptions, draft.course_name);
   const publicFlashcardProfile = {
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
+    shareFlashcardBadge: profileSettings.shareFlashcardBadge === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
     badgeId: !profileSettings.sharedFlashcardBadge || profileSettings.sharedFlashcardBadge === "current"
       ? profileSettings.selectedBadge || ""

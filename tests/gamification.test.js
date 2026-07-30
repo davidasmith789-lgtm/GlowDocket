@@ -20,12 +20,14 @@ test("weekly momentum honors week starts, ignores legacy and deleted work, and c
 });
 
 test("Flashcards public profile preferences normalize independently", () => {
-  const settings = normalizeGamification({ earnedAchievementIds: ["flash-first-session"], selectedBadge: "flash-first-session", shareFlashcardLevel: true, showFlashcardName: false, sharedFlashcardBadge: "flash-first-session" });
+  const settings = normalizeGamification({ earnedAchievementIds: ["flash-first-session"], selectedBadge: "flash-first-session", shareFlashcardLevel: true, shareFlashcardBadge: false, showFlashcardName: false, sharedFlashcardBadge: "flash-first-session" });
   assert.equal(settings.shareFlashcardLevel, true);
+  assert.equal(settings.shareFlashcardBadge, false);
   assert.equal(settings.showFlashcardName, false);
   assert.equal(settings.sharedFlashcardBadge, "flash-first-session");
   assert.equal(normalizeGamification({ showFlashcardName: true }).showFlashcardName, true);
   assert.equal(normalizeGamification({}).sharedFlashcardBadge, "current");
+  assert.equal(normalizeGamification({ shareFlashcardLevel: true }).shareFlashcardBadge, true);
   assert.equal(normalizeGamification({ earnedAchievementIds: ["flash-first-session"], selectedBadge: "flash-first-session", sharedFlashcardBadge: "current" }).sharedFlashcardBadge, "current");
 });
 

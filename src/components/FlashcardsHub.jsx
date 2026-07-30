@@ -86,13 +86,14 @@ export default function FlashcardsHub({
   const guideBadge = GAMIFICATION_ACHIEVEMENTS.find((badge) => badge.id === profileSettings.selectedBadge) || earnedGuideBadges.at(-1);
   const publicProfile = useMemo(() => ({
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
+    shareFlashcardBadge: profileSettings.shareFlashcardBadge === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
     badgeId: !profileSettings.sharedFlashcardBadge || profileSettings.sharedFlashcardBadge === "current"
       ? profileSettings.selectedBadge || ""
       : profileSettings.sharedFlashcardBadge,
     level: getGamificationLevel(profileSettings.totalXp).level,
     name: displayName,
-  }), [displayName, profileSettings.selectedBadge, profileSettings.shareFlashcardLevel, profileSettings.sharedFlashcardBadge, profileSettings.showFlashcardName, profileSettings.totalXp]);
+  }), [displayName, profileSettings.selectedBadge, profileSettings.shareFlashcardBadge, profileSettings.shareFlashcardLevel, profileSettings.sharedFlashcardBadge, profileSettings.showFlashcardName, profileSettings.totalXp]);
   const askToConfirm = (title, description, action, confirmLabel = "Confirm") =>
     setConfirmRequest({ title, description, action, confirmLabel });
   const closeConfirmation = useCallback(

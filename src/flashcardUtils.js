@@ -36,8 +36,8 @@ export function buildFlashcardProfileTags(tags, profile = {}) {
   const reserved = [];
   if (profile.shareFlashcardLevel) {
     reserved.push(`gdl:${Math.max(1, Math.floor(Number(profile.level) || 1))}`);
-    if (profile.badgeId) reserved.push(`gdb:${String(profile.badgeId).slice(0, 26)}`);
   }
+  if (profile.shareFlashcardBadge && profile.badgeId) reserved.push(`gdb:${String(profile.badgeId).slice(0, 26)}`);
   if (profile.showFlashcardName && String(profile.name || "").trim()) reserved.push(`gdn:${String(profile.name).trim().replace(/[\r\n]/g, " ").slice(0, 26)}`);
   return [...publicTags.slice(0, Math.max(0, 8 - reserved.length)), ...reserved];
 }

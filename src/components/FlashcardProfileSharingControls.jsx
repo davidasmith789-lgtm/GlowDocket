@@ -10,19 +10,31 @@ export default function FlashcardProfileSharingControls({ profileSettings = {}, 
     : profileSettings.sharedFlashcardBadge;
   const preview = buildFlashcardProfileTags([], {
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
+    shareFlashcardBadge: profileSettings.shareFlashcardBadge === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
     badgeId,
     level,
     name: displayName,
   });
   const levelName = getGamificationLevel(profileSettings.totalXp).name;
+  const sharesAnything = profileSettings.shareFlashcardLevel === true || profileSettings.shareFlashcardBadge === true || profileSettings.showFlashcardName === true;
   return (
     <details className="flash-profile-sharing">
-      <summary>Share Account level &amp; badge</summary>
-      <label><span>Show my Account level ({levelName}) and badge publicly on Shared Decks and Community posts</span><input type="checkbox" checked={profileSettings.shareFlashcardLevel === true} onChange={(event) => onChange({ shareFlashcardLevel: event.target.checked })} /></label>
-      <label><span>Badge shown with my level</span><select value={profileSettings.sharedFlashcardBadge || "current"} onChange={(event) => onChange({ sharedFlashcardBadge: event.target.value })}><option value="current">Current</option>{earnedBadges.map((badge) => <option key={badge.id} value={badge.id}>{badge.title}</option>)}</select></label>
-      <label><span>Show my account name publicly</span><input type="checkbox" checked={profileSettings.showFlashcardName === true} onChange={(event) => onChange({ showFlashcardName: event.target.checked })} /></label>
-      <FlashcardProfileChip tags={preview} />
+      <summary>Profile sharing</summary>
+      <div className="flash-profile-sharing-content">
+        <p>Choose exactly what appears on Shared Decks and Community posts. Changes save automatically.</p>
+        <fieldset>
+          <legend>Information other users can see</legend>
+          <label><span><strong>Share level</strong><small>Show Level {level} · {levelName}.</small></span><input type="checkbox" checked={profileSettings.shareFlashcardLevel === true} onChange={(event) => onChange({ shareFlashcardLevel: event.target.checked })} /></label>
+          <label><span><strong>Share badge</strong><small>Show the badge selected below.</small></span><input type="checkbox" checked={profileSettings.shareFlashcardBadge === true} onChange={(event) => onChange({ shareFlashcardBadge: event.target.checked })} /></label>
+          <label><span><strong>Share account name</strong><small>Show {displayName || "your account name"} beside the selected details.</small></span><input type="checkbox" checked={profileSettings.showFlashcardName === true} onChange={(event) => onChange({ showFlashcardName: event.target.checked })} /></label>
+        </fieldset>
+        <label className={`flash-profile-badge-choice${profileSettings.shareFlashcardBadge === true ? "" : " is-disabled"}`}><span><strong>Badge other users see</strong><small>Choose Current to follow the badge selected in your account.</small></span><select disabled={profileSettings.shareFlashcardBadge !== true} value={profileSettings.sharedFlashcardBadge || "current"} onChange={(event) => onChange({ sharedFlashcardBadge: event.target.value })}><option value="current">Current</option>{earnedBadges.map((badge) => <option key={badge.id} value={badge.id}>{badge.title}</option>)}</select></label>
+        <section className="flash-profile-sharing-preview" aria-label="Public profile preview">
+          <span>What other users will see</span>
+          {sharesAnything && preview.length > 0 ? <FlashcardProfileChip tags={preview} /> : <strong>Nothing from your profile will be shared.</strong>}
+        </section>
+      </div>
     </details>
   );
 }

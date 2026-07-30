@@ -45,14 +45,14 @@ test("Flashcards header includes a closed expandable XP guide", () => {
 });
 
 test("public Flashcards profiles store level badge and name independently in hidden tags", () => {
-  const tags = buildFlashcardProfileTags(["history"], { shareFlashcardLevel: true, showFlashcardName: false, level: 7, badgeId: "flash-first-session", name: "Private Name" });
+  const tags = buildFlashcardProfileTags(["history"], { shareFlashcardLevel: true, shareFlashcardBadge: true, showFlashcardName: false, level: 7, badgeId: "flash-first-session", name: "Private Name" });
   assert.deepEqual(parseFlashcardProfile(tags), { level: 7, badgeId: "flash-first-session", name: "" });
   assert.deepEqual(stripFlashcardProfileTags(tags), ["history"]);
   const named = buildFlashcardProfileTags([], { shareFlashcardLevel: false, showFlashcardName: true, level: 7, name: "Taylor" });
   assert.deepEqual(parseFlashcardProfile(named), { level: null, badgeId: "", name: "Taylor" });
   assert.match(profileSharing, /<option value="current">Current<\/option>/);
-  assert.match(profileSharing, /Share Account level &amp; badge/);
-  assert.match(profileSharing, /Show my account name publicly/);
+  assert.match(profileSharing, /Profile sharing/);
+  assert.match(profileSharing, /Share account name/);
   assert.doesNotMatch(profileSharing, /Show my account name separately/);
   assert.match(communityHub, /FlashcardProfileChip/);
   assert.match(communityHub, /FlashcardProfileSharingControls/);
