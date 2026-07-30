@@ -254,9 +254,10 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "focus", label: "Header outline", group: "Foundations" },
   { key: "input", label: "Inputs", group: "Foundations" },
   { key: "nav", label: "Navigation", group: "Foundations" },
-  { key: "task", label: "Assignment cards", group: "Workspace" },
-  { key: "modal", label: "Modals", group: "Workspace" },
-  { key: "backdrop", label: "Modal backdrop", group: "Workspace" },
+  { key: "task", label: "Assignment cards", group: "Assignment Viewing" },
+  { key: "taskHighlight", label: "Assignment highlight", group: "Assignment Viewing" },
+  { key: "modal", label: "Modals", group: "Assignment Viewing" },
+  { key: "backdrop", label: "Modal backdrop", group: "Assignment Viewing" },
   { key: "primary", label: "Primary actions", group: "Actions" },
   { key: "primaryText", label: "Primary button text", group: "Actions" },
   { key: "secondary", label: "Secondary actions", group: "Actions" },
@@ -396,7 +397,7 @@ const THEME_COLOR_DEFAULTS = {
   light: {
     page: "#f4f7fb", surface: "#ffffff", surfaceAlt: "#ebeff3",
     text: "#111827", muted: "#6b7280", border: "#dbe3ef", focus: "#6366f1", input: "#ffffff",
-    nav: "#ffffff", task: "#ffffff", modal: "#ffffff", backdrop: "#020617", primary: "#4f46e5",
+    nav: "#ffffff", task: "#ffffff", taskHighlight: "#dbeafe", taskHighlightText: "#111827", modal: "#ffffff", backdrop: "#020617", primary: "#4f46e5",
     primaryText: "#ffffff", secondary: "#e5e7eb", secondaryText: "#111827",
     success: "#16a34a", warning: "#f59e0b", warningText: "#111827",
     danger: "#dc2626", dangerText: "#ffffff", priorityHigh: "#ffebeb",
@@ -414,7 +415,7 @@ const THEME_COLOR_DEFAULTS = {
   dark: {
     page: "#0b1020", surface: "#151b2e", surfaceAlt: "#1f2937",
     text: "#f9fafb", muted: "#aab3c5", border: "#293247", focus: "#818cf8", input: "#111827",
-    nav: "#151b2e", task: "#151b2e", modal: "#151b2e", backdrop: "#020617", primary: "#60a5fa",
+    nav: "#151b2e", task: "#151b2e", taskHighlight: "#334155", taskHighlightText: "#ffffff", modal: "#151b2e", backdrop: "#020617", primary: "#60a5fa",
     primaryText: "#0b1020", secondary: "#334155", secondaryText: "#ffffff",
     success: "#22c55e", warning: "#facc15", warningText: "#111827",
     danger: "#ef4444", dangerText: "#ffffff", priorityHigh: "#4a1a1a",
@@ -565,6 +566,7 @@ const getSafeColorThemeColors = (colors = {}) => {
   return {
     ...normalized,
     ...(normalized.surface && { text: ensureReadableText(normalized.text, normalized.surface) }),
+    ...(normalized.taskHighlight && { taskHighlightText: getContrastText(normalized.taskHighlight) }),
     ...(normalized.page && { muted: ensureReadableText(normalized.muted, normalized.page, 3) }),
     ...(normalized.primary && { primaryText: ensureReadableText(normalized.primaryText, normalized.primary) }),
     ...(normalized.communityAccent && { communityActionText: ensureReadableText(normalized.communityActionText, normalized.communityAccent) }),
@@ -590,6 +592,8 @@ const COLOR_CSS_VARIABLES = {
   input: ["--input-bg"],
   nav: ["--nav-bg"],
   task: ["--task-bg"],
+  taskHighlight: ["--task-highlight-bg"],
+  taskHighlightText: ["--task-highlight-text"],
   modal: ["--modal-bg"],
   backdrop: ["--backdrop-color"],
   primary: ["--button-primary-bg", "--primary-color"],
@@ -7906,7 +7910,7 @@ function App() {
   <li
     key={task.id}
     id={`${status}-task-${task.id}`}
-    className={`task-card${isMobileUi ? ` mobile-task-card mobile-task-level-${mobileLevel}` : ""}${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" && !isMobileUi ? " task-card-high" : ""}${overdue ? " is-overdue" : ""}${mobileSummaryOpen ? " expanded" : ""}`}
+    className={`task-card${isMobileUi ? ` mobile-task-card mobile-task-level-${mobileLevel}` : ""}${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" && !isMobileUi ? " task-card-high" : ""}${overdue ? " is-overdue" : ""}${mobileSummaryOpen ? " expanded" : ""}${(!isMobileUi && expandedTaskId === task.id) || (isMobileUi && mobileSummaryOpen) ? " is-highlighted" : ""}`}
     onClick={() => toggleTaskExpansion(task.id)}
     onKeyDown={(event) => { if (isMobileUi && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleTaskExpansion(task.id); } }}
     role={isMobileUi ? "button" : undefined}
@@ -9091,7 +9095,7 @@ function App() {
                             <li
                               key={task.id}
                               id={`todo-task-${task.id}`}
-                              className={`task-card${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded" : ""}`}
+                              className={`task-card${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded is-highlighted" : ""}`}
                               onClick={() => toggleTaskExpansion(task.id)}
                             >
                               <div>
@@ -9236,7 +9240,7 @@ function App() {
                             <li
                               key={task.id}
                               id={`inProgress-task-${task.id}`}
-                              className={`task-card in-progress-task-card${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded" : ""}`}
+                              className={`task-card in-progress-task-card${task.priority === "HIGH" ? " task-card-high" : ""}${expandedTaskId === task.id ? " expanded is-highlighted" : ""}`}
                               onClick={() => toggleTaskExpansion(task.id)}
                             >
                               <div>
@@ -9371,7 +9375,7 @@ function App() {
                   {completedTasks.map((task) => (
                     <li
                       key={task.id}
-                      className={`task-card${expandedTaskId === task.id ? " expanded" : ""}`}
+                      className={`task-card${expandedTaskId === task.id ? " expanded is-highlighted" : ""}`}
                       onClick={() => toggleTaskExpansion(task.id)}
                     >
                       <div>
@@ -9571,7 +9575,7 @@ function App() {
                       {selectedDateTasks.map((task) => (
                           <li
                             key={task.id}
-                            className={`task-card calendar-task-card${expandedTaskId === task.id ? " expanded" : ""}`}
+                            className={`task-card calendar-task-card${expandedTaskId === task.id ? " expanded is-highlighted" : ""}`}
                             onClick={() => setExpandedTaskId((currentId) => currentId === task.id ? null : task.id)}
                           >
                             <div>
