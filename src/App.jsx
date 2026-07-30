@@ -8000,19 +8000,17 @@ function App() {
   );
 
   const getWorkspaceCanvasHeight = (items) => Math.max(420, ...items.map((item) => (Number(item.y) || 0) + (workspaceLayout.collapsed[item.type] ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(item.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT) : Number(item.height) || 320) + 30));
-  const appShellDesignWidth = workspaceMode === "desktop" ? WORKSPACE_DESIGN_WIDTH : workspaceMode === "chromebook" ? 1160 : workspaceCanvasWidth;
+  const savedWorkspaceRightEdge = Math.max(0, ...(workspaceLayout[workspaceMode]?.[currentTab] || []).filter((item) => !item.hidden).map((item) => (Number(item.x) || 0) + (Number(item.width) || 0)));
+  const appShellDesignWidth = workspaceMode === "desktop"
+    ? Math.max(WORKSPACE_DESIGN_WIDTH, savedWorkspaceRightEdge)
+    : workspaceMode === "chromebook"
+      ? Math.max(1160, savedWorkspaceRightEdge)
+      : workspaceCanvasWidth;
   const appShellScale = !isMobileUi && appShellDesignWidth > 0
     ? Math.min(1, Math.max(0.35, (appViewportWidth - 32) / appShellDesignWidth))
     : 1;
   const responsiveCanvasWidth = workspaceMode === "mobile" ? workspaceCanvasWidth : appShellDesignWidth;
-  const responsiveWorkspaceLayout = workspaceCanvasWidth > 0
-    ? normalizeWorkspaceLayout(structuredClone(workspaceLayout), {
-        mode: workspaceMode,
-        canvasWidth: responsiveCanvasWidth,
-        reflowForCanvas: true,
-        collapsed: workspaceLayout.collapsed,
-      })
-    : workspaceLayout;
+  const responsiveWorkspaceLayout = workspaceLayout;
   const renderWorkspaceForTab = (tab) => {
     const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
     return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)} scale={appShellScale} width={responsiveCanvasWidth}>

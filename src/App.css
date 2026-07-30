@@ -5313,12 +5313,16 @@ html[data-theme="dark"] {
   max-width: none !important;
 }
 
-.detached-widget-app { min-height: 100vh; padding: 0; background: var(--background-color); color: var(--text-color); }
-.detached-widget-shell { display: grid; min-height: 100vh; grid-template-rows: auto minmax(0, 1fr); background: var(--background-color); }
+.detached-widget-app { height: 100vh; min-height: 100vh; padding: 0; overflow: hidden; background: var(--background-color); color: var(--text-color); }
+.detached-widget-shell { display: grid; height: 100vh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; background: var(--background-color); }
 .detached-widget-shell > header { position: sticky; z-index: 2; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border-color); background: color-mix(in srgb, var(--card-bg) 94%, transparent); box-shadow: var(--shadow-card); }
 .detached-widget-shell > header button { padding: 8px 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-alt); color: var(--text-color); cursor: pointer; font-weight: 800; }
 .detached-widget-content { min-width: 0; padding: 16px; overflow: auto; background: var(--card-bg); }
 .detached-widget-content > * { width: 100%; max-width: none; }
+@media (hover: hover) and (pointer: fine) {
+  .detached-widget-content { scrollbar-width: none; }
+  .detached-widget-content::-webkit-scrollbar { display: none; }
+}
 
 .workspace-widget {
   position: absolute;

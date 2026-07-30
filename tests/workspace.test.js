@@ -304,13 +304,18 @@ test("resizing scales the full app shell without changing the chosen widget arra
   assert.match(styles, /\.app-shell\.is-viewport-scaled/);
 });
 
-test("rendered widgets reflow to the measured screen without overwriting saved geometry", async () => {
+test("rendered widgets use saved geometry without resize-time reflow", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
-  assert.match(app, /const responsiveWorkspaceLayout = workspaceCanvasWidth > 0/);
-  assert.match(app, /normalizeWorkspaceLayout\(structuredClone\(workspaceLayout\), \{/);
-  assert.match(app, /canvasWidth: responsiveCanvasWidth/);
-  assert.match(app, /reflowForCanvas: true/);
+  assert.match(app, /const responsiveWorkspaceLayout = workspaceLayout;/);
+  assert.match(app, /savedWorkspaceRightEdge/);
+  assert.doesNotMatch(app, /const responsiveWorkspaceLayout[\s\S]{0,400}reflowForCanvas/);
   assert.match(app, /responsiveWorkspaceLayout\[workspaceMode\]\?\.\[tab\]/);
+});
+
+test("desktop pop-out widgets scroll without a visible right scrollbar", async () => {
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(styles, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.detached-widget-content \{ scrollbar-width: none; \}/);
+  assert.match(styles, /\.detached-widget-content::-webkit-scrollbar \{ display: none; \}/);
 });
 
 test("narrow compact canvases keep every default widget inside the right edge", () => {
