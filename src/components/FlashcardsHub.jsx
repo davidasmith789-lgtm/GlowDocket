@@ -864,6 +864,7 @@ export default function FlashcardsHub({
               <input
                 value={editor.tags || ""}
                 onChange={(e) => change("tags", e.target.value)}
+                placeholder="Enter keywords users can search to find this deck"
               />
             </label>
             <label>
