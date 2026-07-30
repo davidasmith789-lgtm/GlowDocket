@@ -178,10 +178,13 @@
   gap: 5px;
   font-weight: 750;
 }
+.flash-deck-fields > label { align-self: start; }
 .flash-primary-field-label {
   display: flex;
   min-height: 40px;
   align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .flash-toolbar :is(input, select),
 .flash-deck-fields :is(input, select, textarea),
@@ -198,6 +201,10 @@
   height: 42px;
   min-height: 42px;
   resize: vertical;
+}
+.flash-deck-fields.description-reflowed > label:nth-child(6) {
+  grid-column: 2;
+  grid-row: 3;
 }
 .flash-toolbar :is(input, select) {
   min-height: 46px;
@@ -798,6 +805,7 @@
 }
 @media (max-width: 650px) {
   .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
+  .flash-deck-fields.description-reflowed > label:nth-child(6) { grid-column: 1; grid-row: auto; }
   .flash-page,
   .flash-editor,
   .flash-viewer {

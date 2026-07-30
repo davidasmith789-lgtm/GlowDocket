@@ -78,8 +78,19 @@ export default function FlashcardsHub({
     [shareDeck, setShareDeck] = useState(null),
     [shareEmail, setShareEmail] = useState("");
   const saveTimer = useRef();
+  const descriptionFieldRef = useRef(null);
+  const [descriptionReflowed, setDescriptionReflowed] = useState(false);
   const rewardsCallbackRef = useRef(onRewards);
   rewardsCallbackRef.current = onRewards;
+  useEffect(() => {
+    const field = descriptionFieldRef.current;
+    if (!field) return undefined;
+    const updateLayout = () => setDescriptionReflowed(field.getBoundingClientRect().height >= 120);
+    updateLayout();
+    const observer = new ResizeObserver(updateLayout);
+    observer.observe(field);
+    return () => observer.disconnect();
+  });
   const accountLevel = getGamificationLevel(profileSettings.totalXp);
   const publicProfile = useMemo(() => ({
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
@@ -826,7 +837,7 @@ export default function FlashcardsHub({
             </div>
             <p>{editor.cards.length} cards</p>
           </section>
-          <div className="flash-deck-fields">
+          <div className={`flash-deck-fields${descriptionReflowed ? " description-reflowed" : ""}`}>
             <label>
               <span className="flash-primary-field-label">Deck title</span>
               <input
@@ -854,6 +865,7 @@ export default function FlashcardsHub({
               <span className="flash-primary-field-label">Description</span>
               <textarea
                 className="flash-description-field"
+                ref={descriptionFieldRef}
                 maxLength={1000}
                 value={editor.description || ""}
                 onChange={(e) => change("description", e.target.value)}
