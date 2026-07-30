@@ -539,6 +539,13 @@ test("recommended widget scrolls vertically without visible scrollbars or horizo
   assert.match(cssSource, /\.workspace-widget\.is-recommended-widget \.workspace-widget-body::-webkit-scrollbar\s*\{\s*display:\s*none;/);
 });
 
+test("display-only statistic widgets center their text without scrollbars", async () => {
+  const cssSource = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(cssSource, /\.workspace-widget\.is-display-only \.workspace-widget-body\s*\{[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*overflow:\s*hidden;/s);
+  assert.match(cssSource, /\.workspace-widget\.is-display-only \.workspace-widget-scaled-content\s*\{[^}]*place-items:\s*center;/s);
+  assert.match(cssSource, /\.portable-stat\s*\{[^}]*place-content:\s*center;[^}]*place-items:\s*center;[^}]*text-align:\s*center;/s);
+});
+
 test("expanding a widget restores its expanded height", () => {
   const saved = createDefaultWorkspaceLayout();
   saved.desktop.dashboard = [
