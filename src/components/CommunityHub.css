@@ -1096,7 +1096,7 @@
   }
   .community-form-grid :is(input, select, textarea) {
     min-height: 48px;
-    font-size: 16px;
+    font-size: max(1rem, 16px);
   }
   .community-editor-workspace {
     width: 100%;
@@ -1121,7 +1121,7 @@
   }
   .community-rich-toolbar select {
     min-width: 112px;
-    font-size: 16px;
+    font-size: max(1rem, 16px);
   }
   .community-highlight-button {
     min-width: max-content !important;
@@ -1134,7 +1134,7 @@
     min-height: 42dvh;
     padding: 16px;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: max(1rem, 16px);
     text-align: left;
   }
   .community-editor-status {
@@ -1311,7 +1311,7 @@
     width: 100%;
     min-width: 0;
     padding: 7px 24px 7px 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
   }
   .community-rich-toolbar > select:nth-of-type(3) {
     grid-column: 1 / -1;
@@ -1356,7 +1356,7 @@
   .community-rich-editor {
     min-height: 34dvh !important;
     padding: 13px !important;
-    font-size: 15px !important;
+    font-size: max(0.9375rem, 16px) !important;
     line-height: 1.55;
   }
   .community-rich-editor :is(ul, ol) {

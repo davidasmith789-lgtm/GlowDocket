@@ -552,7 +552,7 @@ html { scrollbar-gutter: stable; }
 }
 
 .task-details {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--placeholder-color);
   margin-top: 4px;
 }
@@ -569,7 +569,7 @@ html { scrollbar-gutter: stable; }
 .task-notes-label {
   display: block;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--text-color);
 }
 
@@ -658,7 +658,7 @@ html { scrollbar-gutter: stable; }
 }
 
 .hint-text {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--placeholder-color);
   margin-top: 8px;
 }
@@ -851,7 +851,7 @@ body {
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: 0.85;
   font-weight: 700;
 }
@@ -867,7 +867,7 @@ body {
   margin: 12px 0 0;
   color: rgba(255, 255, 255, 0.86);
   max-width: 680px;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .user-pill {
@@ -916,6 +916,7 @@ html[data-theme="dark"] .tab-row {
   background: transparent;
   color: var(--muted-text);
 }
+.tab-button-icon { display: inline-block; margin-right: 6px; line-height: 1; }
 
 .tab-button:hover,
 .btn:hover {
@@ -948,7 +949,7 @@ html[data-theme="dark"] .tab-row {
 
 .stat-card strong {
   display: block;
-  font-size: 30px;
+  font-size: 1.875rem;
   margin-top: 8px;
 }
 
@@ -960,7 +961,7 @@ html[data-theme="dark"] .tab-row {
 .stat-label {
   color: var(--muted-text);
   font-weight: 800;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1517,7 +1518,7 @@ textarea {
 .task-details {
   color: var(--muted-text);
   margin-top: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .task-actions {
@@ -1528,7 +1529,7 @@ textarea {
 }
 
 .bucket-title {
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 /* Button color variants */
@@ -2945,7 +2946,7 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   justify-content: space-between;
   align-items: center;
   font-weight: 900;
-  font-size: 15px;
+  font-size: 0.9375rem;
   cursor: pointer;
 }
 
@@ -2998,7 +2999,7 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 
 .assignment-toggle-button {
   padding: 7px 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border-radius: 10px;
   white-space: nowrap;
 }
@@ -3177,8 +3178,11 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 
 .settings-danger-zone { border-color: color-mix(in srgb, var(--danger-color) 55%, var(--border-color)); }
 
-.App.text-size-small { font-size: 0.92rem; }
-.App.text-size-large { font-size: 1.08rem; }
+.text-size-slider-control { display: grid; gap: 10px; }
+.text-size-slider-control > span, .text-size-slider-control > small { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.text-size-slider-control output { color: var(--primary-color); font-weight: 900; }
+.text-size-slider-control input[type="range"] { width: 100%; min-height: 32px; padding: 0; accent-color: var(--primary-color); cursor: pointer; }
+.text-size-slider-control > small { color: var(--muted-text); font-size: .72rem; }
 .App:is(.text-size-large, .text-size-xlarge) :where(.btn, .tab-button, input, select, textarea, summary, [role="button"]) {
   min-height: 2.35em;
   line-height: 1.3;
@@ -3281,7 +3285,7 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 
 .course-colors-toggle-button {
   padding: 7px 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border-radius: 10px;
   white-space: nowrap;
 }
@@ -3371,7 +3375,7 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   border: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-color);
-  font-size: 26px;
+  font-size: 1.625rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -4068,7 +4072,7 @@ html[data-theme="dark"] .edit-notes-side {
 .recommended-plan-eyebrow {
   margin: 0 0 6px;
   color: var(--muted-text);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -4080,7 +4084,7 @@ html[data-theme="dark"] .edit-notes-side {
   border-radius: 999px;
   background: rgba(99, 102, 241, 0.12);
   color: #4f46e5;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 
@@ -4191,7 +4195,7 @@ html[data-theme="light"] .recommended-plan-button {
   flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -4201,7 +4205,7 @@ html[data-theme="light"] .recommended-plan-button {
   gap: 6px 14px;
   margin-top: 7px;
   color: var(--muted-text);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .recommended-plan-reasons {
@@ -4303,7 +4307,7 @@ html[data-theme="dark"] .recommended-plan-reasons span {
   border-radius: 999px;
   background: rgba(79, 70, 229, 0.12);
   color: #4f46e5;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 900;
 }
 
@@ -4315,7 +4319,7 @@ html[data-theme="dark"] .in-progress-status-pill {
 .subtask-progress-line {
   margin: 8px 0 0;
   color: var(--muted-text);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 
@@ -4419,7 +4423,7 @@ html[data-theme="dark"] .subtask-checklist-panel {
 .subtask-checklist-hint {
   margin: 6px 0 0;
   color: var(--muted-text);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .subtask-form-row {
@@ -4485,7 +4489,7 @@ html[data-theme="dark"] .subtask-checklist-panel {
   justify-content: space-between;
   gap: 12px;
   color: var(--text-color);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 900;
 }
 
@@ -5470,6 +5474,10 @@ html[data-theme="dark"] {
   justify-content: center;
   overflow: hidden;
 }
+.App:is(.text-size-large, .text-size-xlarge) :where(.achievement-card, .gamification-xp-card, .gamification-week-card, .account-header-button, .momentum-header-summary) { height: auto; }
+.App:is(.text-size-large, .text-size-xlarge) .achievement-card { min-height: calc(230px + 4rem); align-content: start; }
+.App:is(.text-size-large, .text-size-xlarge) :where(.achievement-card-copy, .badge-mastery-progress, .account-header-copy, .account-header-progress) { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+.App:is(.text-size-large, .text-size-xlarge) :where(.achievement-card button, .gamification-dialog button, .widget-menu-popover button, .sync-conflict-choice) { white-space: normal; overflow-wrap: anywhere; }
 .workspace-widget.is-display-only .workspace-widget-scaled-content {
   display: grid;
   width: 100%;
@@ -5629,6 +5637,10 @@ html[data-theme="dark"] {
   border-left: 1px solid var(--border-color);
 }
 .account-action-group > span { max-width: 150px; overflow: hidden; color: var(--muted-text); font-size: 0.78rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 768px) {
+  .widgets-tray-button { margin-left: auto; }
+  .desktop-feedback-tab + .tab-button + .account-action-group { margin-left: 0; }
+}
 
 .workspace-organizer { gap: 16px; margin-top: -8px; box-shadow: var(--shadow-soft); }
 .workspace-organizer-header { align-items: center; }
@@ -6151,7 +6163,7 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 
   input,
   select,
-  textarea { min-height: 44px; font-size: 16px; }
+  textarea { min-height: 44px; font-size: 1rem; }
 
   .workspace-layout.workspace-customizable,
   .workspace-calendar-only { width: 100%; }
@@ -7165,7 +7177,7 @@ html[data-theme="dark"] .tutorial-demo-link {
   .mobile-app-ui :where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea) {
     max-width: 100%;
     min-height: 46px;
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   .mobile-app-ui :where(.btn, summary, .settings-collapse-button, .widget-collapse-button, .widget-menu > summary, .checklist-item-delete, .subtask-remove-button, .delete-undo-dismiss) {

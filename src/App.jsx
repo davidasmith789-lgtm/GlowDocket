@@ -102,7 +102,7 @@ const DEFAULT_USER_SETTINGS = {
   dashboardReminderHours: 24,
   quickMatchCustomPresets: [],
   schoolLevel: "high",
-  textSize: "medium",
+  textSize: 100,
   fontFamily: "sans",
   interfaceDensity: "comfortable",
   taskActionLayout: "wrap",
@@ -532,6 +532,20 @@ const getSavedThemeMode = (settings = {}, fallback = "dark") => {
   return ["light", "dark"].includes(selectedTheme?.mode)
     ? selectedTheme.mode
     : ["light", "dark"].includes(fallback) ? fallback : "dark";
+};
+
+const getTextScalePercent = (value) => {
+  const legacyScales = { xsmall: 70, small: 85, medium: 100, large: 125, xlarge: 150 };
+  const numericValue = legacyScales[value] ?? Number(value);
+  return Math.min(150, Math.max(70, Number.isFinite(numericValue) ? numericValue : 100));
+};
+
+const getTextSizeClass = (value) => {
+  const percent = getTextScalePercent(value);
+  if (percent >= 140) return "text-size-xlarge";
+  if (percent >= 115) return "text-size-large";
+  if (percent <= 90) return "text-size-small";
+  return "text-size-medium";
 };
 
 const getEffectiveThemeColors = (mode, customColors = {}) => {
@@ -2563,8 +2577,7 @@ function App() {
     }
   }, [theme]);
   useEffect(() => {
-    const scale = { xsmall: 0.7, small: 0.85, medium: 1, large: 1.25, xlarge: 1.5 }[userSettings.textSize] || 1;
-    document.documentElement.style.fontSize = `${scale * 100}%`;
+    document.documentElement.style.fontSize = `${getTextScalePercent(userSettings.textSize)}%`;
   }, [userSettings.textSize]);
 
   useEffect(() => {
@@ -8262,8 +8275,8 @@ function App() {
     });
     handleAddFieldSettingChange("gamification", applyFlashcardMasterySummary(combined, summary));
   };
-  const communityEnabled = import.meta.env.VITE_COMMUNITY_HUB_ENABLED === "true" && accountMode === "cloud";
-  const flashcardsEnabled = import.meta.env.VITE_FLASHCARDS_ENABLED === "true" && accountMode === "cloud";
+  const communityEnabled = accountMode === "cloud";
+  const flashcardsEnabled = accountMode === "cloud";
   const mobileOwnedTabs = ["dashboard", "account", "todo", "inProgress", "completed", "mobile-add", "mobile-tools", "mobile-courses", ...(communityEnabled ? ["community"] : []), ...(flashcardsEnabled ? ["flashcards"] : [])];
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
   const mobileTaskTabActive = ["todo", "inProgress", "completed"].includes(currentTab);
@@ -8467,7 +8480,7 @@ function App() {
   );
   return (
     <div
-      className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.pageColorWashEnabled !== false ? " page-color-wash" : ""}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}
+      className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} ${getTextSizeClass(userSettings.textSize)} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.pageColorWashEnabled !== false ? " page-color-wash" : ""}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}
       style={{ "--page-color-wash": userSettings.pageColorWashColor || "#6366f1" }}
     >
       <div
@@ -8535,7 +8548,7 @@ function App() {
             className={`tab-button ${currentTab === "dashboard" ? "active" : ""}`}
             onClick={() => setCurrentTab("dashboard")}
           >
-            Dashboard
+            <span className="tab-button-icon" aria-hidden="true">📌</span>Dashboard
           </button>
 
           <button
@@ -8545,7 +8558,7 @@ function App() {
             className={`tab-button ${currentTab === "todo" ? "active" : ""}`}
             onClick={() => setCurrentTab("todo")}
           >
-            {schoolLevelCopy.todoLabel}
+            <span className="tab-button-icon" aria-hidden="true">📝</span>{schoolLevelCopy.todoLabel}
           </button>
 
           <button
@@ -8555,7 +8568,7 @@ function App() {
             className={`tab-button ${currentTab === "inProgress" ? "active" : ""}`}
             onClick={() => setCurrentTab("inProgress")}
           >
-            In Progress
+            <span className="tab-button-icon" aria-hidden="true">✍️</span>In Progress
           </button>
 
           <button
@@ -8565,25 +8578,29 @@ function App() {
             className={`tab-button ${currentTab === "completed" ? "active" : ""}`}
             onClick={() => setCurrentTab("completed")}
           >
-            Completed
+            <span className="tab-button-icon" aria-hidden="true">✅</span>Completed
           </button>
 
           <button
             className={`tab-button ${currentTab === "calendar" ? "active" : ""}`}
             onClick={() => setCurrentTab("calendar")}
           >
-            📅 Calendar
+            <span className="tab-button-icon" aria-hidden="true">📅</span>Calendar
+          </button>
+
+          {flashcardsEnabled && <button className={`tab-button ${currentTab === "flashcards" ? "active" : ""}`} onClick={() => setCurrentTab("flashcards")}><span className="tab-button-icon" aria-hidden="true">📚</span>Flashcards</button>}
+          {communityEnabled && <button className={`tab-button ${currentTab === "community" ? "active" : ""}`} onClick={() => setCurrentTab("community")}><span className="tab-button-icon" aria-hidden="true">👥</span>Community</button>}
+
+          <button type="button" className={`tab-button widgets-tray-button${widgetsTrayOpen ? " active" : ""}`} onClick={() => setWidgetsTrayOpen((open) => !open)} aria-expanded={widgetsTrayOpen} disabled={widgetsUnavailableOnCurrentTab} title={widgetsUnavailableOnCurrentTab ? "Widgets are not available on Community or Flashcards." : "Customize widgets on this tab"}>
+            ▦ Widgets
           </button>
 
           <button
-            className={`tab-button ${currentTab === "recommendations" ? "active" : ""}`}
+            className={`tab-button desktop-feedback-tab ${currentTab === "recommendations" ? "active" : ""}`}
             onClick={() => setCurrentTab("recommendations")}
           >
-            Feedback & Support
+            <span className="tab-button-icon" aria-hidden="true">🙋</span>Feedback & Support
           </button>
-
-          {communityEnabled && <button className={`tab-button ${currentTab === "community" ? "active" : ""}`} onClick={() => setCurrentTab("community")}>Community</button>}
-          {flashcardsEnabled && <button className={`tab-button ${currentTab === "flashcards" ? "active" : ""}`} onClick={() => setCurrentTab("flashcards")}>Flashcards</button>}
 
           <button
             data-tab="settings"
@@ -8595,10 +8612,6 @@ function App() {
             title="Settings"
           >
             ⚙️ Settings
-          </button>
-
-          <button type="button" className={`tab-button widgets-tray-button${widgetsTrayOpen ? " active" : ""}`} onClick={() => setWidgetsTrayOpen((open) => !open)} aria-expanded={widgetsTrayOpen} disabled={widgetsUnavailableOnCurrentTab} title={widgetsUnavailableOnCurrentTab ? "Widgets are not available on Community or Flashcards." : "Customize widgets on this tab"}>
-            ▦ Widgets
           </button>
 
           {currentUser && (
@@ -9883,18 +9896,10 @@ function App() {
                         </select>
                       </label>
                       <div className="settings-option-grid">
-                        <label className="settings-select-row settings-option-card">
-                          <span>Text size</span>
-                          <select
-                            value={userSettings.textSize || "medium"}
-                            onChange={(e) => handleAddFieldSettingChange("textSize", e.target.value)}
-                          >
-                            <option value="xsmall">Extra Small (70%)</option>
-                            <option value="small">Small</option>
-                            <option value="medium">Medium</option>
-                            <option value="large">Large</option>
-                            <option value="xlarge">Extra Large (150%)</option>
-                          </select>
+                        <label className="settings-option-card text-size-slider-control" htmlFor="global-text-size">
+                          <span><strong>Text size</strong><output htmlFor="global-text-size">{getTextScalePercent(userSettings.textSize)}%</output></span>
+                          <input id="global-text-size" type="range" min="70" max="150" step="5" value={getTextScalePercent(userSettings.textSize)} onChange={(event) => handleAddFieldSettingChange("textSize", Number(event.target.value))} />
+                          <small><span>Smaller</span><span>Default</span><span>Larger</span></small>
                         </label>
                         <label className="settings-select-row settings-option-card">
                           <span>App font</span>
@@ -10396,7 +10401,7 @@ function App() {
                       </div>
                     </SettingsCard>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
-                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing browser-only profile into a secure account without removing its assignments or personalization." className="settings-section-wide">
+                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing browser-only profile into a secure account without removing its assignments or personalization." className="settings-section-wide" collapsible={false}>
                     <form className="account-settings-form account-password-form" onSubmit={handleLocalAccountUpgrade}>
                       <label htmlFor="upgrade-display-name">Preferred name</label>
                       <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
@@ -10484,7 +10489,7 @@ function App() {
                 )}
 
                 {settingsSection === "calendar" && (
-                  <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide">
+                  <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide" collapsible={false}>
                     <div className="settings-option-grid">
                       <label className="settings-select-row settings-option-card">
                         <span>Week starts on</span>
@@ -10508,7 +10513,7 @@ function App() {
                 )}
 
                 {settingsSection === "cycle" && (
-                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings">
+                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings" collapsible={false}>
                     <label className="settings-select-row">
                       <span>Anchor date</span>
                       <input
@@ -10650,7 +10655,7 @@ function App() {
                 )}
 
                 {settingsSection === "privacy" && (
-                  <SettingsCard title="Privacy & Data" description="Understand where GlowDocket keeps information and which features are specific to this device." className="settings-section-wide privacy-settings-card">
+                  <SettingsCard title="Privacy & Data" description="Understand where GlowDocket keeps information and which features are specific to this device." className="settings-section-wide privacy-settings-card" collapsible={false}>
                     <PrivacyDataPanel />
                   </SettingsCard>
                 )}

@@ -28,20 +28,23 @@ function toggleFromHeaderDoubleClick(event, toggle) {
   toggle();
 }
 
-export function SettingsCard({ title, description, className = "", children }) {
+export function SettingsCard({ title, description, className = "", children, collapsible = true }) {
   const [isOpen, setIsOpen] = useState(false);
   const accordion = useContext(SettingsAccordionContext);
   const cardId = toSettingsCardId(title);
-  const expanded = accordion?.isMobile ? accordion.isExpanded(cardId) : isOpen;
+  const expanded = !collapsible || (accordion?.isMobile ? accordion.isExpanded(cardId) : isOpen);
   const toggle = () => {
+    if (!collapsible) return;
     if (accordion?.isMobile) accordion.toggle(cardId);
     else setIsOpen((open) => !open);
   };
   return (
     <section className={`settings-section ${className}`.trim()}>
-      <div className="settings-collapse-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, toggle)} title="Use the button to expand or minimize">
+      <div className={`settings-collapse-header${collapsible ? " double-click-collapse-header" : " settings-static-header"}`} onDoubleClick={collapsible ? (event) => toggleFromHeaderDoubleClick(event, toggle) : undefined} title={collapsible ? "Use the button to expand or minimize" : undefined}>
         <h4>{title}</h4>
+        {collapsible && (
         <button type="button" className="settings-collapse-button" onClick={(event) => toggleFromCollapseButton(event, toggle)} onDoubleClick={stopControlDoubleClick} aria-expanded={expanded} aria-label={`${expanded ? "Shrink" : "Enlarge"} ${title}`} title={`${expanded ? "Shrink" : "Enlarge"} ${title}`}>{expanded ? "−" : "+"}</button>
+        )}
       </div>
       {expanded && <div className="settings-collapsible-content">{description && <p className="hint-text settings-card-description">{description}</p>}{children}</div>}
     </section>
