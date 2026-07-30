@@ -649,7 +649,7 @@ const SETTINGS_SECTIONS = [
   { id: "checklists", icon: "☑️", label: "Checklists", description: "Standalone list deadlines and appearance." },
   { id: "calendar", icon: "📅", label: "Calendar", description: "Week layout and calendar details." },
   { id: "reminders", icon: "🔔", label: "Reminders & App", description: "Notifications and installation." },
-  { id: "cycle", icon: "🔁", label: "School Cycle", description: "Cycle labels, anchor date, and courses." },
+  { id: "cycle", icon: "🔁", label: "Class Repeats", description: "Choose when each course happens during your week." },
   { id: "accessibility", icon: "♿", label: "Accessibility", description: "Automated checks and manual verification." },
   { id: "privacy", icon: "🛡️", label: "Privacy & Data", description: "Local data, cloud sync, and device-specific behavior." },
   { id: "storage", icon: "🗄️", label: "Storage", description: "Archive, Trash, and preference tools." },
@@ -10593,9 +10593,9 @@ function App() {
                 )}
 
                 {settingsSection === "cycle" && (
-                  <SettingsCard title="School-Day Cycle" description="Choose an alternating letter-day cycle or a weekday-based college schedule." className="school-cycle-settings" collapsible={false}>
+                  <SettingsCard title="Class Repeats" description="Choose how your classes repeat. Use A/B days for an alternating schedule, or choose the exact weekdays and times when each college class happens." className="school-cycle-settings" collapsible={false}>
                     <fieldset className="schedule-mode-picker">
-                      <legend>Scheduling system</legend>
+                      <legend>How do your classes repeat?</legend>
                       <label><input type="radio" name="school-schedule-mode" checked={userSettings.schoolScheduleMode !== "weekly"} onChange={() => handleAddFieldSettingChange("schoolScheduleMode", "ab")} /><span><strong>A/B Schedule</strong><small>Alternate A Day, B Day, or custom letter days.</small></span></label>
                       <label><input type="radio" name="school-schedule-mode" checked={userSettings.schoolScheduleMode === "weekly"} onChange={() => handleAddFieldSettingChange("schoolScheduleMode", "weekly")} /><span><strong>College or Weekly Schedule</strong><small>Choose weekdays and times for each course.</small></span></label>
                     </fieldset>
@@ -10640,15 +10640,15 @@ function App() {
                       ))}
                     </div>
                     </> : <div className="weekly-course-schedules">
-                      <p className="hint-text">Add one meeting for every distinct time. A meeting can repeat on multiple weekdays.</p>
+                      <p className="hint-text">For each course, add the days it happens and its class time. Select one day or several days if the class repeats at the same time.</p>
                       {courses.map((course) => {
                         const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course]) ? userSettings.weeklyCourseMeetings[course] : [];
                         return <section className="weekly-course-card" key={course}>
-                          <div className="weekly-course-heading"><strong>{course}</strong><button type="button" className="btn btn-secondary" onClick={() => handleAddWeeklyMeeting(course)}>Add meeting</button></div>
-                          {meetings.length === 0 ? <p className="hint-text">No weekly meetings added.</p> : meetings.map((meeting, meetingIndex) => <div className="weekly-meeting-row" key={meeting.id}>
-                            <div className="weekly-meeting-title"><strong>Meeting {meetingIndex + 1}</strong><button type="button" onClick={() => handleRemoveWeeklyMeeting(course, meeting.id)} aria-label={`Remove meeting ${meetingIndex + 1} for ${course}`}>Remove</button></div>
-                            <div className="weekly-day-picker">{WEEKDAYS.map((weekday) => { const selectedDays = Array.isArray(meeting.weekdays) ? meeting.weekdays.map(Number) : []; return <label key={weekday.value}><input type="checkbox" checked={selectedDays.includes(weekday.value)} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { weekdays: event.target.checked ? [...new Set([...selectedDays, weekday.value])].sort() : selectedDays.filter((day) => day !== weekday.value) })} /><span>{weekday.short}</span></label>; })}</div>
-                            <div className="weekly-time-fields"><label><span>Starts</span><input type="time" value={meeting.startTime || ""} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { startTime: event.target.value })} /></label><label><span>Ends</span><input type="time" value={meeting.endTime || ""} min={meeting.startTime || undefined} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { endTime: event.target.value })} /></label></div>
+                          <div className="weekly-course-heading"><strong>{course}</strong><button type="button" className="btn btn-secondary" onClick={() => handleAddWeeklyMeeting(course)}>Add class days &amp; time</button></div>
+                          {meetings.length === 0 ? <p className="hint-text">Choose “Add class days &amp; time” to put this course on your weekly schedule.</p> : meetings.map((meeting, meetingIndex) => <div className="weekly-meeting-row" key={meeting.id}>
+                            <div className="weekly-meeting-title"><strong>{meetings.length > 1 ? `Class time ${meetingIndex + 1}` : "Class days and time"}</strong><button type="button" onClick={() => handleRemoveWeeklyMeeting(course, meeting.id)} aria-label={`Remove class days and time ${meetingIndex + 1} for ${course}`}>Remove</button></div>
+                            <div><strong>Days this class happens</strong><div className="weekly-day-picker" aria-label={`Days ${course} happens`}>{WEEKDAYS.map((weekday) => { const selectedDays = Array.isArray(meeting.weekdays) ? meeting.weekdays.map(Number) : []; return <label key={weekday.value}><input type="checkbox" checked={selectedDays.includes(weekday.value)} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { weekdays: event.target.checked ? [...new Set([...selectedDays, weekday.value])].sort() : selectedDays.filter((day) => day !== weekday.value) })} /><span>{weekday.short}</span></label>; })}</div></div>
+                            <div className="weekly-time-fields"><label><span>Class starts</span><input type="time" value={meeting.startTime || ""} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { startTime: event.target.value })} /></label><label><span>Class ends</span><input type="time" value={meeting.endTime || ""} min={meeting.startTime || undefined} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { endTime: event.target.value })} /></label></div>
                           </div>)}
                         </section>;
                       })}

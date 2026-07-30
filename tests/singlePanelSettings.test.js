@@ -6,7 +6,7 @@ const appSource = fs.readFileSync(new URL("../src/App.jsx", import.meta.url), "u
 const componentsSource = fs.readFileSync(new URL("../src/components/AppDisplayComponents.jsx", import.meta.url), "utf8");
 
 test("single-panel settings stay open without a minimize control", () => {
-  for (const title of ["Calendar Display", "School-Day Cycle", "Privacy & Data"]) {
+  for (const title of ["Calendar Display", "Class Repeats", "Privacy & Data"]) {
     const openingTag = appSource.match(new RegExp(`<SettingsCard title="${title}"[^>]*>`))?.[0] || "";
     assert.match(openingTag, /collapsible=\{false\}/, `${title} should not be collapsible`);
   }
