@@ -16,21 +16,21 @@ test("widget titles stay centered on the widget independently of header controls
   assert.match(titleRule, /text-align: center;/);
 });
 
-test("personalization tips can be searched and filtered by useful topics", async () => {
+test("Quick Tips searches every tip without subcategories", async () => {
   const [app, display] = await Promise.all([
     read("../src/App.jsx"),
     read("../src/components/AppDisplayComponents.jsx"),
   ]);
 
-  assert.match(app, /const PERSONALIZATION_TIP_CATEGORIES = \["All", "Workspace", "Appearance", "Assignments", "Reminders", "Calendar", "Data & Accounts", "Accessibility"\]/);
-  assert.match(app, /aria-label="Filter personalization tips by topic"/);
-  assert.match(app, /aria-pressed=\{helpCategory === category\}/);
+  assert.match(app, /<h4>Quick Tips<\/h4>/);
+  assert.match(app, /Wondering how to do something\? Find your answer\./);
+  assert.match(app, /placeholder="Search all tips…"/);
+  assert.doesNotMatch(app, /PERSONALIZATION_TIP_CATEGORIES|helpCategory|Filter personalization tips by topic/);
   assert.match(app, /visiblePersonalizationTips\.length === 0/);
   for (const title of ["Privacy and data use", "Install a GlowDocket update", "Storage and attachment warnings", "Verify accessibility", "Edit assignments on mobile"]) {
     assert.match(app, new RegExp(title));
   }
-  assert.match(display, /personalization-tip-category/);
-  assert.match(display, /\{category\}/);
+  assert.doesNotMatch(display, /personalization-tip-category|\{category\}/);
 });
 
 test("the page color wash is editable, optional, and saved with personalization", async () => {

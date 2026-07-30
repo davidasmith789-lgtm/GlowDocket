@@ -1287,16 +1287,6 @@ const PERSONALIZATION_TIPS = [
   ["Fine-tune assignment cards", "Course badges, detail lines, countdowns, checklist progress, and reminder indicators can each be shown or hidden independently after choosing a preset."],
 ];
 
-const PERSONALIZATION_TIP_CATEGORIES = ["All", "Workspace", "Appearance", "Assignments", "Reminders", "Calendar", "Data & Accounts", "Accessibility"];
-function getPersonalizationTipCategory(title) {
-  if (/widget|layout|minimize|enlarge/i.test(title)) return "Workspace";
-  if (/theme|color|contrast|text size|font|spacing|motion|action layout/i.test(title)) return "Appearance";
-  if (/reminder|notification|deadline is too close/i.test(title)) return "Reminders";
-  if (/calendar|school-day cycle/i.test(title)) return "Calendar";
-  if (/accessibility/i.test(title)) return "Accessibility";
-  if (/account|password|welcome|local data|privacy|analytics|version|storage|restore|update|tutorial/i.test(title)) return "Data & Accounts";
-  return "Assignments";
-}
 
 function WorkspaceWidget({
   instance,
@@ -2146,7 +2136,6 @@ function App() {
   const [widgetSearch, setWidgetSearch] = useState("");
   const widgetsUnavailableOnCurrentTab = ["community", "flashcards"].includes(currentTab);
   const [helpSearch, setHelpSearch] = useState("");
-  const [helpCategory, setHelpCategory] = useState("All");
   const [isMobileUi, setIsMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
@@ -8198,11 +8187,8 @@ function App() {
   const selectedMobileSettingsSection = SETTINGS_SECTIONS.find((section) => section.id === settingsSection) || SETTINGS_SECTIONS[0];
   const normalizedHelpSearch = helpSearch.trim().toLowerCase();
   const visiblePersonalizationTips = PERSONALIZATION_TIPS
-    .map(([title, copy]) => ({ title, copy, category: getPersonalizationTipCategory(title) }))
-    .filter(({ title, copy, category }) => (
-      (helpCategory === "All" || category === helpCategory)
-      && (!normalizedHelpSearch || `${title} ${copy} ${category}`.toLowerCase().includes(normalizedHelpSearch))
-    ));
+    .map(([title, copy]) => ({ title, copy }))
+    .filter(({ title, copy }) => !normalizedHelpSearch || `${title} ${copy}`.toLowerCase().includes(normalizedHelpSearch));
   const savedMobileAccordion = userSettings.mobileSettingsExpandedCards
     && typeof userSettings.mobileSettingsExpandedCards === "object"
     && !Array.isArray(userSettings.mobileSettingsExpandedCards)
@@ -9887,43 +9873,29 @@ function App() {
                     onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, togglePersonalizationTips)}
                     title="Double-click to expand or minimize"
                   >
-                    <h4>Personalization Tips</h4>
+                    <h4>Quick Tips</h4>
                     <button
                       type="button"
                       className="settings-collapse-button"
                       onClick={(event) => toggleFromCollapseButton(event, togglePersonalizationTips)}
                       aria-expanded={personalizationTipsExpanded}
                       aria-controls="personalization-tips-content"
-                      aria-label={`${personalizationTipsExpanded ? "Shrink" : "Enlarge"} Personalization Tips`}
-                      title={`${personalizationTipsExpanded ? "Shrink" : "Enlarge"} Personalization Tips`}
+                      aria-label={`${personalizationTipsExpanded ? "Shrink" : "Enlarge"} Quick Tips`}
+                      title={`${personalizationTipsExpanded ? "Shrink" : "Enlarge"} Quick Tips`}
                     >
                       {personalizationTipsExpanded ? "−" : "+"}
                     </button>
                   </div>
                   {personalizationTipsExpanded && (
                     <div id="personalization-tips-content" className="settings-collapsible-content personalization-tips-content">
-                      <p className="hint-text">Browse by topic or search for a specific setting, feature, or workflow.</p>
-                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search reminders, assignments, layouts, colors…" aria-label="Search GlowDocket tips" />
-                      <div className="personalization-tip-toolbar" role="group" aria-label="Filter personalization tips by topic">
-                        {PERSONALIZATION_TIP_CATEGORIES.map((category) => (
-                          <button
-                            type="button"
-                            key={category}
-                            className={helpCategory === category ? "active" : ""}
-                            aria-pressed={helpCategory === category}
-                            onClick={() => setHelpCategory(category)}
-                          >
-                            {category}
-                          </button>
-                        ))}
-                      </div>
+                      <p className="hint-text">Wondering how to do something? Find your answer.</p>
+                      <input type="search" value={helpSearch} onChange={(event) => setHelpSearch(event.target.value)} placeholder="Search all tips…" aria-label="Search GlowDocket tips" />
                       <div className="personalization-tip-results" role="status" aria-live="polite">
                         <span>{visiblePersonalizationTips.length} {visiblePersonalizationTips.length === 1 ? "tip" : "tips"}</span>
-                        <span>{helpCategory === "All" ? "All topics" : helpCategory}</span>
                       </div>
                       <div className="personalization-tip-grid">
-                        {visiblePersonalizationTips.map(({ title, copy, category }) => <PersonalizationTip key={title} title={title} category={category} forceOpen={Boolean(normalizedHelpSearch)}>{copy}</PersonalizationTip>)}
-                        {visiblePersonalizationTips.length === 0 && <p className="personalization-tip-empty">No tips match this topic and search. Try another topic or a shorter search.</p>}
+                        {visiblePersonalizationTips.map(({ title, copy }) => <PersonalizationTip key={title} title={title} forceOpen={Boolean(normalizedHelpSearch)}>{copy}</PersonalizationTip>)}
+                        {visiblePersonalizationTips.length === 0 && <p className="personalization-tip-empty">No tips match this search. Try a shorter search.</p>}
                       </div>
                     </div>
                   )}
