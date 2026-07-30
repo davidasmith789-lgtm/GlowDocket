@@ -9,7 +9,7 @@ import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calen
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
-import { DEFAULT_LAYOUT_VERSION, canHideWidget, createDefaultWorkspaceLayout, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { DEFAULT_LAYOUT_VERSION, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -333,6 +333,24 @@ test("desktop dashboard defaults use the full landscape canvas", () => {
   const layout = createDefaultWorkspaceLayout();
   const rightEdge = Math.max(...layout.desktop.dashboard.filter((item) => !item.hidden).map((item) => item.x + item.width));
   assert.ok(rightEdge >= 1600);
+});
+
+test("new and reset desktop layouts choose balanced screen-size presets", () => {
+  const cases = [
+    [1260, 1280],
+    [1420, 1440],
+    [1880, 1920],
+    [2480, 2560],
+    [3300, 3200],
+  ];
+  for (const [availableWidth, expectedPreset] of cases) {
+    assert.equal(getDesktopLayoutPresetWidth(availableWidth), expectedPreset);
+    const layout = createDefaultWorkspaceLayout({ desktopCanvasWidth: availableWidth });
+    assert.equal(layout.defaultDesktopCanvasWidth, expectedPreset);
+    const rightEdge = Math.max(...layout.desktop.dashboard.filter((item) => !item.hidden).map((item) => item.x + item.width));
+    assert.ok(rightEdge >= expectedPreset * 0.97);
+    assert.deepEqual(findWidgetOverlaps(layout.desktop.dashboard), []);
+  }
 });
 
 test("old default desktop dashboard migrates to the balanced full-width layout", () => {

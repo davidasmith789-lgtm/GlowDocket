@@ -1192,6 +1192,7 @@ const WORKSPACE_TABS = [
 const WORKSPACE_MOBILE_BREAKPOINT = 720;
 const WORKSPACE_DESKTOP_BREAKPOINT = 960;
 const WORKSPACE_DESIGN_WIDTH = 1680;
+const getAvailableWorkspaceWidth = () => Math.max(960, Math.max(Number(window.screen?.availWidth) || 0, window.innerWidth) - 32);
 const getWorkspaceModeForWidth = (width, userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent) => {
   if (/CrOS/i.test(userAgent)) return "chromebook";
   if (Number(width) < WORKSPACE_MOBILE_BREAKPOINT) return "mobile";
@@ -2059,12 +2060,13 @@ function App() {
   });
   const [workspaceLayout, setWorkspaceLayout] = useState(() => {
   try {
-    return repairLoadedWorkspace(
-      JSON.parse(localStorage.getItem(workspaceStorageKey) || "null"),
-    );
+    const savedWorkspace = JSON.parse(localStorage.getItem(workspaceStorageKey) || "null");
+    return savedWorkspace
+      ? repairLoadedWorkspace(savedWorkspace)
+      : createDefaultWorkspaceLayout({ desktopCanvasWidth: getAvailableWorkspaceWidth() });
   } catch (error) {
     console.error("Error reading workspace layout:", error);
-    return createDefaultWorkspaceLayout();
+    return createDefaultWorkspaceLayout({ desktopCanvasWidth: getAvailableWorkspaceWidth() });
   }
 });
   const workspaceLayoutRef = useRef(workspaceLayout);
@@ -6146,7 +6148,7 @@ function App() {
 
   const resetWorkspaceTab = () => {
     if (!window.confirm("Reset this tab's layout?")) return;
-    const defaults = createDefaultWorkspaceLayout();
+    const defaults = createDefaultWorkspaceLayout({ desktopCanvasWidth: getAvailableWorkspaceWidth() });
     const next = structuredClone(workspaceLayout);
     next[workspaceMode][currentTab] = defaults[workspaceMode][currentTab] || [];
     saveWorkspace(next);
@@ -6154,7 +6156,7 @@ function App() {
 
   const resetAllWorkspace = () => {
     if (!window.confirm("Reset every desktop and mobile workspace layout?")) return;
-    saveWorkspace(createDefaultWorkspaceLayout());
+    saveWorkspace(createDefaultWorkspaceLayout({ desktopCanvasWidth: getAvailableWorkspaceWidth() }));
   };
 
   // ---------------------------------------------------------------------------

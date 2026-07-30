@@ -85,6 +85,27 @@ export const DEFAULT_DESKTOP_LAYOUT = {
 // the finalized monitor arrangement above.
 export const DEFAULT_WIDGET_LAYOUT = DEFAULT_DESKTOP_LAYOUT;
 
+export const DESKTOP_LAYOUT_WIDTH_PRESETS = [1280, 1440, 1680, 1920, 2160, 2560, 3200];
+
+export function getDesktopLayoutPresetWidth(availableWidth) {
+  const width = Math.max(960, Number(availableWidth) || 1680);
+  return DESKTOP_LAYOUT_WIDTH_PRESETS.reduce((closest, preset) => (
+    Math.abs(preset - width) < Math.abs(closest - width) ? preset : closest
+  ), DESKTOP_LAYOUT_WIDTH_PRESETS[0]);
+}
+
+function createSizedDesktopLayout(canvasWidth) {
+  const scale = canvasWidth / 1680;
+  return Object.fromEntries(Object.entries(DEFAULT_DESKTOP_LAYOUT).map(([tab, items]) => [
+    tab,
+    items.map((item) => ({
+      ...item,
+      width: Math.round(Number(item.width) * scale),
+      desktopX: Number.isFinite(item.desktopX) ? Math.round(item.desktopX * scale) : item.desktopX,
+    })),
+  ]));
+}
+
 const makeInstance = (item, index, tab = "workspace") => ({
   id: `${item.type}-${tab}-${index}`,
   ...item,
@@ -513,11 +534,17 @@ function addMissingPositions(items, mode, options = {}) {
   return packVisibleWidgets(positioned, mode, options);
 }
 
-export function createDefaultWorkspaceLayout() {
+export function createDefaultWorkspaceLayout(options = {}) {
+  const desktopCanvasWidth = getDesktopLayoutPresetWidth(options.desktopCanvasWidth);
+  const sizedDesktopLayout = createSizedDesktopLayout(desktopCanvasWidth);
   const makeMode = (mode) => Object.fromEntries(
-    Object.entries(DEFAULT_DESKTOP_LAYOUT).map(([tab, items]) => [
+    Object.entries(mode === "desktop" ? sizedDesktopLayout : DEFAULT_DESKTOP_LAYOUT).map(([tab, items]) => [
       tab,
-      addMissingPositions(items.map((item, index) => makeInstance(getModeDefaultItem(item, mode, tab), index, tab)), mode),
+      addMissingPositions(
+        items.map((item, index) => makeInstance(getModeDefaultItem(item, mode, tab), index, tab)),
+        mode,
+        mode === "desktop" ? { canvasWidth: desktopCanvasWidth } : {},
+      ),
     ]),
   );
 
@@ -528,6 +555,7 @@ export function createDefaultWorkspaceLayout() {
     mobile: makeMode("mobile"),
     collapsed: {},
     locked: { desktop: true, chromebook: false, mobile: false },
+    defaultDesktopCanvasWidth: desktopCanvasWidth,
   };
 }
 
