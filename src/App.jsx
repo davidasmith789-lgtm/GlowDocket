@@ -255,7 +255,7 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "input", label: "Inputs", group: "Foundations" },
   { key: "nav", label: "Navigation", group: "Foundations" },
   { key: "task", label: "Assignment cards", group: "Assignment Viewing" },
-  { key: "dropdownHighlight", label: "Dropdown highlight", group: "Assignment Viewing" },
+  { key: "dropdownHighlight", label: "Dropdown highlight", group: "Actions" },
   { key: "modal", label: "Modals", group: "Assignment Viewing" },
   { key: "backdrop", label: "Modal backdrop", group: "Assignment Viewing" },
   { key: "primary", label: "Primary actions", group: "Actions" },

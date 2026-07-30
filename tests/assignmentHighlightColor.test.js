@@ -7,7 +7,7 @@ const css = fs.readFileSync(new URL("../src/App.css", import.meta.url), "utf8");
 
 test("dropdown highlight is customizable and uses readable derived text", () => {
   assert.doesNotMatch(app, /group: "Workspace"/);
-  assert.match(app, /key: "dropdownHighlight", label: "Dropdown highlight", group: "Assignment Viewing"/);
+  assert.match(app, /key: "dropdownHighlight", label: "Dropdown highlight", group: "Actions"/);
   assert.match(app, /normalized\.dropdownHighlight && \{ dropdownHighlightText: getContrastText\(normalized\.dropdownHighlight\) \}/);
   assert.match(app, /dropdownHighlight: \["--dropdown-highlight-bg"\]/);
   assert.match(app, /dropdownHighlightText: \["--dropdown-highlight-text"\]/);
