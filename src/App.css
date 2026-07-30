@@ -2435,6 +2435,45 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
 .course-cycle-row > div { display: flex; flex-wrap: wrap; gap: 10px; }
 .course-cycle-row label { display: inline-flex; gap: 5px; align-items: center; }
 
+.schedule-mode-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 18px;
+  padding: 0;
+  border: 0;
+}
+.schedule-mode-picker legend { grid-column: 1 / -1; margin-bottom: 7px; font-weight: 800; }
+.schedule-mode-picker > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+.schedule-mode-picker input { margin-top: 3px; }
+.schedule-mode-picker span { display: grid; gap: 4px; }
+.schedule-mode-picker small { color: var(--muted-text); }
+.weekly-course-schedules { display: grid; gap: 14px; margin-top: 14px; }
+.weekly-course-card { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
+.weekly-course-heading, .weekly-meeting-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.weekly-meeting-row { display: grid; gap: 12px; margin-top: 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--panel-bg); }
+.weekly-meeting-title button { border: 0; background: transparent; color: var(--danger-color, #dc2626); cursor: pointer; font-weight: 700; }
+.weekly-day-picker { display: grid; grid-template-columns: repeat(5, minmax(52px, 1fr)); gap: 7px; }
+.weekly-day-picker label { position: relative; }
+.weekly-day-picker input { position: absolute; opacity: 0; pointer-events: none; }
+.weekly-day-picker span { display: block; padding: 8px 5px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; cursor: pointer; font-weight: 700; }
+.weekly-day-picker input:checked + span { border-color: var(--primary-color); background: var(--primary-color); color: var(--button-primary-color); }
+.weekly-day-picker input:focus-visible + span { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+.weekly-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.weekly-time-fields label { display: grid; gap: 5px; font-weight: 700; }
+.calendar-class-meetings { display: grid; gap: 7px; margin-top: 8px; }
+.calendar-class-meetings p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin: 0; }
+.calendar-class-meetings p:last-child { display: block; margin-top: 4px; }
+
 .calendar-tile-details {
   display: grid;
   justify-items: center;
@@ -2478,6 +2517,8 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
 
 @media (max-width: 650px) {
   .course-cycle-row { grid-template-columns: 1fr; }
+  .schedule-mode-picker, .weekly-time-fields { grid-template-columns: 1fr; }
+  .weekly-day-picker { grid-template-columns: repeat(5, minmax(44px, 1fr)); }
   .attachment-draft-row { align-items: stretch; flex-direction: column; }
 }
 

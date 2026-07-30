@@ -38,6 +38,7 @@ import {
 } from "./onboardingUtils.js";
 import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
 import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
+import { formatMeetingTime, getWeeklyMeetingsForDate, WEEKDAYS } from "./schoolScheduleUtils.js";
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
@@ -123,6 +124,8 @@ const DEFAULT_USER_SETTINGS = {
   cycleDayNames: ["A Day", "B Day"],
   cycleAnchorDate: "",
   courseCycleDays: {},
+  schoolScheduleMode: "ab",
+  weeklyCourseMeetings: {},
   customColors: {},
   activeColorThemeId: "midnight-neon",
   activeColorThemeMode: "dark",
@@ -760,6 +763,7 @@ function getTaskCourseOrCategory(task) {
 }
 
 function getCycleDayForDate(date, settings) {
+  if (settings?.schoolScheduleMode === "weekly") return null;
   const dayNames = Array.isArray(settings?.cycleDayNames)
     ? settings.cycleDayNames.filter(Boolean)
     : [];
@@ -3599,6 +3603,37 @@ function App() {
     setTutorialPracticeOpen(false);
   };
 
+  const updateWeeklyCourseMeetings = (course, meetings) => {
+    handleAddFieldSettingChange("weeklyCourseMeetings", {
+      ...(userSettings.weeklyCourseMeetings || {}),
+      [course]: meetings,
+    });
+  };
+
+  const handleAddWeeklyMeeting = (course) => {
+    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
+      ? userSettings.weeklyCourseMeetings[course]
+      : [];
+    updateWeeklyCourseMeetings(course, [
+      ...meetings,
+      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weekdays: [], startTime: "09:00", endTime: "10:00" },
+    ]);
+  };
+
+  const handleWeeklyMeetingChange = (course, meetingId, changes) => {
+    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
+      ? userSettings.weeklyCourseMeetings[course]
+      : [];
+    updateWeeklyCourseMeetings(course, meetings.map((meeting) => meeting.id === meetingId ? { ...meeting, ...changes } : meeting));
+  };
+
+  const handleRemoveWeeklyMeeting = (course, meetingId) => {
+    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
+      ? userSettings.weeklyCourseMeetings[course]
+      : [];
+    updateWeeklyCourseMeetings(course, meetings.filter((meeting) => meeting.id !== meetingId));
+  };
+
   const advanceTutorial = () => {
     setTutorialStep((step) => step + 1);
   };
@@ -6351,6 +6386,10 @@ function App() {
       Number(task.dueDay) === selectedDate.getDate(),
   );
   const selectedCycleDay = getCycleDayForDate(selectedDate, userSettings);
+  const selectedWeeklyMeetings = getWeeklyMeetingsForDate(selectedDate, userSettings);
+  const selectedScheduleCourses = userSettings.schoolScheduleMode === "weekly"
+    ? [...new Set(selectedWeeklyMeetings.map((meeting) => meeting.course))]
+    : [];
   const selectedCycleCourses = selectedCycleDay
     ? courses.filter((course) => {
         const assignedDays = userSettings.courseCycleDays?.[course];
@@ -6361,6 +6400,9 @@ function App() {
     (task) =>
       getTaskCategory(task) === "School" &&
       selectedCycleCourses.includes(task.course),
+  );
+  const selectedWeeklyCourseTasks = selectedDateTasks.filter(
+    (task) => getTaskCategory(task) === "School" && selectedScheduleCourses.includes(task.course),
   );
 
   // To Do and In Progress use the same student-friendly order: urgent first,
@@ -9559,15 +9601,30 @@ function App() {
                   </h4>
 
                   <div className="calendar-day-summary">
-                    <strong>{selectedCycleDay || "No scheduled school cycle day"}</strong>
-                    {selectedCycleDay && (
+                    <strong>{userSettings.schoolScheduleMode === "weekly"
+                      ? `${selectedDate.toLocaleDateString(undefined, { weekday: "long" })} classes`
+                      : selectedCycleDay || "No scheduled school cycle day"}</strong>
+                    {userSettings.schoolScheduleMode === "weekly" && (
+                      selectedWeeklyMeetings.length > 0 ? (
+                        <div className="calendar-class-meetings">
+                          {selectedWeeklyMeetings.map((meeting) => (
+                            <p key={`${meeting.course}-${meeting.id}`}>
+                              <strong>{meeting.course}</strong>
+                              <span>{formatMeetingTime(meeting.startTime)}–{formatMeetingTime(meeting.endTime)}</span>
+                            </p>
+                          ))}
+                          <p>Scheduled-course assignments due: {selectedWeeklyCourseTasks.length > 0 ? selectedWeeklyCourseTasks.map((task) => task.title).join(", ") : "None"}</p>
+                        </div>
+                      ) : <p>No classes are scheduled for this day.</p>
+                    )}
+                    {userSettings.schoolScheduleMode !== "weekly" && selectedCycleDay && (
                       <p>
                         Courses: {selectedCycleCourses.length > 0
                           ? selectedCycleCourses.join(", ")
                           : "No courses are scheduled for this day yet"}
                       </p>
                     )}
-                    {selectedCycleDay && (
+                    {userSettings.schoolScheduleMode !== "weekly" && selectedCycleDay && (
                       <p>
                         Scheduled-course assignments due: {selectedCycleCourseTasks.length > 0
                           ? selectedCycleCourseTasks.map((task) => task.title).join(", ")
@@ -10536,7 +10593,13 @@ function App() {
                 )}
 
                 {settingsSection === "cycle" && (
-                  <SettingsCard title="School-Day Cycle" description="The anchor date uses the first label. Weekends are skipped automatically." className="school-cycle-settings" collapsible={false}>
+                  <SettingsCard title="School-Day Cycle" description="Choose an alternating letter-day cycle or a weekday-based college schedule." className="school-cycle-settings" collapsible={false}>
+                    <fieldset className="schedule-mode-picker">
+                      <legend>Scheduling system</legend>
+                      <label><input type="radio" name="school-schedule-mode" checked={userSettings.schoolScheduleMode !== "weekly"} onChange={() => handleAddFieldSettingChange("schoolScheduleMode", "ab")} /><span><strong>A/B Schedule</strong><small>Alternate A Day, B Day, or custom letter days.</small></span></label>
+                      <label><input type="radio" name="school-schedule-mode" checked={userSettings.schoolScheduleMode === "weekly"} onChange={() => handleAddFieldSettingChange("schoolScheduleMode", "weekly")} /><span><strong>College or Weekly Schedule</strong><small>Choose weekdays and times for each course.</small></span></label>
+                    </fieldset>
+                    {userSettings.schoolScheduleMode !== "weekly" ? <>
                     <label className="settings-select-row">
                       <span>Anchor date</span>
                       <input
@@ -10576,6 +10639,20 @@ function App() {
                         </div>
                       ))}
                     </div>
+                    </> : <div className="weekly-course-schedules">
+                      <p className="hint-text">Add one meeting for every distinct time. A meeting can repeat on multiple weekdays.</p>
+                      {courses.map((course) => {
+                        const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course]) ? userSettings.weeklyCourseMeetings[course] : [];
+                        return <section className="weekly-course-card" key={course}>
+                          <div className="weekly-course-heading"><strong>{course}</strong><button type="button" className="btn btn-secondary" onClick={() => handleAddWeeklyMeeting(course)}>Add meeting</button></div>
+                          {meetings.length === 0 ? <p className="hint-text">No weekly meetings added.</p> : meetings.map((meeting, meetingIndex) => <div className="weekly-meeting-row" key={meeting.id}>
+                            <div className="weekly-meeting-title"><strong>Meeting {meetingIndex + 1}</strong><button type="button" onClick={() => handleRemoveWeeklyMeeting(course, meeting.id)} aria-label={`Remove meeting ${meetingIndex + 1} for ${course}`}>Remove</button></div>
+                            <div className="weekly-day-picker">{WEEKDAYS.map((weekday) => { const selectedDays = Array.isArray(meeting.weekdays) ? meeting.weekdays.map(Number) : []; return <label key={weekday.value}><input type="checkbox" checked={selectedDays.includes(weekday.value)} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { weekdays: event.target.checked ? [...new Set([...selectedDays, weekday.value])].sort() : selectedDays.filter((day) => day !== weekday.value) })} /><span>{weekday.short}</span></label>; })}</div>
+                            <div className="weekly-time-fields"><label><span>Starts</span><input type="time" value={meeting.startTime || ""} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { startTime: event.target.value })} /></label><label><span>Ends</span><input type="time" value={meeting.endTime || ""} min={meeting.startTime || undefined} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { endTime: event.target.value })} /></label></div>
+                          </div>)}
+                        </section>;
+                      })}
+                    </div>}
                   </SettingsCard>
                 )}
 
