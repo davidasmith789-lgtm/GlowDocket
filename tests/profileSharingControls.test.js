@@ -6,6 +6,7 @@ import { buildFlashcardProfileTags, parseFlashcardProfile } from "../src/flashca
 const controls = fs.readFileSync(new URL("../src/components/FlashcardProfileSharingControls.jsx", import.meta.url), "utf8");
 const styles = fs.readFileSync(new URL("../src/components/FlashcardProfileSharingControls.css", import.meta.url), "utf8");
 const app = fs.readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+const appStyles = fs.readFileSync(new URL("../src/App.css", import.meta.url), "utf8");
 
 test("level and badge sharing support all four combinations", () => {
   const profile = { level: 4, badgeId: "flash-first-session" };
@@ -25,7 +26,9 @@ test("sharing controls show an immediate public preview and scale safely", () =>
 });
 
 test("profile sharing is visible from both account surfaces", () => {
-  assert.match(app, /account-dashboard-card account-profile-sharing-card[\s\S]*<FlashcardProfileSharingControls/);
+  assert.match(app, /account-password-card[\s\S]*account-profile-sharing-card[\s\S]*account-dashboard-security-card/);
   assert.match(app, /settingsSection === "account"[\s\S]*<SettingsCard title="Profile Sharing"[\s\S]*<FlashcardProfileSharingControls/);
   assert.match(app, /profileSettings=\{gamification\} onChange=\{updateGamification\}/);
+  assert.match(appStyles, /\.account-profile-sharing-card\s*\{\s*grid-column: 1 \/ -1;/);
+  assert.match(appStyles, /\.account-profile-sharing-card \.flash-profile-sharing-content\s*\{[^}]*grid-template-columns: minmax\(0, 1\.35fr\) minmax\(240px, \.65fr\)/s);
 });

@@ -8428,11 +8428,6 @@ function App() {
       </section>
 
       <div className="account-dashboard-grid">
-        <section className="account-dashboard-card account-profile-sharing-card">
-          <header><div><span>Privacy</span><h3>Profile sharing</h3></div></header>
-          <p>Control what other students see beside your Shared Decks and Community posts.</p>
-          <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
-        </section>
         <section className="account-dashboard-card account-profile-card">
           <header><div><span>Profile</span><h3>Name and email</h3></div></header>
           <p>Press Enter or click outside a field to save your change.</p>
@@ -8460,16 +8455,28 @@ function App() {
               <div className="password-input-row"><input id="dashboard-confirm-password" type={showAccountPasswordConfirm ? "text" : "password"} value={accountPasswordConfirm} autoComplete="new-password" onChange={(event) => setAccountPasswordConfirm(event.target.value)} /><button type="button" className="password-visibility-button is-icon-only" aria-pressed={showAccountPasswordConfirm} aria-label={showAccountPasswordConfirm ? "Hide password confirmation" : "Show password confirmation"} onClick={() => setShowAccountPasswordConfirm((shown) => !shown)}><PasswordEyeIcon hidden={!showAccountPasswordConfirm} /></button></div>
             </form>
           </section>
+          <section className="account-dashboard-card account-profile-sharing-card">
+            <header><div><span>Privacy</span><h3>Profile sharing</h3></div></header>
+            <p>Control what other students see beside your Shared Decks and Community posts.</p>
+            <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
+          </section>
           <section className="account-dashboard-card account-dashboard-security-card">
             <header><div><span>Account access</span><h3>Sessions and account</h3></div></header>
             <div className="account-management-action"><div><strong>Sign out of all devices</strong><p>End this account's active sessions everywhere.</p></div><button type="button" className="btn btn-secondary" disabled={Boolean(accountUpdateBusy)} onClick={handleSignOutAllDevices}>{accountUpdateBusy === "sign-out-all" ? "Signing out…" : "Sign Out All Devices"}</button></div>
             <div className="account-management-action"><div><strong>Delete account permanently</strong><p>Delete this account and its cloud-synced planner data. This cannot be undone.</p></div><button type="button" className="btn btn-danger" disabled={Boolean(accountUpdateBusy)} onClick={handleDeleteAccount}>{accountUpdateBusy === "delete-account" ? "Deleting account…" : "Delete My Account"}</button></div>
           </section>
-        </> : <section className="account-dashboard-card">
-          <header><div><span>Storage</span><h3>Browser-only profile</h3></div></header>
-          <p>Your assignments and preferences are saved on this device. Open Account in Settings to add an email and enable cross-device sync.</p>
-          <button type="button" className="btn btn-primary" onClick={() => { setSettingsSection("account"); setCurrentTab("settings"); }}>Open Account Settings</button>
-        </section>}
+        </> : <>
+          <section className="account-dashboard-card">
+            <header><div><span>Storage</span><h3>Browser-only profile</h3></div></header>
+            <p>Your assignments and preferences are saved on this device. Open Account in Settings to add an email and enable cross-device sync.</p>
+            <button type="button" className="btn btn-primary" onClick={() => { setSettingsSection("account"); setCurrentTab("settings"); }}>Open Account Settings</button>
+          </section>
+          <section className="account-dashboard-card account-profile-sharing-card">
+            <header><div><span>Privacy</span><h3>Profile sharing</h3></div></header>
+            <p>Control what other students see beside your Shared Decks and Community posts.</p>
+            <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
+          </section>
+        </>}
       </div>
       {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
       <footer className="account-dashboard-footer"><button type="button" className="btn btn-secondary" onClick={() => { setSettingsSection("account"); setCurrentTab("settings"); }}>Advanced Account Settings</button><button type="button" className="btn btn-danger" onClick={handleSignOut}>Sign Out</button></footer>

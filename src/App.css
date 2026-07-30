@@ -6608,7 +6608,13 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-dashboard-card > p { margin: 0; color: var(--muted-text); line-height: 1.5; }
 .account-profile-sharing-card .flash-profile-sharing,
 .account-profile-sharing-settings .flash-profile-sharing { width: 100%; min-width: 0; box-sizing: border-box; }
+.account-profile-sharing-card { grid-column: 1 / -1; }
 .account-profile-sharing-card .flash-profile-sharing { align-self: start; }
+.account-profile-sharing-card .flash-profile-sharing-content { grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr); align-items: start; }
+.account-profile-sharing-card .flash-profile-sharing-content > p { grid-column: 1 / -1; }
+.account-profile-sharing-card .flash-profile-sharing fieldset { grid-column: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.account-profile-sharing-card .flash-profile-badge-choice { grid-column: 1; }
+.account-profile-sharing-card .flash-profile-sharing-preview { grid-column: 2; grid-row: 2 / span 2; min-height: 100%; align-content: center; box-sizing: border-box; }
 .account-dashboard-card > header em { padding: 5px 9px; border-radius: 999px; background: var(--surface-alt); font-size: .7rem; font-style: normal; font-weight: 900; }
 .account-dashboard-card > header em.is-verified { color: var(--success-color); }
 .account-dashboard-card > header em.is-unverified { color: var(--warning-color); }
@@ -6639,6 +6645,10 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
   .account-dashboard-shortcuts { grid-template-columns: 1fr 1fr; }
   .account-cosmetics-card { grid-column: 1 / -1; }
   .account-dashboard-grid { grid-template-columns: 1fr; }
+  .account-profile-sharing-card { grid-column: 1; }
+  .account-profile-sharing-card .flash-profile-sharing-content { grid-template-columns: 1fr; }
+  .account-profile-sharing-card .flash-profile-sharing fieldset { grid-template-columns: 1fr; }
+  .account-profile-sharing-card .flash-profile-sharing-preview { grid-column: 1; grid-row: auto; min-height: 0; }
   .account-dashboard-security-card { grid-column: 1; }
 }
 @media (max-width: 480px) {
