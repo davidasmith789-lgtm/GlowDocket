@@ -119,17 +119,36 @@ test("new widget types are added without resetting a saved layout", () => {
   assert.equal(normalized.locked.desktop, true);
 });
 
-test("older customized layouts receive the corrected dashboard once without resetting other tabs", () => {
+test("older customized layouts receive corrected defaults without resetting unrelated tabs", () => {
   const saved = createDefaultWorkspaceLayout();
   saved.version = 4;
   saved.userCustomized = true;
   saved.desktop.dashboard[0].x = 123;
-  saved.desktop.todo[0].x = 77;
+  saved.desktop.inProgress[0].x = 77;
   const normalized = normalizeWorkspaceLayout(saved, { preservePositions: true });
   assert.equal(normalized.version, DEFAULT_LAYOUT_VERSION);
   assert.equal(normalized.desktop.dashboard[0].x, 0);
-  assert.equal(normalized.desktop.todo[0].x, 77);
+  assert.equal(normalized.desktop.inProgress[0].x, 77);
   assert.equal(normalized.desktop.dashboard.find((item) => item.type === "recommended").width, 520);
+});
+
+test("To Do defaults use a utility column beside a wide working column", () => {
+  const layout = createDefaultWorkspaceLayout();
+  const todo = layout.desktop.todo;
+  const courseColors = todo.find((item) => item.type === "course-colors");
+  const reminders = todo.find((item) => item.type === "reminders");
+  const todoMaster = todo.find((item) => item.type === "todo-master");
+  const addAssignment = todo.find((item) => item.type === "add-assignment");
+
+  assert.deepEqual(
+    { x: reminders.x, y: reminders.y, width: reminders.width, height: reminders.height },
+    { x: courseColors.x, y: courseColors.y + courseColors.height + 18, width: courseColors.width, height: courseColors.height },
+  );
+  assert.equal(todoMaster.x, 418);
+  assert.equal(todoMaster.width, 1238);
+  assert.equal(addAssignment.x, todoMaster.x);
+  assert.equal(addAssignment.width, todoMaster.width);
+  assert.deepEqual(findWidgetOverlaps(todo), []);
 });
 
 test("invalid, unknown, and duplicate saved widgets are repaired", () => {

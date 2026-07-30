@@ -5,7 +5,7 @@
  * creates defaults, repairs older saved layouts, enforces usable sizes, and
  * resolves placement without depending on React or the browser DOM.
  */
-export const DEFAULT_LAYOUT_VERSION = 5;
+export const DEFAULT_LAYOUT_VERSION = 6;
 export const WORKSPACE_LAYOUT_VERSION = DEFAULT_LAYOUT_VERSION;
 
 export const PROTECTED_WIDGETS = new Set([
@@ -65,10 +65,10 @@ export const DEFAULT_DESKTOP_LAYOUT = {
     { type: "completed-master", width: 520, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1707, zIndex: 360, newUserOnly: true },
   ],
   todo: [
-    { type: "todo-master", width: 844, height: 650, desktopX: 418, xRatio: 418 / 1680, desktopY: 0, zIndex: 358 },
+    { type: "todo-master", width: 1238, height: 650, desktopX: 418, xRatio: 418 / 1680, desktopY: 0, zIndex: 358 },
     { type: "course-colors", width: 400, height: 500, desktopX: 0, xRatio: 0, desktopY: 0, zIndex: 322 },
-    { type: "add-assignment", width: 844, height: 620, desktopX: 418, xRatio: 418 / 1680, desktopY: 668, zIndex: 326 },
-    { type: "reminders", width: 376, height: 380, desktopX: 1280, xRatio: 1280 / 1680, desktopY: 0, zIndex: 357 },
+    { type: "add-assignment", width: 1238, height: 620, desktopX: 418, xRatio: 418 / 1680, desktopY: 668, zIndex: 326 },
+    { type: "reminders", width: 400, height: 500, desktopX: 0, xRatio: 0, desktopY: 518, zIndex: 357 },
   ],
   inProgress: [
     { type: "in-progress-master", width: 1138, height: 680, desktopX: 518, xRatio: 518 / 1680, desktopY: 0, zIndex: 359 },
@@ -577,6 +577,15 @@ export function normalizeWorkspaceLayout(value, options = {}) {
     for (const mode of modes) {
       value[mode] = value[mode] || {};
       value[mode].dashboard = structuredClone(defaults[mode].dashboard);
+    }
+  }
+
+  // Version 6 gives the To Do tab a narrow utility column and a wide working
+  // column. This migration changes only widget geometry on that tab.
+  if (savedVersion < 6) {
+    for (const mode of modes) {
+      value[mode] = value[mode] || {};
+      value[mode].todo = structuredClone(defaults[mode].todo);
     }
   }
 
