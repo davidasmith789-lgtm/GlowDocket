@@ -198,9 +198,9 @@
   background: var(--card-bg);
 }
 .flash-deck-fields .flash-description-field {
-  height: 42px;
+  height: 190px;
   min-height: 42px;
-  max-height: 190px;
+  max-height: 276px;
   overflow-y: auto;
   resize: vertical;
 }
