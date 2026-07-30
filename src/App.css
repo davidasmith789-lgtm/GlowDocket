@@ -6606,6 +6606,9 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
 .account-dashboard-card > header span { color: var(--primary-color); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .account-dashboard-card h3 { margin: 0; font-size: 1.2rem; }
 .account-dashboard-card > p { margin: 0; color: var(--muted-text); line-height: 1.5; }
+.account-profile-sharing-card .flash-profile-sharing,
+.account-profile-sharing-settings .flash-profile-sharing { width: 100%; min-width: 0; box-sizing: border-box; }
+.account-profile-sharing-card .flash-profile-sharing { align-self: start; }
 .account-dashboard-card > header em { padding: 5px 9px; border-radius: 999px; background: var(--surface-alt); font-size: .7rem; font-style: normal; font-weight: 900; }
 .account-dashboard-card > header em.is-verified { color: var(--success-color); }
 .account-dashboard-card > header em.is-unverified { color: var(--warning-color); }

@@ -59,6 +59,7 @@ import AchievementEmblem from "./components/AchievementEmblem.jsx";
 import CompletionRippleCanvas from "./components/CompletionRippleCanvas.jsx";
 import CommunityHub from "./components/CommunityHub.jsx";
 import FlashcardsHub from "./components/FlashcardsHub.jsx";
+import FlashcardProfileSharingControls from "./components/FlashcardProfileSharingControls.jsx";
 import AssignmentFlashcards from "./components/AssignmentFlashcards.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
@@ -8427,6 +8428,11 @@ function App() {
       </section>
 
       <div className="account-dashboard-grid">
+        <section className="account-dashboard-card account-profile-sharing-card">
+          <header><div><span>Privacy</span><h3>Profile sharing</h3></div></header>
+          <p>Control what other students see beside your Shared Decks and Community posts.</p>
+          <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
+        </section>
         <section className="account-dashboard-card account-profile-card">
           <header><div><span>Profile</span><h3>Name and email</h3></div></header>
           <p>Press Enter or click outside a field to save your change.</p>
@@ -10405,7 +10411,7 @@ function App() {
                       </div>
                     </SettingsCard>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type} settings-section-wide`} role="status">{accountUpdateStatus.message}</div>}
-                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing browser-only profile into a secure account without removing its assignments or personalization." className="settings-section-wide" collapsible={false}>
+                  </> : CLOUD_SYNC_CONFIGURED ? <SettingsCard title="Add Email & Enable Cross-Device Sync" description="Turn this existing browser-only profile into a secure account without removing its assignments or personalization." className="settings-section-wide">
                     <form className="account-settings-form account-password-form" onSubmit={handleLocalAccountUpgrade}>
                       <label htmlFor="upgrade-display-name">Preferred name</label>
                       <input id="upgrade-display-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} />
@@ -10420,6 +10426,12 @@ function App() {
                     </form>
                     {accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}
                   </SettingsCard> : <><SettingsCard title="Preferred Name" description="Choose what GlowDocket calls you in friendly greetings and open-app reminders." className="settings-section-wide"><form className="account-settings-form" onSubmit={handleAccountDisplayNameUpdate}><label htmlFor="local-preferred-name">Preferred name</label><input id="local-preferred-name" value={accountDisplayNameDraft} maxLength={60} autoComplete="nickname" onChange={(event) => setAccountDisplayNameDraft(event.target.value)} /><button type="submit" className="btn btn-primary" disabled={Boolean(accountUpdateBusy) || !accountDisplayNameDraft.trim()}>{accountUpdateBusy === "display-name" ? "Saving…" : "Save Preferred Name"}</button></form>{accountUpdateStatus.message && <div className={`account-update-message is-${accountUpdateStatus.type}`} role="status">{accountUpdateStatus.message}</div>}</SettingsCard><SettingsCard title="Browser-Only Profile" description="This version saves the profile only in this browser." className="settings-section-wide"><p className="hint-text">Assignments remain available on this device. Online account controls will appear automatically when cross-device saving is available.</p></SettingsCard></>
+                )}
+
+                {settingsSection === "account" && (
+                  <SettingsCard title="Profile Sharing" description="Choose what other students can see beside your Shared Decks and Community posts." className="settings-section-wide account-profile-sharing-settings">
+                    <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
+                  </SettingsCard>
                 )}
 
                 {settingsSection === "checklists" && (
