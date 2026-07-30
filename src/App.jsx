@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./App.css";
 import {
   formatChecklistCountdown,
@@ -1189,7 +1190,8 @@ const WORKSPACE_TABS = [
 ];
 
 const WORKSPACE_MOBILE_BREAKPOINT = 720;
-const WORKSPACE_DESKTOP_BREAKPOINT = 1400;
+const WORKSPACE_DESKTOP_BREAKPOINT = 960;
+const WORKSPACE_DESIGN_WIDTH = 1680;
 const getWorkspaceModeForWidth = (width, userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent) => {
   if (/CrOS/i.test(userAgent)) return "chromebook";
   if (Number(width) < WORKSPACE_MOBILE_BREAKPOINT) return "mobile";
@@ -1300,6 +1302,7 @@ function WorkspaceWidget({
   onMove,
   onCopy,
   onHide,
+  onDetach,
   onSelectUnderneath,
   children,
 }) {
@@ -1348,8 +1351,9 @@ function WorkspaceWidget({
     const obstacles = widget && canvas ? getWorkspaceObstacleRects(widget, canvas) : [];
     const widgetBounds = widget?.getBoundingClientRect();
     const canvasBounds = canvas?.getBoundingClientRect();
-    const widgetX = widgetBounds && canvasBounds ? widgetBounds.left - canvasBounds.left : 0;
-    const widgetY = widgetBounds && canvasBounds ? widgetBounds.top - canvasBounds.top : 0;
+    const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
+    const widgetX = widgetBounds && canvasBounds ? (widgetBounds.left - canvasBounds.left) / canvasScale : 0;
+    const widgetY = widgetBounds && canvasBounds ? (widgetBounds.top - canvasBounds.top) / canvasScale : 0;
     let nextWidth = startWidth;
     let nextHeight = startHeight;
     let lastSafe = {
@@ -1361,8 +1365,8 @@ function WorkspaceWidget({
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== activePointerId) return;
       moveEvent.preventDefault();
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
+      const deltaX = (moveEvent.clientX - startX) / canvasScale;
+      const deltaY = (moveEvent.clientY - startY) / canvasScale;
       const rawX = widgetX + deltaX;
       const rawY = widgetY + deltaY;
       const desiredX = edges.left ? Math.min(widgetX + startWidth - 190, Math.max(0, rawX)) : widgetX;
@@ -1460,8 +1464,9 @@ function WorkspaceWidget({
     const startY = event.clientY;
     const widgetBounds = widget.getBoundingClientRect();
     const canvasBounds = canvas.getBoundingClientRect();
-    const initialX = widgetBounds.left - canvasBounds.left;
-    const initialY = widgetBounds.top - canvasBounds.top;
+    const canvasScale = Number(canvas.dataset.workspaceScale) || 1;
+    const initialX = (widgetBounds.left - canvasBounds.left) / canvasScale;
+    const initialY = (widgetBounds.top - canvasBounds.top) / canvasScale;
     let nextX = initialX;
     let nextY = initialY;
     let targetTab = null;
@@ -1484,8 +1489,8 @@ function WorkspaceWidget({
       const maxX = Math.max(0, canvas.clientWidth - widget.offsetWidth);
       const desired = {
         ...lastSafe,
-        x: Math.max(0, Math.min(maxX, initialX + moveEvent.clientX - startX)),
-        y: Math.max(0, initialY + moveEvent.clientY - startY),
+        x: Math.max(0, Math.min(maxX, initialX + (moveEvent.clientX - startX) / canvasScale)),
+        y: Math.max(0, initialY + (moveEvent.clientY - startY) / canvasScale),
       };
       const legal = chooseLegalWorkspaceRect(
         desired,
@@ -1520,7 +1525,9 @@ function WorkspaceWidget({
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (dragHandle.hasPointerCapture?.(activePointerId)) dragHandle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
-      if (targetTab) onMove(targetTab);
+      const releasedOutsideWindow = stopEvent && (stopEvent.clientX < 0 || stopEvent.clientY < 0 || stopEvent.clientX > window.innerWidth || stopEvent.clientY > window.innerHeight);
+      if (releasedOutsideWindow && onDetach) onDetach();
+      else if (targetTab) onMove(targetTab);
       else onPosition(nextX, nextY, canvas.clientWidth);
     };
     window.addEventListener("pointermove", move);
@@ -1572,6 +1579,7 @@ function WorkspaceWidget({
             <strong>Copy to</strong>
             {WORKSPACE_TABS.filter(([tab]) => tab !== "calendar").map(([tab, label]) => <button type="button" key={`copy-${tab}`} onClick={() => onCopy(tab)}>{label}</button>)}
             {onSelectUnderneath && <button type="button" onClick={onSelectUnderneath}>Select widget underneath</button>}
+            {onDetach && <button type="button" onClick={onDetach}>Open in desktop window</button>}
             <button type="button" className="widget-hide-action" onClick={onHide}>Hide widget</button>
           </div>
         </details>
@@ -1604,8 +1612,19 @@ function WorkspaceWidget({
   );
 }
 
-function WorkspaceCanvas({ children, height }) {
-  return <div className="workspace-widget-canvas" style={{ height: `${height}px` }}>{children}</div>;
+function WorkspaceCanvas({ children, height, scale = 1, width }) {
+  const canvas = <div className="workspace-widget-canvas" data-workspace-scale={scale} style={{ width: width ? `${width}px` : undefined, height: `${height}px`, transform: scale < 1 ? `scale(${scale})` : undefined }}>{children}</div>;
+  return scale < 1 ? <div className="workspace-scale-frame" style={{ height: `${height * scale}px` }}>{canvas}</div> : canvas;
+}
+
+function DetachedWidgetWindow({ title, portalRoot, onClose, children }) {
+  return createPortal(
+    <main className="detached-widget-shell">
+      <header><strong>{title}</strong><button type="button" onClick={onClose} aria-label={`Return ${title} to GlowDocket`}>Return to GlowDocket</button></header>
+      <div className="detached-widget-content">{children}</div>
+    </main>,
+    portalRoot,
+  );
 }
 
 const VOICE_MONTHS = [
@@ -2146,6 +2165,7 @@ function App() {
   const [workspaceMode, setWorkspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
   const [workspaceCanvasWidth, setWorkspaceCanvasWidth] = useState(0);
   const workspaceMainRef = useRef(null);
+  const [detachedWidgets, setDetachedWidgets] = useState([]);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(() =>
     window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -7920,6 +7940,34 @@ function App() {
     return statContent ? <div className="portable-stat"><strong>{statContent[0]}</strong><p>{statContent[1]}</p></div> : null;
   };
 
+  const detachWorkspaceWidget = (instance) => {
+    const existing = detachedWidgets.find((item) => item.id === instance.id);
+    if (existing?.popup && !existing.popup.closed) {
+      existing.popup.focus();
+      return;
+    }
+    const popup = window.open("", `glowdocket-widget-${instance.id}`, "popup=yes,width=520,height=620,resizable=yes");
+    if (!popup) {
+      window.alert("Your browser blocked the widget window. Allow pop-ups for GlowDocket and try again.");
+      return;
+    }
+    const title = getWorkspaceWidgetTitle(instance.type);
+    popup.document.title = `${title} · GlowDocket`;
+    popup.document.documentElement.dataset.theme = document.documentElement.dataset.theme || theme;
+    document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => popup.document.head.appendChild(node.cloneNode(true)));
+    const portalRoot = popup.document.createElement("div");
+    portalRoot.className = `App ${theme} detached-widget-app`;
+    popup.document.body.appendChild(portalRoot);
+    popup.addEventListener("beforeunload", () => setDetachedWidgets((items) => items.filter((item) => item.id !== instance.id)));
+    popup.focus();
+    setDetachedWidgets((items) => [...items.filter((item) => item.id !== instance.id), { id: instance.id, type: instance.type, popup, portalRoot }]);
+  };
+  const returnDetachedWidget = (instanceId) => {
+    const detached = detachedWidgets.find((item) => item.id === instanceId);
+    setDetachedWidgets((items) => items.filter((item) => item.id !== instanceId));
+    if (detached?.popup && !detached.popup.closed) detached.popup.close();
+  };
+
   const renderWorkspaceInstance = (instance) => (
     <WorkspaceWidget
       key={instance.id}
@@ -7944,6 +7992,7 @@ function App() {
       onMove={(tab) => moveWorkspaceWidget(instance, tab, false)}
       onCopy={(tab) => moveWorkspaceWidget(instance, tab, true)}
       onHide={() => hideWorkspaceWidget(instance)}
+      onDetach={() => detachWorkspaceWidget(instance)}
       onSelectUnderneath={(() => {
         const instanceHeight = workspaceLayout.collapsed[instance.type] ? COLLAPSED_WIDGET_HEIGHT : Number(instance.height);
         const hasUnderneath = (workspaceLayout[workspaceMode]?.[currentTab] || []).some((item) => {
@@ -7962,23 +8011,27 @@ function App() {
   );
 
   const getWorkspaceCanvasHeight = (items) => Math.max(420, ...items.map((item) => (Number(item.y) || 0) + (workspaceLayout.collapsed[item.type] ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(item.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT) : Number(item.height) || 320) + 30));
+  const workspaceScale = workspaceMode === "desktop" && workspaceCanvasWidth > 0
+    ? Math.min(1, workspaceCanvasWidth / WORKSPACE_DESIGN_WIDTH)
+    : 1;
+  const responsiveCanvasWidth = workspaceMode === "desktop" ? Math.max(WORKSPACE_DESIGN_WIDTH, workspaceCanvasWidth) : workspaceCanvasWidth;
   const responsiveWorkspaceLayout = workspaceCanvasWidth > 0
     ? normalizeWorkspaceLayout(structuredClone(workspaceLayout), {
         mode: workspaceMode,
-        canvasWidth: workspaceCanvasWidth,
+        canvasWidth: responsiveCanvasWidth,
         reflowForCanvas: true,
         collapsed: workspaceLayout.collapsed,
       })
     : workspaceLayout;
   const renderWorkspaceForTab = (tab) => {
-    const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden);
-    return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)}>
+    const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
+    return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)} scale={workspaceScale} width={responsiveCanvasWidth}>
       {items.map(renderWorkspaceInstance)}
     </WorkspaceCanvas>
   };
   const renderWorkspaceExtrasForTab = (tab) => {
-    const extras = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden);
-    return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
+    const extras = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
+    return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)} scale={workspaceScale} width={responsiveCanvasWidth}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
   };
 
   if (authInitializing) {
@@ -8545,6 +8598,17 @@ function App() {
             <div className="widgets-tray-actions"><button type="button" className="btn btn-secondary" disabled={currentTab === "calendar"} onClick={resetWorkspaceTab}>Reset this tab</button><button type="button" className="btn btn-danger" onClick={resetAllWorkspace}>Reset all layouts</button></div>
           </section>
         )}
+
+        {detachedWidgets.map((detached) => (
+          <DetachedWidgetWindow
+            key={detached.id}
+            title={getWorkspaceWidgetTitle(detached.type)}
+            portalRoot={detached.portalRoot}
+            onClose={() => returnDetachedWidget(detached.id)}
+          >
+            {renderWidgetContent(detached.type)}
+          </DetachedWidgetWindow>
+        ))}
 
         {isMobileUi && currentUser && mobileUsesOwnScreen && (
           <main id="mobile-main-content" className={`mobile-app-main${currentTab === "mobile-add" ? " mobile-add-fullscreen" : ""}${mobileTaskTabActive ? " mobile-task-page" : ""}`} tabIndex="-1">

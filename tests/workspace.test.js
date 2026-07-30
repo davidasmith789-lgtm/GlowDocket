@@ -281,16 +281,33 @@ test("ChromeOS mode detection and pointer-captured resizing stay wired", async (
 test("phones, tablets, compact laptops, and wide desktops use independent workspaces", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(app, /WORKSPACE_MOBILE_BREAKPOINT = 720/);
-  assert.match(app, /WORKSPACE_DESKTOP_BREAKPOINT = 1400/);
+  assert.match(app, /WORKSPACE_DESKTOP_BREAKPOINT = 960/);
   assert.match(app, /if \(Number\(width\) < WORKSPACE_MOBILE_BREAKPOINT\) return "mobile"/);
   assert.match(app, /Number\(width\) < WORKSPACE_DESKTOP_BREAKPOINT \? "chromebook" : "desktop"/);
+});
+
+test("new accounts see every registered widget on the dashboard", () => {
+  const layout = createDefaultWorkspaceLayout();
+  const registeredTypes = new Set(Object.values(layout.desktop).flat().map((item) => item.type));
+  const dashboardTypes = new Set(layout.desktop.dashboard.filter((item) => !item.hidden).map((item) => item.type));
+  assert.deepEqual([...dashboardTypes].sort(), [...registeredTypes].sort());
+  assert.deepEqual(findWidgetOverlaps(layout.desktop.dashboard), []);
+});
+
+test("desktop workspace scales one arrangement before the responsive handoff", async () => {
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(app, /workspaceCanvasWidth \/ WORKSPACE_DESIGN_WIDTH/);
+  assert.match(app, /data-workspace-scale=\{scale\}/);
+  assert.match(styles, /\.workspace-widget-canvas[\s\S]*?transform-origin:\s*top left;/);
+  assert.match(styles, /\.workspace-scale-frame/);
 });
 
 test("rendered widgets reflow to the measured screen without overwriting saved geometry", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(app, /const responsiveWorkspaceLayout = workspaceCanvasWidth > 0/);
   assert.match(app, /normalizeWorkspaceLayout\(structuredClone\(workspaceLayout\), \{/);
-  assert.match(app, /canvasWidth: workspaceCanvasWidth/);
+  assert.match(app, /canvasWidth: responsiveCanvasWidth/);
   assert.match(app, /reflowForCanvas: true/);
   assert.match(app, /responsiveWorkspaceLayout\[workspaceMode\]\?\.\[tab\]/);
 });

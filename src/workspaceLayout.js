@@ -5,7 +5,7 @@
  * creates defaults, repairs older saved layouts, enforces usable sizes, and
  * resolves placement without depending on React or the browser DOM.
  */
-export const DEFAULT_LAYOUT_VERSION = 3;
+export const DEFAULT_LAYOUT_VERSION = 4;
 export const WORKSPACE_LAYOUT_VERSION = DEFAULT_LAYOUT_VERSION;
 
 export const PROTECTED_WIDGETS = new Set([
@@ -59,6 +59,10 @@ export const DEFAULT_DESKTOP_LAYOUT = {
     { type: "course-overview", width: 540, height: 440, desktopX: 558, xRatio: 558 / 1680, desktopY: 611, zIndex: 355 },
     { type: "checklists", width: 540, height: 440, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 611, zIndex: 31 },
     { type: "add-assignment", width: 1098, height: 620, desktopX: 0, xRatio: 0, desktopY: 1069, zIndex: 356 },
+    { type: "course-colors", width: 540, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1069, zIndex: 357, newUserOnly: true },
+    { type: "todo-master", width: 540, height: 620, desktopX: 0, xRatio: 0, desktopY: 1707, zIndex: 358, newUserOnly: true },
+    { type: "in-progress-master", width: 540, height: 620, desktopX: 558, xRatio: 558 / 1680, desktopY: 1707, zIndex: 359, newUserOnly: true },
+    { type: "completed-master", width: 540, height: 620, desktopX: 1116, xRatio: 1116 / 1680, desktopY: 1707, zIndex: 360, newUserOnly: true },
   ],
   todo: [
     { type: "todo-master", width: 844, height: 650, desktopX: 418, xRatio: 418 / 1680, desktopY: 0, zIndex: 358 },
@@ -588,7 +592,7 @@ export function normalizeWorkspaceLayout(value, options = {}) {
       value[mode][tab] = withoutRemovedWidgets(value[mode][tab]);
       const existingTypes = new Set(value[mode][tab].map((item) => item.type));
       const missing = defaults[mode][tab].filter(
-        (item) => !existingTypes.has(item.type),
+        (item) => !existingTypes.has(item.type) && (!userCustomized || !item.newUserOnly),
       );
 
       if (missing.length > 0) {
