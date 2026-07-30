@@ -312,6 +312,11 @@ test("rendered widgets use saved geometry without resize-time reflow", async () 
   assert.match(app, /responsiveWorkspaceLayout\[workspaceMode\]\?\.\[tab\]/);
 });
 
+test("desktop widget canvas keeps the full monitor-sized resize boundary", async () => {
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(styles, /\.App:not\(\.mobile-app-ui\) \.workspace-widget-canvas\s*\{\s*max-width:\s*none;/);
+});
+
 test("desktop pop-out widgets scroll without a visible right scrollbar", async () => {
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(styles, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.detached-widget-content \{ scrollbar-width: none; \}/);

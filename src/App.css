@@ -5312,6 +5312,9 @@ html[data-theme="dark"] {
   width: 100% !important;
   max-width: none !important;
 }
+.App:not(.mobile-app-ui) .workspace-widget-canvas {
+  max-width: none;
+}
 
 .detached-widget-app { height: 100vh; min-height: 100vh; padding: 0; overflow: hidden; background: var(--background-color); color: var(--text-color); }
 .detached-widget-shell { display: grid; height: 100vh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; background: var(--background-color); }
