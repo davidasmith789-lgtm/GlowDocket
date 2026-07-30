@@ -1120,9 +1120,14 @@ textarea {
   font: inherit;
 }
 .hero-status-stack { display: grid; justify-items: end; gap: 9px; }
-.account-header-button { display: grid; width: min(440px, 100%); min-height: 94px; grid-template-columns: 64px minmax(0, 1fr) auto 24px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--hero-text) 30%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--card-bg) 16%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); transition: transform var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease; }
-.account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); transform: translateY(-2px); }
+.account-header-button { display: grid; width: min(440px, 100%); min-height: 94px; grid-template-columns: 64px minmax(0, 1fr) auto 24px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--hero-text) 30%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--card-bg) 16%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--hero-text) 18%, transparent), 0 0 42px color-mix(in srgb, var(--hero-text) 8%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); animation: account-profile-glow 3.4s ease-in-out infinite; transition: transform var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease; }
+.account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); box-shadow: 0 0 24px color-mix(in srgb, var(--hero-text) 34%, transparent), 0 0 54px color-mix(in srgb, var(--hero-text) 16%, transparent); transform: translateY(-2px); animation-play-state: paused; }
 .account-header-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--hero-text) 55%, transparent); outline-offset: 3px; }
+@keyframes account-profile-glow {
+  0%, 100% { box-shadow: 0 0 16px color-mix(in srgb, var(--hero-text) 16%, transparent), 0 0 36px color-mix(in srgb, var(--hero-text) 7%, transparent); }
+  50% { box-shadow: 0 0 24px color-mix(in srgb, var(--hero-text) 28%, transparent), 0 0 52px color-mix(in srgb, var(--hero-text) 13%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .account-header-button { animation: none; } }
 .account-header-badge { position: relative; display: grid; width: 58px; height: 58px; place-items: center; justify-self: center; overflow: visible; transform: translate(-23px, -23px); }
 .account-header-badge-center { position: absolute; inset: 0; display: grid; place-items: center; }
 .account-header-badge-center .achievement-medallion { transform: scale(.5); transform-origin: 50% 50%; }
