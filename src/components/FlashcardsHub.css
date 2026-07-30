@@ -56,7 +56,7 @@
   justify-content: space-between;
   align-items: end;
   gap: 18px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 .flash-editor-intro h1 {
   margin: 3px 0 0;
@@ -178,6 +178,11 @@
   gap: 5px;
   font-weight: 750;
 }
+.flash-primary-field-label {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+}
 .flash-toolbar :is(input, select),
 .flash-deck-fields :is(input, select, textarea),
 .flash-card-editor textarea {
@@ -188,6 +193,11 @@
   border-radius: 10px;
   color: var(--text-color);
   background: var(--card-bg);
+}
+.flash-deck-fields .flash-description-field {
+  height: 42px;
+  min-height: 42px;
+  resize: vertical;
 }
 .flash-toolbar :is(input, select) {
   min-height: 46px;

@@ -828,7 +828,7 @@ export default function FlashcardsHub({
           </section>
           <div className="flash-deck-fields">
             <label>
-              Deck title
+              <span className="flash-primary-field-label">Deck title</span>
               <input
                 maxLength={120}
                 value={editor.title}
@@ -837,7 +837,7 @@ export default function FlashcardsHub({
               />
             </label>
             <label>
-              Course
+              <span className="flash-primary-field-label">Course</span>
               <input
                 list="flash-courses"
                 maxLength={100}
@@ -851,8 +851,9 @@ export default function FlashcardsHub({
               </datalist>
             </label>
             <label>
-              Description
+              <span className="flash-primary-field-label">Description</span>
               <textarea
+                className="flash-description-field"
                 maxLength={1000}
                 value={editor.description || ""}
                 onChange={(e) => change("description", e.target.value)}
