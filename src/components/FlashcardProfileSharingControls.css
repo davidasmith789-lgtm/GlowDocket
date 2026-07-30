@@ -4,10 +4,10 @@
 .flash-profile-sharing-content > p { margin: 0; color: var(--muted-text); font-size: .78rem; line-height: 1.5; }
 .flash-profile-sharing fieldset { display: grid; min-width: 0; gap: 8px; margin: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
 .flash-profile-sharing legend { padding: 0 5px; color: var(--text-color); font-size: .76rem; font-weight: 850; }
-.flash-profile-sharing label { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin: 0; color: var(--text-color); font-size: .8rem; }
+.flash-profile-sharing label { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: start; justify-content: start; gap: 9px; margin: 0; color: var(--text-color); font-size: .8rem; }
 .flash-profile-sharing label > span { display: grid; min-width: 0; gap: 3px; }
 .flash-profile-sharing label small { color: var(--muted-text); font-size: .7rem; line-height: 1.4; overflow-wrap: anywhere; }
-.flash-profile-sharing input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary-color); }
+.flash-profile-sharing input[type="checkbox"] { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--primary-color); }
 .flash-profile-badge-choice { padding: 11px; border: 1px solid var(--border-color); border-radius: 12px; }
 .flash-profile-badge-choice.is-disabled { opacity: .68; }
 .flash-profile-sharing select { grid-column: 1/-1; width: 100%; min-width: 0; min-height: 42px; }
@@ -15,6 +15,5 @@
 .flash-profile-sharing-preview > span { color: var(--primary-color); font-size: .7rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .flash-profile-sharing-preview > strong { color: var(--muted-text); font-size: .76rem; line-height: 1.45; }
 .flash-profile-sharing-preview .flash-public-profile { max-width: 100%; }
-.App:is(.text-size-large, .text-size-xlarge) .flash-profile-sharing label { grid-template-columns: minmax(0, 1fr); }
-.App:is(.text-size-large, .text-size-xlarge) .flash-profile-sharing input[type="checkbox"] { justify-self: start; }
-@media (max-width: 560px) { .flash-profile-sharing { width: 100%; min-width: 0; } .flash-profile-sharing label { grid-template-columns: minmax(0, 1fr) auto; } }
+.App:is(.text-size-large, .text-size-xlarge) .flash-profile-sharing label { grid-template-columns: auto minmax(0, 1fr); }
+@media (max-width: 560px) { .flash-profile-sharing { width: 100%; min-width: 0; } }

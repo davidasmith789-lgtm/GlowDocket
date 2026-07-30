@@ -19,9 +19,11 @@ test("level and badge sharing support all four combinations", () => {
 test("sharing controls show an immediate public preview and scale safely", () => {
   assert.match(controls, /Share level/);
   assert.match(controls, /Share badge/);
+  assert.match(controls, /<label><input type="checkbox" checked=\{profileSettings\.shareFlashcardLevel[\s\S]{0,180}<span><strong>Share level/);
+  assert.match(controls, /<label><input type="checkbox" checked=\{profileSettings\.shareFlashcardBadge[\s\S]{0,180}<span><strong>Share badge/);
   assert.match(controls, /What other users will see/);
   assert.match(controls, /Nothing from your profile will be shared/);
-  assert.match(styles, /\.App:is\(\.text-size-large, \.text-size-xlarge\) \.flash-profile-sharing label/);
+  assert.match(styles, /\.flash-profile-sharing label[^}]*grid-template-columns: auto minmax\(0, 1fr\)/);
   assert.doesNotMatch(styles, /white-space:\s*nowrap/);
 });
 
