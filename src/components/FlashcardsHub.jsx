@@ -1036,7 +1036,12 @@ export default function FlashcardsHub({
                       </ul>
                       <div className="flash-import-example" aria-label="Flashcard import examples">
                         <span>Examples</span>
-                        <code><b>Tab:</b> Photosynthesis[TAB]How plants turn light into energy{"\n"}<b>Comma:</b> H₂O,Water{"\n"}<b>Semicolon:</b> Nucleus;The control center of a cell{"\n"}<b>Spaced dash:</b> Mitochondria - The powerhouse of the cell</code>
+                        <div className="flash-import-example-grid">
+                          <div><b>Tab</b><code>Photosynthesis[TAB]How plants turn light into energy</code></div>
+                          <div><b>Comma</b><code>H₂O,Water</code></div>
+                          <div><b>Semicolon</b><code>Nucleus;The control center of a cell</code></div>
+                          <div><b>Spaced dash</b><code>Mitochondria - The powerhouse of the cell</code></div>
+                        </div>
                       </div>
                     </div>
                     <label>
