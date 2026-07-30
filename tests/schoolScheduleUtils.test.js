@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatMeetingTime, getWeeklyMeetingsForDate } from "../src/schoolScheduleUtils.js";
+import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate } from "../src/schoolScheduleUtils.js";
 
 const settings = {
   schoolScheduleMode: "weekly",
@@ -28,4 +28,13 @@ test("weekly meetings are ignored while A/B mode is selected", () => {
 test("meeting times are shown in readable twelve-hour time", () => {
   assert.equal(formatMeetingTime("09:05"), "9:05 AM");
   assert.equal(formatMeetingTime("13:30"), "1:30 PM");
+});
+
+test("saved multi-day classes split into independently editable day schedules", () => {
+  const expanded = expandMeetingsToIndividualDays([
+    { id: "biology", weekdays: [1, 3], startTime: "09:00", endTime: "10:00" },
+  ]);
+  assert.deepEqual(expanded.map((item) => item.weekdays), [[1], [3]]);
+  expanded[0].startTime = "08:30";
+  assert.equal(expanded[1].startTime, "09:00");
 });

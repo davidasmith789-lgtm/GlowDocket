@@ -38,7 +38,7 @@ import {
 } from "./onboardingUtils.js";
 import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
 import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
-import { formatMeetingTime, getWeeklyMeetingsForDate, WEEKDAYS } from "./schoolScheduleUtils.js";
+import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate, WEEKDAYS } from "./schoolScheduleUtils.js";
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
@@ -3610,28 +3610,17 @@ function App() {
     });
   };
 
-  const handleAddWeeklyMeeting = (course) => {
-    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
-      ? userSettings.weeklyCourseMeetings[course]
-      : [];
-    updateWeeklyCourseMeetings(course, [
-      ...meetings,
-      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, weekdays: [], startTime: "09:00", endTime: "10:00" },
-    ]);
+  const handleWeeklyClassDayToggle = (course, weekday, enabled) => {
+    const meetings = expandMeetingsToIndividualDays(userSettings.weeklyCourseMeetings?.[course]);
+    const withoutDay = meetings.filter((meeting) => meeting.weekdays[0] !== weekday);
+    updateWeeklyCourseMeetings(course, enabled
+      ? [...withoutDay, { id: `${course}-${weekday}-${Date.now()}`, weekdays: [weekday], startTime: "09:00", endTime: "10:00" }]
+      : withoutDay);
   };
 
-  const handleWeeklyMeetingChange = (course, meetingId, changes) => {
-    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
-      ? userSettings.weeklyCourseMeetings[course]
-      : [];
-    updateWeeklyCourseMeetings(course, meetings.map((meeting) => meeting.id === meetingId ? { ...meeting, ...changes } : meeting));
-  };
-
-  const handleRemoveWeeklyMeeting = (course, meetingId) => {
-    const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course])
-      ? userSettings.weeklyCourseMeetings[course]
-      : [];
-    updateWeeklyCourseMeetings(course, meetings.filter((meeting) => meeting.id !== meetingId));
+  const handleWeeklyClassTimeChange = (course, weekday, field, value) => {
+    const meetings = expandMeetingsToIndividualDays(userSettings.weeklyCourseMeetings?.[course]);
+    updateWeeklyCourseMeetings(course, meetings.map((meeting) => meeting.weekdays[0] === weekday ? { ...meeting, [field]: value } : meeting));
   };
 
   const advanceTutorial = () => {
@@ -10640,16 +10629,18 @@ function App() {
                       ))}
                     </div>
                     </> : <div className="weekly-course-schedules">
-                      <p className="hint-text">For each course, add the days it happens and its class time. Select one day or several days if the class repeats at the same time.</p>
+                      <p className="hint-text">Choose every day each course happens. Each selected day has its own start and end time, so Monday can differ from Wednesday.</p>
                       {courses.map((course) => {
-                        const meetings = Array.isArray(userSettings.weeklyCourseMeetings?.[course]) ? userSettings.weeklyCourseMeetings[course] : [];
+                        const meetings = expandMeetingsToIndividualDays(userSettings.weeklyCourseMeetings?.[course]);
                         return <section className="weekly-course-card" key={course}>
-                          <div className="weekly-course-heading"><strong>{course}</strong><button type="button" className="btn btn-secondary" onClick={() => handleAddWeeklyMeeting(course)}>Add class days &amp; time</button></div>
-                          {meetings.length === 0 ? <p className="hint-text">Choose “Add class days &amp; time” to put this course on your weekly schedule.</p> : meetings.map((meeting, meetingIndex) => <div className="weekly-meeting-row" key={meeting.id}>
-                            <div className="weekly-meeting-title"><strong>{meetings.length > 1 ? `Class time ${meetingIndex + 1}` : "Class days and time"}</strong><button type="button" onClick={() => handleRemoveWeeklyMeeting(course, meeting.id)} aria-label={`Remove class days and time ${meetingIndex + 1} for ${course}`}>Remove</button></div>
-                            <div><strong>Days this class happens</strong><div className="weekly-day-picker" aria-label={`Days ${course} happens`}>{WEEKDAYS.map((weekday) => { const selectedDays = Array.isArray(meeting.weekdays) ? meeting.weekdays.map(Number) : []; return <label key={weekday.value}><input type="checkbox" checked={selectedDays.includes(weekday.value)} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { weekdays: event.target.checked ? [...new Set([...selectedDays, weekday.value])].sort() : selectedDays.filter((day) => day !== weekday.value) })} /><span>{weekday.short}</span></label>; })}</div></div>
-                            <div className="weekly-time-fields"><label><span>Class starts</span><input type="time" value={meeting.startTime || ""} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { startTime: event.target.value })} /></label><label><span>Class ends</span><input type="time" value={meeting.endTime || ""} min={meeting.startTime || undefined} onChange={(event) => handleWeeklyMeetingChange(course, meeting.id, { endTime: event.target.value })} /></label></div>
-                          </div>)}
+                          <div className="weekly-course-heading"><strong>{course}</strong><small>Select the days this class happens</small></div>
+                          <div className="weekly-class-day-list">{WEEKDAYS.map((weekday) => {
+                            const classDay = meetings.find((meeting) => meeting.weekdays[0] === weekday.value);
+                            return <div className={`weekly-class-day${classDay ? " is-active" : ""}`} key={weekday.value}>
+                              <label className="weekly-class-day-toggle"><input type="checkbox" checked={Boolean(classDay)} onChange={(event) => handleWeeklyClassDayToggle(course, weekday.value, event.target.checked)} /><span><strong>{weekday.label}</strong><small>{classDay ? "Class scheduled" : "No class"}</small></span></label>
+                              {classDay && <div className="weekly-time-fields"><label><span>Starts</span><input type="time" value={classDay.startTime || ""} onChange={(event) => handleWeeklyClassTimeChange(course, weekday.value, "startTime", event.target.value)} /></label><label><span>Ends</span><input type="time" value={classDay.endTime || ""} min={classDay.startTime || undefined} onChange={(event) => handleWeeklyClassTimeChange(course, weekday.value, "endTime", event.target.value)} /></label></div>}
+                            </div>;
+                          })}</div>
                         </section>;
                       })}
                     </div>}

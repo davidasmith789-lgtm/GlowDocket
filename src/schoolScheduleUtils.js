@@ -22,10 +22,21 @@ export function getWeeklyMeetingsForDate(date, settings) {
     .sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")) || a.course.localeCompare(b.course));
 }
 
+export function expandMeetingsToIndividualDays(meetings) {
+  if (!Array.isArray(meetings)) return [];
+  return meetings.flatMap((meeting, meetingIndex) => {
+    const weekdays = Array.isArray(meeting?.weekdays) ? [...new Set(meeting.weekdays.map(Number))] : [];
+    return weekdays.map((weekday) => ({
+      ...meeting,
+      id: `${meeting.id || `class-${meetingIndex}`}-day-${weekday}`,
+      weekdays: [weekday],
+    }));
+  });
+}
+
 export function formatMeetingTime(time) {
   if (!/^\d{2}:\d{2}$/.test(String(time || ""))) return "Time not set";
   const [hour, minute] = time.split(":").map(Number);
   const suffix = hour >= 12 ? "PM" : "AM";
   return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${suffix}`;
 }
-
