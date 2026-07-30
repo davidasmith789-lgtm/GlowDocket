@@ -200,12 +200,21 @@
 .flash-deck-fields .flash-description-field {
   height: 42px;
   min-height: 42px;
+  max-height: 190px;
+  overflow-y: auto;
   resize: vertical;
 }
-.flash-deck-fields.description-reflowed > label:nth-child(6) {
+.flash-deck-fields > label:nth-child(3) {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+}
+.flash-deck-fields > label:nth-child(4) { grid-column: 1; grid-row: 2; }
+.flash-deck-fields > label:nth-child(5) { grid-column: 2; grid-row: 2; }
+.flash-deck-fields > label:nth-child(6) {
   grid-column: 2;
   grid-row: 3;
 }
+.flash-deck-fields > label:nth-child(7) { grid-column: 1; grid-row: 3; }
 .flash-toolbar :is(input, select) {
   min-height: 46px;
   background: var(--surface-alt);
@@ -805,7 +814,7 @@
 }
 @media (max-width: 650px) {
   .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
-  .flash-deck-fields.description-reflowed > label:nth-child(6) { grid-column: 1; grid-row: auto; }
+  .flash-deck-fields > label:nth-child(n) { grid-column: 1; grid-row: auto; }
   .flash-page,
   .flash-editor,
   .flash-viewer {
