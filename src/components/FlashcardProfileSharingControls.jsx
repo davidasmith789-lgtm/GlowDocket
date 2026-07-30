@@ -3,7 +3,7 @@ import { buildFlashcardProfileTags } from "../flashcardUtils.js";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
 import "./FlashcardProfileSharingControls.css";
 
-export default function FlashcardProfileSharingControls({ profileSettings = {}, onChange = () => {}, level = 1, displayName = "" }) {
+export default function FlashcardProfileSharingControls({ profileSettings = {}, onChange = () => {}, level = 1, displayName = "", inline = false }) {
   const earnedBadges = GAMIFICATION_ACHIEVEMENTS.filter((badge) => (profileSettings.earnedAchievementIds || []).includes(badge.id));
   const badgeId = !profileSettings.sharedFlashcardBadge || profileSettings.sharedFlashcardBadge === "current"
     ? profileSettings.selectedBadge || ""
@@ -18,10 +18,8 @@ export default function FlashcardProfileSharingControls({ profileSettings = {}, 
   });
   const levelName = getGamificationLevel(profileSettings.totalXp).name;
   const sharesAnything = profileSettings.shareFlashcardLevel === true || profileSettings.shareFlashcardBadge === true || profileSettings.showFlashcardName === true;
-  return (
-    <details className="flash-profile-sharing">
-      <summary>Profile sharing</summary>
-      <div className="flash-profile-sharing-content">
+  const content = (
+    <div className="flash-profile-sharing-content">
         <p>Choose exactly what appears on Shared Decks and Community posts. Changes save automatically.</p>
         <fieldset>
           <legend>Information other users can see</legend>
@@ -34,7 +32,8 @@ export default function FlashcardProfileSharingControls({ profileSettings = {}, 
           <span>What other users will see</span>
           {sharesAnything && preview.length > 0 ? <FlashcardProfileChip tags={preview} /> : <strong>Nothing from your profile will be shared.</strong>}
         </section>
-      </div>
-    </details>
+    </div>
   );
+  if (inline) return <div className="flash-profile-sharing is-inline">{content}</div>;
+  return <details className="flash-profile-sharing"><summary>Profile sharing</summary>{content}</details>;
 }

@@ -10437,7 +10437,7 @@ function App() {
 
                 {settingsSection === "account" && (
                   <SettingsCard title="Profile Sharing" description="Choose what other students can see beside your Shared Decks and Community posts." className="settings-section-wide account-profile-sharing-settings">
-                    <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} />
+                    <FlashcardProfileSharingControls profileSettings={gamification} onChange={updateGamification} level={gamificationLevel.level} displayName={displayName} inline />
                   </SettingsCard>
                 )}
 

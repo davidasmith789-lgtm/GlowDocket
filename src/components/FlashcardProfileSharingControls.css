@@ -1,6 +1,8 @@
 .flash-profile-sharing { min-width: 250px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); text-align: left; }
 .flash-profile-sharing summary { color: var(--primary-color); cursor: pointer; font-size: .88rem; font-weight: 850; overflow-wrap: anywhere; }
 .flash-profile-sharing-content { display: grid; gap: 14px; padding-top: 12px; }
+.flash-profile-sharing.is-inline { padding: 0; border: 0; background: transparent; }
+.flash-profile-sharing.is-inline .flash-profile-sharing-content { padding-top: 0; }
 .flash-profile-sharing-content > p { margin: 0; color: var(--muted-text); font-size: .78rem; line-height: 1.5; }
 .flash-profile-sharing fieldset { display: grid; min-width: 0; gap: 8px; margin: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; }
 .flash-profile-sharing legend { padding: 0 5px; color: var(--text-color); font-size: .76rem; font-weight: 850; }

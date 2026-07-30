@@ -31,6 +31,8 @@ test("profile sharing is visible from both account surfaces", () => {
   assert.match(app, /account-password-card[\s\S]*account-profile-sharing-card[\s\S]*account-dashboard-security-card/);
   assert.match(app, /settingsSection === "account"[\s\S]*<SettingsCard title="Profile Sharing"[\s\S]*<FlashcardProfileSharingControls/);
   assert.match(app, /profileSettings=\{gamification\} onChange=\{updateGamification\}/);
+  assert.match(app, /<SettingsCard title="Profile Sharing"[\s\S]*?<FlashcardProfileSharingControls[^>]* inline \/>/);
+  assert.match(controls, /if \(inline\) return <div className="flash-profile-sharing is-inline">/);
   assert.match(appStyles, /\.account-profile-sharing-card\s*\{\s*grid-column: 1 \/ -1;/);
   assert.match(appStyles, /\.account-profile-sharing-card \.flash-profile-sharing-content\s*\{[^}]*grid-template-columns: minmax\(0, 1\.35fr\) minmax\(240px, \.65fr\)/s);
 });
