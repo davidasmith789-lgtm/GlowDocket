@@ -20,3 +20,16 @@ test("native controls use the active theme without a light dropdown flash", asyn
   assert.match(appStyles, /@supports \(appearance: base-select\)[\s\S]*?::picker\(select\)[\s\S]*?background: var\(--input-bg\);/);
   assert.doesNotMatch(appStyles, /html \{ color-scheme: light dark; \}/);
 });
+
+test("profile theme selection restores its saved mode after reload and sign-in", async () => {
+  const [app, cloudSync] = await Promise.all([
+    read("../src/App.jsx"),
+    read("../src/cloudSync.js"),
+  ]);
+
+  assert.match(app, /activeColorThemeMode: "dark"/);
+  assert.match(app, /setTheme\(getSavedThemeMode\(loadedSettings, localStorage\.getItem\("theme"\)\)\)/);
+  assert.match(app, /activeColorThemeMode: selectedTheme\.mode/);
+  assert.match(app, /activeColorThemeMode: theme/);
+  assert.match(cloudSync, /"activeColorThemeMode"/);
+});

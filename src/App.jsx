@@ -124,6 +124,7 @@ const DEFAULT_USER_SETTINGS = {
   courseCycleDays: {},
   customColors: {},
   activeColorThemeId: "midnight-neon",
+  activeColorThemeMode: "dark",
   customCategories: [],
   customColorThemes: [],
   deletedColorThemeIds: [],
@@ -518,6 +519,20 @@ const BUILT_IN_COLOR_THEMES = [
   { id: "dark", name: "Dark", mode: "dark", colors: THEME_COLOR_DEFAULTS.dark, builtIn: true },
   ...DEFAULT_COLOR_THEME_PRESETS.map((themePreset) => ({ ...themePreset, builtIn: true })),
 ];
+
+const getSavedThemeMode = (settings = {}, fallback = "dark") => {
+  if (["light", "dark"].includes(settings.activeColorThemeMode)) {
+    return settings.activeColorThemeMode;
+  }
+  const savedThemes = [
+    ...BUILT_IN_COLOR_THEMES,
+    ...(Array.isArray(settings.customColorThemes) ? settings.customColorThemes : []),
+  ];
+  const selectedTheme = savedThemes.find((colorTheme) => colorTheme?.id === settings.activeColorThemeId);
+  return ["light", "dark"].includes(selectedTheme?.mode)
+    ? selectedTheme.mode
+    : ["light", "dark"].includes(fallback) ? fallback : "dark";
+};
 
 const getEffectiveThemeColors = (mode, customColors = {}) => {
   const savedColors = customColors || {};
@@ -2395,6 +2410,7 @@ function App() {
           externalPushEnabled: Boolean(localDeviceSettings.externalPushEnabled),
           notificationsEnabled: Boolean(localDeviceSettings.notificationsEnabled),
           activeColorThemeId: localDeviceSettings.activeColorThemeId || localStorage.getItem("theme") || getSystemPreference(),
+          activeColorThemeMode: getSavedThemeMode(localDeviceSettings, localStorage.getItem("theme")),
           customColors: localDeviceSettings.customColors || {},
         });
         saveLocalSnapshot(localStorage, currentUser, selected, revision, false);
@@ -2404,7 +2420,7 @@ function App() {
         setTasks(selected.tasks);
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
-        setUserSettings((settings) => ({ ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, customColors: settings.customColors }));
+        setUserSettings((settings) => ({ ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, activeColorThemeMode: settings.activeColorThemeMode, customColors: settings.customColors }));
         setChecklists(selected.checklists);
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
         workspaceLayoutRef.current = repairedWorkspace;
@@ -2994,6 +3010,7 @@ function App() {
       ...DEFAULT_USER_SETTINGS,
       signInDays: normalizeSignInDays(userSettings.signInDays),
       activeColorThemeId: "midnight-neon",
+      activeColorThemeMode: "dark",
       cycleDayNames: [...DEFAULT_USER_SETTINGS.cycleDayNames],
       courseCycleDays: {},
       customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark,
@@ -3050,6 +3067,7 @@ function App() {
       const updated = {
         ...prev,
         activeColorThemeId: "custom",
+        activeColorThemeMode: theme,
         customColors: {
           ...(prev.customColors || {}),
           [key]: value,
@@ -3077,6 +3095,7 @@ function App() {
       const updated = {
         ...prev,
         activeColorThemeId: selectedTheme.id,
+        activeColorThemeMode: selectedTheme.mode,
         customColors:
           selectedTheme.id === "light" || selectedTheme.id === "dark"
             ? {}
@@ -3120,6 +3139,7 @@ function App() {
       const updated = {
         ...prev,
         activeColorThemeId: themeId,
+        activeColorThemeMode: theme,
         customColorThemes: [...existingThemes, savedTheme],
       };
 
@@ -3177,6 +3197,7 @@ function App() {
           : deletingActiveTheme
             ? "custom"
             : prev.activeColorThemeId,
+        activeColorThemeMode: fallbackTheme?.mode || prev.activeColorThemeMode || theme,
         customColors: fallbackTheme
           ? fallbackTheme.id === "light" || fallbackTheme.id === "dark"
             ? {}
@@ -3296,6 +3317,7 @@ function App() {
     setCourses(loadedCourses);
     setCourseColors(loadedCourseColors);
     setUserSettings(loadedSettings);
+    setTheme(getSavedThemeMode(loadedSettings, localStorage.getItem("theme")));
     setChecklists(loadedChecklists);
     workspaceLayoutRef.current = loadedWorkspace;
     setWorkspaceLayout(loadedWorkspace);
@@ -5234,7 +5256,7 @@ function App() {
   };
 
   const applyResolvedCloudState = (state, revision) => {
-    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, customColors: userSettings.customColors };
+    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, activeColorThemeMode: userSettings.activeColorThemeMode, customColors: userSettings.customColors };
     const deviceState = { ...state, workspaceLayout };
     applyCloudStateToLocal(localStorage, currentUser, deviceState, deviceSettings);
     saveLocalSnapshot(localStorage, currentUser, deviceState, revision, false);
@@ -5244,6 +5266,7 @@ function App() {
     setCourses(deviceState.courses);
     setCourseColors(deviceState.courseColors);
     setUserSettings({ ...DEFAULT_USER_SETTINGS, ...deviceState.userSettings, ...deviceSettings });
+    setTheme(getSavedThemeMode(deviceSettings, theme));
     setChecklists(deviceState.checklists);
     setDisplayName(resolveProfileDisplayName(deviceState.displayName, currentUser, displayName));
   };
@@ -5620,13 +5643,14 @@ function App() {
   };
 
   const applyRecoveryState = (state) => {
-    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, customColors: userSettings.customColors };
+    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, activeColorThemeMode: userSettings.activeColorThemeMode, customColors: userSettings.customColors };
     saveLocalBackup(localStorage, currentUser, getCurrentPortableState());
     applyCloudStateToLocal(localStorage, currentUser, state, deviceSettings);
     setTasks(state.tasks);
     setCourses(state.courses);
     setCourseColors(state.courseColors);
     setUserSettings({ ...DEFAULT_USER_SETTINGS, ...state.userSettings, ...deviceSettings });
+    setTheme(getSavedThemeMode(deviceSettings, theme));
     setChecklists(state.checklists);
     setWorkspaceLayout(repairLoadedWorkspace(state.workspaceLayout));
     setDisplayName(resolveProfileDisplayName(state.displayName, currentUser, displayName));

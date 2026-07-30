@@ -1,7 +1,7 @@
 import { createReportMetadata } from "./buildMetadata.js";
 
 export const CLOUD_STATE_SCHEMA_VERSION = 1;
-const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnabled", "activeColorThemeId", "customColors"]);
+const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnabled", "activeColorThemeId", "activeColorThemeMode", "customColors"]);
 // Workspace geometry is intentionally device-specific so a Chromebook layout
 // cannot replace the arrangement saved in a desktop browser (or vice versa).
 const ACCOUNT_FIELDS = ["tasks", "courses", "courseColors", "userSettings", "checklists", "displayName"];
