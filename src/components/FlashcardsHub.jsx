@@ -1032,8 +1032,8 @@ export default function FlashcardsHub({
                       <h3>Prepare your cards</h3>
                       <ul>
                         <li><strong>Supported formats:</strong> Paste plain text, including rows copied from a TXT, CSV, TSV, or spreadsheet file. To use a file, open it and paste its rows here.</li>
-                        <li><strong>Separate cards:</strong> Put each card on its own non-empty line.</li>
                         <li><strong>Format each card:</strong> Put the term or question first, then a tab, semicolon, comma, or spaced dash, followed by the definition or answer.</li>
+                        <li><strong>Separate cards:</strong> Put each card on its own non-empty line.</li>
                       </ul>
                       <div className="flash-import-example" aria-label="Flashcard import examples">
                         <span>Examples</span>
