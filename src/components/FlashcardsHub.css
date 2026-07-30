@@ -508,6 +508,33 @@
   color: var(--text-color);
   background: var(--modal-bg);
 }
+.flash-import-guide {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--surface-alt);
+}
+.flash-import-guide h3 { margin: 0 0 10px; font-size: 1rem; }
+.flash-import-guide ul { margin: 0; padding-left: 20px; }
+.flash-import-guide li + li { margin-top: 7px; }
+.flash-import-guide li,
+.flash-import-guide p { color: var(--muted-text, var(--text-color)); line-height: 1.5; }
+.flash-import-guide p { margin: 0; }
+.flash-import-example { display: grid; gap: 7px; margin-top: 13px; }
+.flash-import-example span { font-size: .72rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.flash-import-example code {
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: 9px;
+  color: var(--text-color);
+  background: var(--card-bg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.flash-import-review-guide { margin-top: 12px; }
 .flash-confirm-dialog {
   width: min(480px, 100%) !important;
   padding: 28px !important;

@@ -1027,12 +1027,25 @@ export default function FlashcardsHub({
                 <h2>Import Cards</h2>
                 {importRows.length === 0 ? (
                   <>
+                    <div className="flash-import-guide">
+                      <h3>Prepare your cards</h3>
+                      <ul>
+                        <li><strong>Supported formats:</strong> Paste plain text, including rows copied from a TXT, CSV, TSV, or spreadsheet file. To use a file, open it and paste its rows here.</li>
+                        <li><strong>Separate cards:</strong> Put each card on its own non-empty line.</li>
+                        <li><strong>Format each card:</strong> Put the term or question first, then a tab, semicolon, comma, or spaced dash, followed by the definition or answer.</li>
+                      </ul>
+                      <div className="flash-import-example" aria-label="Flashcard import examples">
+                        <span>Examples</span>
+                        <code>Photosynthesis[TAB]How plants turn light into energy{"\n"}Mitochondria - The powerhouse of the cell</code>
+                      </div>
+                    </div>
                     <label>
                       Paste cards
                       <textarea
                         rows="12"
                         value={importText}
                         onChange={(e) => setImportText(e.target.value)}
+                        placeholder="Term[TAB]Definition&#10;Question - Answer"
                       />
                     </label>
                     <button
@@ -1048,6 +1061,10 @@ export default function FlashcardsHub({
                     <p>
                       {importRows.filter((x) => x.valid).length} cards ready
                     </p>
+                    <div className="flash-import-guide flash-import-review-guide">
+                      <h3>Review before adding</h3>
+                      <p>Check every term and definition for accuracy, confirm cards were split correctly, remove duplicates or unwanted rows, and fix any incomplete highlighted cards. Also remove private or sensitive information.</p>
+                    </div>
                     {importRows.map((r, i) => (
                       <div className={r.valid ? "" : "invalid"} key={r.id}>
                         <input
