@@ -596,6 +596,17 @@
   gap: 8px;
   margin: 6px;
 }
+.flash-modal > .flash-import-dialog > .flash-import-guide {
+  display: block;
+  margin: 0 0 18px;
+}
+.flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example {
+  display: grid;
+  margin-top: 8px;
+}
+.flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .flash-modal .invalid {
   border: 2px solid var(--danger-color);
 }
@@ -775,7 +786,7 @@
   font-size: 2rem;
 }
 @media (max-width: 650px) {
-  .flash-import-example-grid { grid-template-columns: 1fr; }
+  .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
   .flash-page,
   .flash-editor,
   .flash-viewer {
