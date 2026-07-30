@@ -31,18 +31,17 @@ test("tutorial is available on mobile and has no skip control", async () => {
   assert.match(app, /<button type="button" className="btn btn-primary"[^>]*onClick=\{completeTutorial\}>Finish<\/button>/);
 });
 
-test("tutorial exploration gate explains itself without disabling navigation", async () => {
+test("tutorial practice is optional and never blocks navigation", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /const advanceTutorial = \(\) =>/);
-  assert.match(app, /!tutorialExploredSteps\.includes\(tutorialStep\)/);
-  assert.match(app, /id="tutorial-exploration-help"[^>]*role="status"[^>]*aria-live="polite"/);
-  assert.match(app, /aria-describedby=\{tutorialGateMessage \? "tutorial-exploration-help" : undefined\}/);
-  assert.doesNotMatch(app, /disabled=\{[^}]*tutorialExploredSteps/);
+  assert.match(app, />Try This Feature<\/button>/);
+  assert.doesNotMatch(app, /tutorialExploredSteps|tutorialGateMessage|tutorial-exploration-help/);
+  assert.doesNotMatch(app, /Explore this feature before/);
 });
 
-test("Replay Tutorial resets every practice and exploration value", async () => {
+test("Replay Tutorial resets every practice value", async () => {
   const app = await read("../src/App.jsx");
-  assert.match(app, /const resetTutorialExperience = \(\) => \{[\s\S]*?setTutorialPracticeDone\(\[\]\);[\s\S]*?setTutorialExploredSteps\(\[\]\);[\s\S]*?setTutorialGateMessage\(""\);/);
+  assert.match(app, /const resetTutorialExperience = \(\) => \{[\s\S]*?setTutorialPracticeDone\(\[\]\);[\s\S]*?setTutorialPracticeNote\(""\);[\s\S]*?setTutorialPracticeDate\(17\);[\s\S]*?setTutorialPracticeWidgetMenu\(""\);/);
   assert.match(app, /const replayTutorial = \(\) => \{\s*resetTutorialExperience\(\);\s*setTutorialOpen\(true\);/);
   assert.match(app, /onClick=\{replayTutorial\}>Replay Tutorial/);
 });

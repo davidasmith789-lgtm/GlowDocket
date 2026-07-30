@@ -2117,8 +2117,6 @@ function App() {
   const [tutorialPracticeHomeStep, setTutorialPracticeHomeStep] = useState(0);
   const [tutorialPracticeHiddenWidget, setTutorialPracticeHiddenWidget] = useState("");
   const [tutorialPracticeWidgetMenu, setTutorialPracticeWidgetMenu] = useState("");
-  const [tutorialExploredSteps, setTutorialExploredSteps] = useState([]);
-  const [tutorialGateMessage, setTutorialGateMessage] = useState("");
   const [tutorialWidgetLayout, setTutorialWidgetLayout] = useState({
     plan: { x: 25, y: 70, width: 330, height: 135 },
     calendar: { x: 430, y: 110, width: 285, height: 135 },
@@ -3500,8 +3498,6 @@ function App() {
     setTutorialPracticeHomeStep(0);
     setTutorialPracticeHiddenWidget("");
     setTutorialPracticeWidgetMenu("");
-    setTutorialExploredSteps([]);
-    setTutorialGateMessage("");
     setTutorialWidgetLayout({ plan: { x: 25, y: 70, width: 330, height: 135 }, calendar: { x: 430, y: 110, width: 285, height: 135 }, checklists: { x: 205, y: 235, width: 280, height: 120 } });
   };
 
@@ -3535,7 +3531,6 @@ function App() {
     setTutorialPracticeHiddenWidget("");
     setTutorialPracticeWidgetMenu("");
     setTutorialWidgetLayout({ plan: { x: 25, y: 70, width: 330, height: 135 }, calendar: { x: 430, y: 110, width: 285, height: 135 }, checklists: { x: 205, y: 235, width: 280, height: 120 } });
-    setTutorialGateMessage("");
     setTutorialPracticeOpen(true);
   };
 
@@ -3544,25 +3539,14 @@ function App() {
       setTutorialStep(tutorialPracticeHomeStep);
       return;
     }
-    setTutorialExploredSteps((steps) => steps.includes(tutorialPracticeHomeStep) ? steps : [...steps, tutorialPracticeHomeStep]);
-    setTutorialGateMessage("");
     setTutorialPracticeOpen(false);
   };
 
   const advanceTutorial = () => {
-    if (tutorialStep > 0 && !tutorialExploredSteps.includes(tutorialStep)) {
-      setTutorialGateMessage("Explore this feature before continuing so you can try it safely without changing your real assignments.");
-      return;
-    }
-    setTutorialGateMessage("");
     setTutorialStep((step) => step + 1);
   };
 
   const completeTutorial = () => {
-    if (tutorialStep > 0 && !tutorialExploredSteps.includes(tutorialStep)) {
-      setTutorialGateMessage("Explore this feature before finishing so you can try it safely without changing your real assignments.");
-      return;
-    }
     finishTutorial();
   };
 
@@ -11486,13 +11470,12 @@ function App() {
             <div className="tutorial-progress" aria-label={`Tutorial step ${tutorialStep + 1} of ${TUTORIAL_SLIDES.length}`}>
               {TUTORIAL_SLIDES.map((slide, index) => <span key={slide.visual} className={index === tutorialStep ? "active" : ""} />)}
             </div>
-            {tutorialStep > 0 && <button type="button" className="tutorial-demo-link" onClick={openTutorialPractice}>Explore this feature</button>}
-            {tutorialGateMessage && <p id="tutorial-exploration-help" className="tutorial-gate-message" role="status" aria-live="polite">{tutorialGateMessage}</p>}
+            {tutorialStep > 0 && <button type="button" className="tutorial-demo-link" onClick={openTutorialPractice}>Try This Feature</button>}
             <div className="tutorial-actions">
-              <button type="button" className="btn btn-secondary" disabled={tutorialStep === 0} onClick={() => { setTutorialGateMessage(""); setTutorialStep((step) => step - 1); }}>Back</button>
+              <button type="button" className="btn btn-secondary" disabled={tutorialStep === 0} onClick={() => setTutorialStep((step) => step - 1)}>Back</button>
               {tutorialStep < TUTORIAL_SLIDES.length - 1
-                ? <button type="button" className="btn btn-primary" aria-describedby={tutorialGateMessage ? "tutorial-exploration-help" : undefined} onClick={advanceTutorial}>Next</button>
-                : <button type="button" className="btn btn-primary" aria-describedby={tutorialGateMessage ? "tutorial-exploration-help" : undefined} onClick={completeTutorial}>Finish</button>}
+                ? <button type="button" className="btn btn-primary" onClick={advanceTutorial}>Next</button>
+                : <button type="button" className="btn btn-primary" onClick={completeTutorial}>Finish</button>}
             </div>
             </>)}
           </section>

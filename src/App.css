@@ -6355,8 +6355,7 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .tutorial-progress { display: flex; justify-content: center; gap: 8px; margin: 22px 0 12px; }
 .tutorial-progress span { width: 9px; height: 9px; border-radius: 999px; background: var(--border-color); transition: width .2s ease, background .2s ease; }
 .tutorial-progress span.active { width: 28px; background: var(--primary-color); }
-.tutorial-demo-link { display: block; margin: 0 auto 14px; border: 0; background: transparent; color: var(--link-color); font-weight: 800; text-decoration: underline; cursor: pointer; min-height: 44px; }
-.tutorial-gate-message { margin: 0 auto 14px; max-width: 600px; padding: 10px 12px; border: 1px solid var(--warning-color, #f59e0b); border-radius: 10px; color: var(--text-color); background: color-mix(in srgb, var(--warning-color, #f59e0b) 12%, var(--surface-color)); text-align: center; font-weight: 700; }
+.tutorial-demo-link { display: block; min-width: 112px; min-height: 46px; margin: 0 auto 14px; padding: 9px 16px; border: 1px solid var(--primary-color); border-radius: 10px; background: var(--primary-color); color: var(--button-primary-color); font-weight: 800; cursor: pointer; box-shadow: var(--shadow-card); }
 .tutorial-actions { display: flex; justify-content: space-between; gap: 12px; }
 .tutorial-actions .btn { min-width: 112px; min-height: 46px; }
 .tutorial-practice { display: grid; min-height: 100%; grid-template-rows: auto 1fr; gap: 22px; }
