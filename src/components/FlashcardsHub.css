@@ -508,6 +508,7 @@
   color: var(--text-color);
   background: var(--modal-bg);
 }
+.flash-modal > .flash-import-dialog { width: min(1040px, 100%); }
 .flash-import-guide {
   margin: 0 0 18px;
   padding: 16px 18px;
@@ -516,8 +517,13 @@
   background: var(--surface-alt);
 }
 .flash-import-guide h3 { margin: 0 0 10px; font-size: 1rem; }
-.flash-import-guide ul { margin: 0; padding-left: 20px; }
-.flash-import-guide li + li { margin-top: 7px; }
+.flash-import-guide ul {
+  display: grid;
+  grid-template-columns: 1.35fr .75fr 1.25fr;
+  gap: 14px 24px;
+  margin: 0;
+  padding-left: 20px;
+}
 .flash-import-guide li,
 .flash-import-guide p { color: var(--muted-text, var(--text-color)); line-height: 1.5; }
 .flash-import-guide p { margin: 0; }
@@ -534,6 +540,7 @@
   line-height: 1.55;
   white-space: pre-wrap;
 }
+.flash-import-example code b { color: var(--primary-color); }
 .flash-import-review-guide { margin-top: 12px; }
 .flash-confirm-dialog {
   width: min(480px, 100%) !important;
@@ -761,6 +768,7 @@
   font-size: 2rem;
 }
 @media (max-width: 650px) {
+  .flash-import-guide ul { grid-template-columns: 1fr; gap: 9px; }
   .flash-page,
   .flash-editor,
   .flash-viewer {

@@ -1023,7 +1023,7 @@ export default function FlashcardsHub({
           </button>
           {importing && (
             <div className="flash-modal">
-              <section role="dialog" aria-modal="true">
+              <section className="flash-import-dialog" role="dialog" aria-modal="true">
                 <h2>Import Cards</h2>
                 {importRows.length === 0 ? (
                   <>
@@ -1036,7 +1036,7 @@ export default function FlashcardsHub({
                       </ul>
                       <div className="flash-import-example" aria-label="Flashcard import examples">
                         <span>Examples</span>
-                        <code>Photosynthesis[TAB]How plants turn light into energy{"\n"}Mitochondria - The powerhouse of the cell</code>
+                        <code><b>Tab:</b> Photosynthesis[TAB]How plants turn light into energy{"\n"}<b>Comma:</b> H₂O,Water{"\n"}<b>Semicolon:</b> Nucleus;The control center of a cell{"\n"}<b>Spaced dash:</b> Mitochondria - The powerhouse of the cell</code>
                       </div>
                     </div>
                     <label>
