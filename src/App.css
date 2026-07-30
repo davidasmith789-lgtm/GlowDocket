@@ -6355,7 +6355,7 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 .tutorial-progress { display: flex; justify-content: center; gap: 8px; margin: 22px 0 12px; }
 .tutorial-progress span { width: 9px; height: 9px; border-radius: 999px; background: var(--border-color); transition: width .2s ease, background .2s ease; }
 .tutorial-progress span.active { width: 28px; background: var(--primary-color); }
-.tutorial-demo-link { display: block; min-width: 112px; min-height: 46px; margin: 0 auto 14px; padding: 9px 16px; border: 1px solid var(--primary-color); border-radius: 10px; background: var(--primary-color); color: var(--button-primary-color); font-weight: 800; cursor: pointer; box-shadow: var(--shadow-card); }
+.tutorial-demo-link { display: block; min-width: 112px; min-height: 46px; margin: 0 auto 14px; padding: 9px 16px; border: 2px solid var(--primary-color); border-radius: 10px; background: color-mix(in srgb, var(--primary-color) 16%, var(--surface-color)); color: var(--text-color); font-weight: 800; cursor: pointer; box-shadow: var(--shadow-card); }
 .tutorial-actions { display: flex; justify-content: space-between; gap: 12px; }
 .tutorial-actions .btn { min-width: 112px; min-height: 46px; }
 .tutorial-practice { display: grid; min-height: 100%; grid-template-rows: auto 1fr; gap: 22px; }
