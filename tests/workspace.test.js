@@ -294,13 +294,14 @@ test("new accounts see every registered widget on the dashboard", () => {
   assert.deepEqual(findWidgetOverlaps(layout.desktop.dashboard), []);
 });
 
-test("desktop workspace scales one arrangement before the responsive handoff", async () => {
+test("resizing scales the full app shell without changing the chosen widget arrangement", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
-  assert.match(app, /workspaceCanvasWidth \/ WORKSPACE_DESIGN_WIDTH/);
+  assert.match(app, /\(appViewportWidth - 32\) \/ appShellDesignWidth/);
+  assert.match(app, /zoom: appShellScale/);
   assert.match(app, /data-workspace-scale=\{scale\}/);
-  assert.match(styles, /\.workspace-widget-canvas[\s\S]*?transform-origin:\s*top left;/);
-  assert.match(styles, /\.workspace-scale-frame/);
+  assert.doesNotMatch(app, /setWorkspaceMode/);
+  assert.match(styles, /\.app-shell\.is-viewport-scaled/);
 });
 
 test("rendered widgets reflow to the measured screen without overwriting saved geometry", async () => {

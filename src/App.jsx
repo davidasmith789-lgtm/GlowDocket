@@ -1613,8 +1613,7 @@ function WorkspaceWidget({
 }
 
 function WorkspaceCanvas({ children, height, scale = 1, width }) {
-  const canvas = <div className="workspace-widget-canvas" data-workspace-scale={scale} style={{ width: width ? `${width}px` : undefined, height: `${height}px`, transform: scale < 1 ? `scale(${scale})` : undefined }}>{children}</div>;
-  return scale < 1 ? <div className="workspace-scale-frame" style={{ height: `${height * scale}px` }}>{canvas}</div> : canvas;
+  return <div className="workspace-widget-canvas" data-workspace-scale={scale} style={{ width: width ? `${width}px` : undefined, height: `${height}px` }}>{children}</div>;
 }
 
 function DetachedWidgetWindow({ title, portalRoot, onClose, children }) {
@@ -2155,14 +2154,15 @@ function App() {
   const [widgetSearch, setWidgetSearch] = useState("");
   const widgetsUnavailableOnCurrentTab = ["community", "flashcards"].includes(currentTab);
   const [helpSearch, setHelpSearch] = useState("");
-  const [isMobileUi, setIsMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  const [isMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const mobileSettingsScrollRef = useRef(null);
   const mobileSettingsListScrollRef = useRef(null);
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
-  const [workspaceMode, setWorkspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
+  const [workspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
+  const [appViewportWidth, setAppViewportWidth] = useState(() => window.innerWidth);
   const [workspaceCanvasWidth, setWorkspaceCanvasWidth] = useState(0);
   const workspaceMainRef = useRef(null);
   const [detachedWidgets, setDetachedWidgets] = useState([]);
@@ -2754,7 +2754,7 @@ function App() {
   }, [currentStorageKey, currentUser, tasks]);
 
   useEffect(() => {
-    const handleResize = () => setWorkspaceMode(getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
+    const handleResize = () => setAppViewportWidth(window.innerWidth);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -2765,9 +2765,6 @@ function App() {
     const updateCanvasWidth = () => {
       const nextWidth = node.clientWidth || 0;
       setWorkspaceCanvasWidth(nextWidth);
-      if (nextWidth > 0) {
-        setWorkspaceMode(getWorkspaceModeForWidth(nextWidth));
-      }
     };
     updateCanvasWidth();
     const resizeObserver = new ResizeObserver(updateCanvasWidth);
@@ -2777,7 +2774,7 @@ function App() {
       resizeObserver.disconnect();
       window.removeEventListener("resize", updateCanvasWidth);
     };
-  }, [currentTab, currentUser, workspaceMode]);
+  }, [currentTab, currentUser]);
 
   useEffect(() => {
   workspaceLayoutRef.current = workspaceLayout;
@@ -3338,14 +3335,6 @@ function App() {
       setManualAccessibilityChecks([]);
     }
   }, [currentUser]);
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 767px)");
-    const handleMobileUiChange = (event) => setIsMobileUi(event.matches);
-    setIsMobileUi(query.matches);
-    query.addEventListener?.("change", handleMobileUiChange);
-    return () => query.removeEventListener?.("change", handleMobileUiChange);
-  }, []);
 
   useEffect(() => {
     try {
@@ -8011,10 +8000,11 @@ function App() {
   );
 
   const getWorkspaceCanvasHeight = (items) => Math.max(420, ...items.map((item) => (Number(item.y) || 0) + (workspaceLayout.collapsed[item.type] ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(item.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT) : Number(item.height) || 320) + 30));
-  const workspaceScale = workspaceMode === "desktop" && workspaceCanvasWidth > 0
-    ? Math.min(1, workspaceCanvasWidth / WORKSPACE_DESIGN_WIDTH)
+  const appShellDesignWidth = workspaceMode === "desktop" ? WORKSPACE_DESIGN_WIDTH : workspaceMode === "chromebook" ? 1160 : workspaceCanvasWidth;
+  const appShellScale = !isMobileUi && appShellDesignWidth > 0
+    ? Math.min(1, Math.max(0.35, (appViewportWidth - 32) / appShellDesignWidth))
     : 1;
-  const responsiveCanvasWidth = workspaceMode === "desktop" ? Math.max(WORKSPACE_DESIGN_WIDTH, workspaceCanvasWidth) : workspaceCanvasWidth;
+  const responsiveCanvasWidth = workspaceMode === "mobile" ? workspaceCanvasWidth : appShellDesignWidth;
   const responsiveWorkspaceLayout = workspaceCanvasWidth > 0
     ? normalizeWorkspaceLayout(structuredClone(workspaceLayout), {
         mode: workspaceMode,
@@ -8025,13 +8015,13 @@ function App() {
     : workspaceLayout;
   const renderWorkspaceForTab = (tab) => {
     const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
-    return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)} scale={workspaceScale} width={responsiveCanvasWidth}>
+    return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)} scale={appShellScale} width={responsiveCanvasWidth}>
       {items.map(renderWorkspaceInstance)}
     </WorkspaceCanvas>
   };
   const renderWorkspaceExtrasForTab = (tab) => {
     const extras = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
-    return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)} scale={workspaceScale} width={responsiveCanvasWidth}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
+    return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)} scale={appShellScale} width={responsiveCanvasWidth}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
   };
 
   if (authInitializing) {
@@ -8439,7 +8429,10 @@ function App() {
       className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} text-size-${userSettings.textSize || "medium"} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.pageColorWashEnabled !== false ? " page-color-wash" : ""}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}
       style={{ "--page-color-wash": userSettings.pageColorWashColor || "#6366f1" }}
     >
-      <div className="app-shell">
+      <div
+        className={`app-shell${appShellScale < 1 ? " is-viewport-scaled" : ""}`}
+        style={appShellScale < 1 ? { width: `${appShellDesignWidth}px`, maxWidth: "none", zoom: appShellScale } : undefined}
+      >
         <a className="skip-link" href={isMobileUi ? "#mobile-main-content" : "#workspace-main-content"}>Skip to main content</a>
         {isMobileUi && currentUser && (
           <header className="mobile-app-header">

@@ -5305,7 +5305,13 @@ html[data-theme="dark"] {
   transform-origin: top left;
 }
 
-.workspace-scale-frame { width: 100%; margin-bottom: 20px; overflow: visible; }
+.App:not(.mobile-app-ui) .app-shell.is-viewport-scaled {
+  margin-inline: auto;
+}
+.App:not(.mobile-app-ui) .app-shell.is-viewport-scaled :is(.workspace-layout.workspace-customizable, .workspace-calendar-only) {
+  width: 100% !important;
+  max-width: none !important;
+}
 
 .detached-widget-app { min-height: 100vh; padding: 0; background: var(--background-color); color: var(--text-color); }
 .detached-widget-shell { display: grid; min-height: 100vh; grid-template-rows: auto minmax(0, 1fr); background: var(--background-color); }
