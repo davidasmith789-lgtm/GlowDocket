@@ -5912,6 +5912,26 @@ html[data-theme="dark"] {
 .workspace-calendar-only .calendar-panel { width: 100%; max-width: none; margin: 0 !important; }
 .workspace-calendar-only .calendar-panel > .react-calendar { width: 100% !important; max-width: none; }
 
+/* Keep the full month view evenly spaced and make every date a distinct cell. */
+.workspace-calendar-only .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workspace-calendar-only .react-calendar__month-view__days > .react-calendar__tile {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: clamp(72px, 8vw, 104px);
+  padding: 10px 6px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent) !important;
+  border-radius: 10px;
+}
+
+.workspace-calendar-only .react-calendar__month-view__days > .react-calendar__tile:hover {
+  border-color: var(--focus-color) !important;
+}
+
 .calendar-view-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .calendar-view-toggle { display: inline-flex; padding: 4px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); }
 .calendar-view-toggle button { padding: 8px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-text); font-weight: 800; cursor: pointer; }
@@ -5934,6 +5954,11 @@ html[data-theme="dark"] {
 @media (max-width: 760px) {
   .calendar-view-header { align-items: stretch; flex-direction: column; }
   .calendar-view-toggle { align-self: flex-start; }
+  .workspace-calendar-only .react-calendar__month-view__days { gap: 5px; }
+  .workspace-calendar-only .react-calendar__month-view__days > .react-calendar__tile {
+    min-height: 58px;
+    padding: 7px 3px;
+  }
   .weekly-calendar-navigation { grid-template-columns: 1fr 1fr; }
   .weekly-calendar-navigation > strong { grid-column: 1 / -1; grid-row: 1; }
   .weekly-calendar-navigation > button:nth-of-type(1) { grid-column: 1; grid-row: 2; }
