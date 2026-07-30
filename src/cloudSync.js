@@ -79,11 +79,16 @@ export function chooseHydrationState(local, localMeta, cloud) {
   if (!hasMeaningfulState(local)) return { state: cloud.state, conflict: false };
   if (sameState(local, cloud.state)) return { state: local, conflict: false };
   if (!localMeta?.pending) return { state: cloud.state, conflict: false };
+  const cloudRevision = Number(cloud.revision) || 0;
+  const localRevision = Number(localMeta?.revision) || 0;
+  if (localRevision === cloudRevision) {
+    return { state: local, conflict: false, needsUpload: true };
+  }
   return {
     state: local,
     conflict: true,
-    cloudRevision: Number(cloud.revision) || 0,
-    localRevision: Number(localMeta?.revision) || 0,
+    cloudRevision,
+    localRevision,
   };
 }
 

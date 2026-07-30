@@ -127,6 +127,15 @@ test("hydration still prompts before replacing pending device changes", () => {
   assert.strictEqual(choice.state, local);
 });
 
+test("pending changes based on the current cloud revision sync without a popup", () => {
+  const local = state({ tasks: [{ id: "device-task", title: "Safe local edit" }] });
+  const cloud = { state: state({ tasks: [] }), revision: 12 };
+  const choice = chooseHydrationState(local, { revision: 12, pending: true }, cloud);
+  assert.equal(choice.conflict, false);
+  assert.equal(choice.needsUpload, true);
+  assert.strictEqual(choice.state, local);
+});
+
 test("new empty devices hydrate from meaningful cloud layouts without uploading defaults", () => {
   const cloudLayout = { desktop: { dashboard: [{ id: "checklists-1", type: "checklists", x: 55, y: 35, width: 500, height: 400 }] }, mobile: {}, collapsed: {}, locked: { desktop: false, mobile: false }, userCustomized: true };
   const emptyLocal = state();

@@ -6522,7 +6522,12 @@ html[data-theme] .focus-session-header h2 { margin-top: 4px; color: var(--text-c
   color: var(--text-color);
 }
 .sync-conflict-dialog > p:not(.eyebrow) { color: var(--muted-text); }
-.sync-conflict-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.sync-conflict-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.sync-conflict-choice { display: grid; min-width: 0; min-height: 112px; align-content: center; gap: 7px; padding: 16px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--surface-alt); color: var(--text-color); cursor: pointer; text-align: left; }
+.sync-conflict-choice.is-primary { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 14%, var(--surface-alt)); }
+.sync-conflict-choice strong { font-size: 1rem; }
+.sync-conflict-choice span { color: var(--muted-text); font-size: .86rem; line-height: 1.4; }
+.sync-conflict-later { display: block; margin: 14px auto 0; padding: 8px 12px; border: 0; background: transparent; color: var(--muted-text); cursor: pointer; text-decoration: underline; }
 .account-settings-form { display: grid; gap: 9px; }
 .account-settings-form label { color: var(--text-color); font-weight: 800; }
 .account-settings-form .btn { width: fit-content; margin-top: 4px; }
@@ -7402,7 +7407,7 @@ html[data-theme="dark"] .tutorial-demo-link {
     padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
   .sync-conflict-dialog { max-height: 90dvh; overflow-y: auto; }
-  .sync-conflict-actions .btn { width: 100%; min-height: 46px; }
+  .sync-conflict-actions { grid-template-columns: 1fr; }
 }
 
 html[data-theme="dark"] .install-device-guidance,

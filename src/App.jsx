@@ -2397,13 +2397,14 @@ function App() {
         if (cancelled) return;
         let selected = local;
         let revision = cloud.revision;
+        let needsUpload = false;
         if (!ensured.created) {
           revision = cloud.revision;
           const hydrationChoice = chooseHydrationState(local, localMeta, cloud);
           if (hydrationChoice.conflict) {
             saveLocalBackup(localStorage, currentUser, local);
             setSyncConflict({ local, cloud: cloud.state, cloudRevision: cloud.revision });
-            setSyncConflictOpen(true);
+            setSyncConflictOpen(false);
             setSyncStatus("conflict");
             return;
           }
@@ -2411,6 +2412,7 @@ function App() {
             ...hydrationChoice.state,
             workspaceLayout: local?.workspaceLayout || {},
           };
+          needsUpload = Boolean(hydrationChoice.needsUpload);
         }
         const localDeviceSettings = JSON.parse(localStorage.getItem(`settings_${currentUser}`) || "{}");
         applyCloudStateToLocal(localStorage, currentUser, selected, {
@@ -2420,10 +2422,10 @@ function App() {
           activeColorThemeMode: getSavedThemeMode(localDeviceSettings, localStorage.getItem("theme")),
           customColors: localDeviceSettings.customColors || {},
         });
-        saveLocalSnapshot(localStorage, currentUser, selected, revision, false);
+        saveLocalSnapshot(localStorage, currentUser, selected, revision, needsUpload);
         cloudRevisionRef.current = revision;
         cloudHydratedUserRef.current = currentUser;
-        cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(selected);
+        cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(needsUpload ? cloud.state : selected);
         setTasks(selected.tasks);
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
@@ -11586,14 +11588,13 @@ function App() {
       {syncConflict && syncConflictOpen && (
         <div className="sync-conflict-backdrop" role="presentation">
           <section className="sync-conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="sync-conflict-title">
-            <p className="eyebrow">Nothing will be overwritten automatically</p>
-            <h2 id="sync-conflict-title">Choose which saved version to keep</h2>
-            <p>This device and the cloud both contain different GlowDocket data. A local backup has already been saved in this browser.</p>
+            <h2 id="sync-conflict-title">Which planner should GlowDocket use?</h2>
+            <p>Your data is safe. Choose the copy with the changes you want to keep.</p>
             <div className="sync-conflict-actions">
-              <button type="button" className="btn btn-secondary" onClick={handleKeepCloudConflict}>Keep cloud data</button>
-              <button type="button" className="btn btn-primary" onClick={handleUseDeviceConflict}>Use this device’s data</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setSyncConflictOpen(false)}>Cancel and decide later</button>
+              <button type="button" className="sync-conflict-choice" onClick={handleKeepCloudConflict}><strong>Use another device’s data</strong><span>Bring in the version most recently saved to your account.</span></button>
+              <button type="button" className="sync-conflict-choice is-primary" onClick={handleUseDeviceConflict}><strong>Keep this device’s data</strong><span>Save what you see on this device to your account.</span></button>
             </div>
+            <button type="button" className="sync-conflict-later" onClick={() => setSyncConflictOpen(false)}>Decide later</button>
           </section>
         </div>
       )}
