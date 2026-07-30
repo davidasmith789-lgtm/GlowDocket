@@ -201,9 +201,8 @@
 .flash-deck-fields .flash-description-field {
   height: 100%;
   min-height: 42px;
-  max-height: calc(100% + 86px);
   overflow-y: auto;
-  resize: vertical;
+  resize: none;
 }
 .flash-deck-fields > label:nth-child(3) {
   position: absolute;
@@ -388,11 +387,12 @@
   padding: 50px;
 }
 .flash-editor-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
   margin: 18px 0;
 }
+.flash-editor-actions button { width: 100%; }
 .flash-card-editor {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -820,7 +820,7 @@
 @media (max-width: 650px) {
   .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
   .flash-deck-fields > label:nth-child(n) { position: static; width: auto; grid-column: 1; grid-row: auto; }
-  .flash-deck-fields .flash-description-field { height: 120px; max-height: 240px; }
+  .flash-deck-fields .flash-description-field { height: 120px; }
   .flash-page,
   .flash-editor,
   .flash-viewer {
