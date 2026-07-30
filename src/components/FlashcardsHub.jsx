@@ -12,7 +12,8 @@ import {
 import FlashcardSharedActions from "./FlashcardSharedActions.jsx";
 import FlashcardConfirmDialog from "./FlashcardConfirmDialog.jsx";
 import FlashcardProfileChip from "./FlashcardProfileChip.jsx";
-import { getGamificationLevel } from "../gamificationUtils.js";
+import AchievementEmblem from "./AchievementEmblem.jsx";
+import { GAMIFICATION_ACHIEVEMENTS, getGamificationLevel } from "../gamificationUtils.js";
 import "./FlashcardsHub.css";
 const STUDY_ACTIONS = [{ label: "Do Again/Hard", rating: "Hard" }];
 const isMissingLibraryFunction = (error) =>
@@ -81,6 +82,8 @@ export default function FlashcardsHub({
   const rewardsCallbackRef = useRef(onRewards);
   rewardsCallbackRef.current = onRewards;
   const accountLevel = getGamificationLevel(profileSettings.totalXp);
+  const earnedGuideBadges = GAMIFICATION_ACHIEVEMENTS.filter((badge) => (profileSettings.earnedAchievementIds || []).includes(badge.id));
+  const guideBadge = GAMIFICATION_ACHIEVEMENTS.find((badge) => badge.id === profileSettings.selectedBadge) || earnedGuideBadges.at(-1);
   const publicProfile = useMemo(() => ({
     shareFlashcardLevel: profileSettings.shareFlashcardLevel === true,
     showFlashcardName: profileSettings.showFlashcardName === true,
@@ -1155,7 +1158,32 @@ export default function FlashcardsHub({
           </div>
         </header>
         {rewardSummary && (
-          <section className="flash-level-card" aria-label={`Account level ${accountLevel.level}, ${accountLevel.name}`}>
+          <section className={`flash-level-card${xpGuideOpen ? " is-guide-open" : ""}`} aria-label={`Account level ${accountLevel.level}, ${accountLevel.name}`}>
+            {xpGuideOpen && (
+              <div className="flash-level-showcase">
+                <div className="flash-level-showcase-art" aria-hidden="true">
+                  <span className="flash-level-showcase-rings" />
+                  <span className={`flash-level-showcase-emblem${guideBadge ? ` badge-${guideBadge.id}` : ""}`}>
+                    {guideBadge ? <AchievementEmblem id={guideBadge.id} /> : <strong>{accountLevel.level}</strong>}
+                  </span>
+                  <i>Level {accountLevel.level}</i>
+                </div>
+                <div className="flash-level-showcase-copy">
+                  <span className="flash-level-showcase-kicker">Your GlowDocket journey</span>
+                  <h3>{accountLevel.name}</h3>
+                  <p>{guideBadge ? <><strong>{guideBadge.title}</strong> is your current showcase badge.</> : "Earn your first badge by building a steady study rhythm."}</p>
+                  <div className="flash-level-milestone-path" aria-label={`Level ${accountLevel.level} of 10`}>
+                    {Array.from({ length: 10 }, (_, index) => index + 1).map((level) => <span key={level} className={level < accountLevel.level ? "is-complete" : level === accountLevel.level ? "is-current" : ""}>{level}</span>)}
+                  </div>
+                  <div className="flash-level-showcase-stats">
+                    <span><strong>{profileSettings.totalXp || 0}</strong><small>Total XP</small></span>
+                    <span><strong>{accountLevel.xpNeeded - accountLevel.xpIntoLevel}</strong><small>XP to next level</small></span>
+                    <span><strong>{earnedGuideBadges.length}</strong><small>Badges earned</small></span>
+                  </div>
+                  <progress max={accountLevel.xpNeeded} value={accountLevel.xpIntoLevel}>{accountLevel.progress}%</progress>
+                </div>
+              </div>
+            )}
             <div className="flash-level-orb"><small>Level</small><strong>{accountLevel.level}</strong></div>
             <div className="flash-level-progress">
               <div><strong>{profileSettings.totalXp || 0} Account XP</strong><span>{accountLevel.xpNeeded - accountLevel.xpIntoLevel} XP to Level {Math.min(10, accountLevel.level + 1)} · {accountLevel.name}</span></div>

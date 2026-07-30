@@ -1086,6 +1086,52 @@
   background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--primary-color) 18%, transparent), transparent 45%), var(--card-bg);
   box-shadow: 0 14px 34px color-mix(in srgb, var(--primary-color) 12%, transparent), var(--shadow);
 }
+.flash-level-card.is-guide-open {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+  align-items: stretch;
+}
+.flash-level-card.is-guide-open > .flash-level-orb,
+.flash-level-card.is-guide-open > .flash-level-progress { display: none; }
+.flash-level-showcase {
+  position: relative;
+  display: grid;
+  min-height: 390px;
+  grid-template-columns: minmax(190px, .72fr) minmax(260px, 1.28fr);
+  align-items: center;
+  gap: clamp(18px, 3vw, 42px);
+  padding: clamp(22px, 4vw, 46px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 28%, var(--border-color));
+  border-radius: 20px;
+  background: radial-gradient(circle at 20% 50%, color-mix(in srgb, var(--primary-color) 28%, transparent), transparent 34%), linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 11%, var(--card-bg)), var(--card-bg));
+}
+.flash-level-showcase::before,
+.flash-level-showcase::after { content: "✦"; position: absolute; color: color-mix(in srgb, var(--primary-color) 55%, transparent); font-size: 1.5rem; }
+.flash-level-showcase::before { top: 8%; left: 6%; }
+.flash-level-showcase::after { right: 7%; bottom: 9%; font-size: 1rem; }
+.flash-level-showcase-art { position: relative; display: grid; min-height: 245px; place-items: center; isolation: isolate; }
+.flash-level-showcase-rings { position: absolute; width: 210px; height: 210px; border: 1px solid color-mix(in srgb, var(--primary-color) 38%, transparent); border-radius: 50%; box-shadow: 0 0 0 18px color-mix(in srgb, var(--primary-color) 7%, transparent), 0 0 0 42px color-mix(in srgb, var(--primary-color) 4%, transparent); }
+.flash-level-showcase-rings::before,
+.flash-level-showcase-rings::after { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--primary-color); box-shadow: 0 0 18px var(--primary-color); }
+.flash-level-showcase-rings::before { top: 10px; right: 27px; }
+.flash-level-showcase-rings::after { bottom: 24px; left: 13px; }
+.flash-level-showcase-emblem { z-index: 1; display: grid; width: 132px; height: 132px; place-items: center; border: 2px solid color-mix(in srgb, white 48%, var(--primary-color)); border-radius: 50%; color: white; background: linear-gradient(145deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 48%, #312e81)); box-shadow: 0 0 0 9px color-mix(in srgb, var(--primary-color) 18%, transparent), 0 22px 48px color-mix(in srgb, var(--primary-color) 34%, transparent); }
+.flash-level-showcase-emblem svg { width: 76px; height: 76px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.flash-level-showcase-emblem strong { font-size: 3.2rem; }
+.flash-level-showcase-art > i { position: absolute; z-index: 2; bottom: 12px; padding: 6px 13px; border-radius: 999px; color: var(--button-primary-color); background: var(--primary-color); box-shadow: 0 8px 18px color-mix(in srgb, var(--primary-color) 28%, transparent); font-size: .72rem; font-style: normal; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.flash-level-showcase-copy { position: relative; z-index: 1; display: grid; gap: 12px; }
+.flash-level-showcase-kicker { color: var(--primary-color); font-size: .7rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.flash-level-showcase-copy h3 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.5rem); }
+.flash-level-showcase-copy p { margin: 0; color: var(--muted-text); line-height: 1.55; }
+.flash-level-milestone-path { display: grid; grid-template-columns: repeat(10, minmax(20px, 1fr)); align-items: center; gap: 4px; }
+.flash-level-milestone-path span { display: grid; min-width: 24px; aspect-ratio: 1; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; color: var(--muted-text); background: var(--surface-alt); font-size: .64rem; font-weight: 900; }
+.flash-level-milestone-path span.is-complete { border-color: color-mix(in srgb, var(--primary-color) 55%, var(--border-color)); color: var(--button-primary-color); background: var(--primary-color); }
+.flash-level-milestone-path span.is-current { border: 2px solid var(--primary-color); color: var(--primary-color); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 14%, transparent); }
+.flash-level-showcase-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.flash-level-showcase-stats span { display: grid; gap: 2px; padding: 10px; border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--border-color)); border-radius: 12px; background: color-mix(in srgb, var(--primary-color) 7%, var(--card-bg)); }
+.flash-level-showcase-stats strong { font-size: 1.05rem; }
+.flash-level-showcase-stats small { color: var(--muted-text); font-size: .64rem; }
+.flash-level-showcase-copy > progress { width: 100%; height: 12px; accent-color: var(--primary-color); }
 .flash-xp-guide {
   width: min(390px, 100%);
   align-self: center;
@@ -1159,6 +1205,8 @@
 .flash-level-progress progress { width: 100%; height: 12px; accent-color: var(--primary-color); }
 @media (max-width: 800px) {
   .flash-level-card { grid-template-columns: auto 1fr; }
+  .flash-level-card.is-guide-open { grid-template-columns: 1fr; }
+  .flash-level-showcase { min-height: 0; grid-template-columns: minmax(150px, .6fr) minmax(240px, 1.4fr); }
   .flash-profile-sharing { grid-column: 1/-1; }
 }
 @media (max-width: 520px) {
@@ -1166,6 +1214,11 @@
   .flash-level-orb { margin-inline: auto; }
   .flash-level-progress > div { justify-content: center; }
   .flash-profile-sharing { grid-column: auto; min-width: 0; text-align: left; }
+  .flash-level-showcase { grid-template-columns: 1fr; padding: 20px 14px; text-align: center; }
+  .flash-level-showcase-art { min-height: 215px; }
+  .flash-level-showcase-stats { grid-template-columns: 1fr; text-align: left; }
+  .flash-level-milestone-path { gap: 2px; }
+  .flash-level-milestone-path span { min-width: 20px; font-size: .56rem; }
 }
 .flash-confetti {
   inset: 0;

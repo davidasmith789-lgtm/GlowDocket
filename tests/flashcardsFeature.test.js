@@ -31,7 +31,7 @@ test("Flashcards XP has escalating account levels", () => {
   assert.equal(getFlashcardLevel(224).level, 2);
   assert.equal(getFlashcardLevel(225).level, 3);
   assert.equal(getGamificationLevel(225).level, 3);
-  assert.match(hub, /className="flash-level-card"/);
+  assert.match(hub, /className=\{`flash-level-card\$\{xpGuideOpen \? " is-guide-open" : ""\}`\}/);
   assert.match(hub, /Account XP/);
   assert.match(hub, /XP to Level/);
 });
