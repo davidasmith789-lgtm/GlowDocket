@@ -8434,7 +8434,13 @@ function App() {
     >
       <div
         className={`app-shell${appShellScale < 1 ? " is-viewport-scaled" : ""}`}
-        style={appShellScale < 1 ? { width: `${appShellDesignWidth}px`, maxWidth: "none", zoom: appShellScale } : undefined}
+        style={appShellScale < 1 ? {
+          width: `${appShellDesignWidth}px`,
+          maxWidth: "none",
+          marginLeft: `${16 / appShellScale}px`,
+          transform: `scale(${appShellScale})`,
+          transformOrigin: "top left",
+        } : undefined}
       >
         <a className="skip-link" href={isMobileUi ? "#mobile-main-content" : "#workspace-main-content"}>Skip to main content</a>
         {isMobileUi && currentUser && (

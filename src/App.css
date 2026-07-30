@@ -5306,7 +5306,7 @@ html[data-theme="dark"] {
 }
 
 .App:not(.mobile-app-ui) .app-shell.is-viewport-scaled {
-  margin-inline: auto;
+  margin-right: 0;
 }
 .App:not(.mobile-app-ui) .app-shell.is-viewport-scaled :is(.workspace-layout.workspace-customizable, .workspace-calendar-only) {
   width: 100% !important;
