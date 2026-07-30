@@ -317,6 +317,11 @@ test("desktop widget canvas keeps the full monitor-sized resize boundary", async
   assert.match(styles, /\.App:not\(\.mobile-app-ui\) \.workspace-widget-canvas\s*\{\s*max-width:\s*none;/);
 });
 
+test("rendered widget dimensions include their borders in collision geometry", async () => {
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(styles, /\.workspace-widget\s*\{[^}]*box-sizing:\s*border-box;/s);
+});
+
 test("desktop pop-out widgets scroll without a visible right scrollbar", async () => {
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(styles, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.detached-widget-content \{ scrollbar-width: none; \}/);
@@ -356,6 +361,13 @@ test("new and reset desktop layouts choose balanced screen-size presets", () => 
     assert.ok(rightEdge >= expectedPreset * 0.97);
     assert.deepEqual(findWidgetOverlaps(layout.desktop.dashboard), []);
   }
+});
+
+test("new and reset layouts size themselves from the browser viewport", async () => {
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+
+  assert.match(app, /getAvailableWorkspaceWidth = \(\) => Math\.max\(960, window\.innerWidth - 32\)/);
+  assert.doesNotMatch(app, /getAvailableWorkspaceWidth[^;]*screen\?\.availWidth/);
 });
 
 test("old default desktop dashboard migrates to the balanced full-width layout", () => {

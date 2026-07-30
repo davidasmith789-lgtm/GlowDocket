@@ -5330,6 +5330,7 @@ html[data-theme="dark"] {
 .workspace-widget {
   position: absolute;
   display: flex;
+  box-sizing: border-box;
   container-type: inline-size;
   max-width: 100%;
   min-width: 190px;
