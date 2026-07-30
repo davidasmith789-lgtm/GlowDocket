@@ -28,8 +28,17 @@ test("profile theme selection restores its saved mode after reload and sign-in",
   ]);
 
   assert.match(app, /activeColorThemeMode: "dark"/);
-  assert.match(app, /setTheme\(getSavedThemeMode\(loadedSettings, localStorage\.getItem\("theme"\)\)\)/);
+  assert.match(app, /const loadedThemeMode = getSavedThemeMode/);
+  assert.match(app, /setTheme\(loadedThemeMode\)/);
   assert.match(app, /activeColorThemeMode: selectedTheme\.mode/);
   assert.match(app, /activeColorThemeMode: theme/);
   assert.match(cloudSync, /"activeColorThemeMode"/);
+});
+
+test("background account updates merge persisted settings without erasing device themes", async () => {
+  const app = await read("../src/App.jsx");
+
+  assert.match(app, /JSON\.stringify\(\{ \.\.\.persisted, gamification: granted \}\)/);
+  assert.match(app, /JSON\.stringify\(\{ \.\.\.persisted, signInDays: nextSignInDays \}\)/);
+  assert.doesNotMatch(app, /setItem\(settingsStorageKey, JSON\.stringify\(updated\)\);[^}]*record this sign-in day/s);
 });

@@ -1944,7 +1944,10 @@ function App() {
       const granted = grantAllGamificationRewards(previous.gamification);
       if (JSON.stringify(granted) === JSON.stringify(normalizeGamification(previous.gamification))) return previous;
       const updated = { ...previous, gamification: granted };
-      try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
+      try {
+        const persisted = JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
+        localStorage.setItem(settingsStorageKey, JSON.stringify({ ...persisted, gamification: granted }));
+      }
       catch (error) { console.error("Failed to save gamification tester rewards:", error); }
       return updated;
     });
@@ -1956,8 +1959,12 @@ function App() {
     setUserSettings((previous) => {
       const signInDays = normalizeSignInDays(previous.signInDays);
       if (signInDays.includes(today)) return previous;
-      const updated = { ...previous, signInDays: [...signInDays, today] };
-      try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
+      const nextSignInDays = [...signInDays, today];
+      const updated = { ...previous, signInDays: nextSignInDays };
+      try {
+        const persisted = JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
+        localStorage.setItem(settingsStorageKey, JSON.stringify({ ...persisted, signInDays: nextSignInDays }));
+      }
       catch (error) { console.error("Failed to record this sign-in day:", error); }
       return updated;
     });
@@ -3306,9 +3313,14 @@ function App() {
     const loadedCourseColors = readStoredSection(localStorage, courseColorsStorageKey, {}, isObject);
     const storedSettings = readStoredSection(localStorage, settingsStorageKey, {}, isObject);
     const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
-    const loadedSettings = Object.keys(storedSettings).length > 0
+    const loadedSettingsBase = Object.keys(storedSettings).length > 0
       ? { ...DEFAULT_USER_SETTINGS, ...storedSettings }
       : { ...DEFAULT_USER_SETTINGS, customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark };
+    const loadedThemeMode = getSavedThemeMode(
+      Object.keys(storedSettings).length > 0 ? storedSettings : loadedSettingsBase,
+      localStorage.getItem("theme"),
+    );
+    const loadedSettings = { ...loadedSettingsBase, activeColorThemeMode: loadedThemeMode };
     const loadedChecklists = readStoredSection(localStorage, checklistStorageKey, [], Array.isArray);
     const storedWorkspace = readStoredSection(localStorage, workspaceStorageKey, null, (value) => value === null || isObject(value));
     const loadedWorkspace = repairLoadedWorkspace(storedWorkspace);
@@ -3317,7 +3329,7 @@ function App() {
     setCourses(loadedCourses);
     setCourseColors(loadedCourseColors);
     setUserSettings(loadedSettings);
-    setTheme(getSavedThemeMode(loadedSettings, localStorage.getItem("theme")));
+    setTheme(loadedThemeMode);
     setChecklists(loadedChecklists);
     workspaceLayoutRef.current = loadedWorkspace;
     setWorkspaceLayout(loadedWorkspace);
