@@ -2491,8 +2491,8 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
   --input-bg: #ffffff;
   --nav-bg: #ffffff;
   --task-bg: #ffffff;
-  --task-highlight-bg: #dbeafe;
-  --task-highlight-text: #111827;
+  --dropdown-highlight-bg: #dbeafe;
+  --dropdown-highlight-text: #111827;
   --modal-bg: #ffffff;
   --primary-color: #4f46e5;
   --secondary-color: #e5e7eb;
@@ -2526,8 +2526,8 @@ html[data-theme="dark"] {
   --input-bg: #111827;
   --nav-bg: #151b2e;
   --task-bg: #151b2e;
-  --task-highlight-bg: #334155;
-  --task-highlight-text: #ffffff;
+  --dropdown-highlight-bg: #334155;
+  --dropdown-highlight-text: #ffffff;
   --modal-bg: #151b2e;
   --primary-color: #60a5fa;
   --secondary-color: #334155;
@@ -2567,7 +2567,16 @@ select optgroup {
   color: var(--text-color);
 }
 
-select { color-scheme: inherit; }
+select {
+  color-scheme: inherit;
+  accent-color: var(--dropdown-highlight-bg);
+}
+
+select option:checked {
+  background-color: var(--dropdown-highlight-bg);
+  background-image: linear-gradient(var(--dropdown-highlight-bg), var(--dropdown-highlight-bg));
+  color: var(--dropdown-highlight-text);
+}
 
 /* Chromium's customizable select surface stays inside the app's composited
    theme layer instead of briefly falling back to the native white popup. */
@@ -2599,8 +2608,8 @@ select { color-scheme: inherit; }
   select option:hover,
   select option:focus,
   select option:checked {
-    background: color-mix(in srgb, var(--primary-color) 16%, var(--input-bg));
-    color: var(--text-color);
+    background: var(--dropdown-highlight-bg);
+    color: var(--dropdown-highlight-text);
   }
 
   select::picker-icon {
@@ -4613,12 +4622,6 @@ html[data-theme] .in-progress-status-pill {
 .edit-modal { background: var(--modal-bg) !important; color: var(--text-color); }
 .task-card { background: var(--task-bg) !important; }
 .task-card-high { background: var(--task-bg) !important; border-left-color: var(--danger-color) !important; }
-.task-card.is-highlighted {
-  --text-color: var(--task-highlight-text);
-  --muted-text: color-mix(in srgb, var(--task-highlight-text) 76%, transparent);
-  background: var(--task-highlight-bg) !important;
-  color: var(--task-highlight-text);
-}
 .tab-row { background: color-mix(in srgb, var(--nav-bg) 88%, transparent) !important; }
 .hero-card { background: var(--accent-gradient) !important; color: var(--hero-text) !important; }
 
