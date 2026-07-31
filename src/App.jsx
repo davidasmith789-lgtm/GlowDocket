@@ -11,6 +11,7 @@ import {
   COLLAPSED_WIDGET_HEIGHT,
   createDefaultWorkspaceLayout,
   getWidgetMinimumExpandedHeight,
+  MAX_WIDGET_LABEL_HEIGHT,
   MIN_WIDGET_WIDTH,
   normalizeWorkspaceLayout,
   placeWidget,
@@ -1269,6 +1270,7 @@ function WorkspaceWidget({
   mobileResize,
   onToggle,
   onResize,
+  onLabelResize,
   onPosition,
   onMove,
   onCopy,
@@ -1280,6 +1282,7 @@ function WorkspaceWidget({
   const widgetRef = useRef(null);
   const [resizeLimit, setResizeLimit] = useState("");
   const minimumExpandedHeight = getWidgetMinimumExpandedHeight(instance.type);
+  const labelHeight = Math.max(44, Number(instance.labelHeight) || Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT);
   // Keep a widget's internal composition stable while its outer viewport is
   // resized. Smaller widgets scale their contents instead of triggering a
   // different responsive layout or hiding controls behind new wrapping.
@@ -1287,7 +1290,7 @@ function WorkspaceWidget({
   const contentReferenceWidth = 492;
   const contentReferenceHeight = Math.max(260, minimumExpandedHeight - COLLAPSED_WIDGET_HEIGHT);
   const availableBodyWidth = Math.max(1, Number(instance.width) - widgetBodyPadding);
-  const availableBodyHeight = Math.max(1, Number(instance.height) - COLLAPSED_WIDGET_HEIGHT - widgetBodyPadding);
+  const availableBodyHeight = Math.max(1, Number(instance.height) - labelHeight - widgetBodyPadding);
   const smallWidget = Number(instance.width) <= 280 || Number(instance.height) <= 220;
   const displayOnlyWidget = instance.type.startsWith("stat-");
   const fixedOverflowWidget = [
@@ -1317,10 +1320,8 @@ function WorkspaceWidget({
     const startX = event.clientX;
     const startY = event.clientY;
     const startWidth = Number(instance.width);
-    const startHeight = collapsed
-      ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT)
-      : Number(instance.height);
-    const minimumHeight = collapsed ? COLLAPSED_WIDGET_HEIGHT : minimumExpandedHeight;
+    const startHeight = collapsed ? labelHeight : Number(instance.height);
+    const minimumHeight = collapsed ? labelHeight : minimumExpandedHeight;
     const widgetBounds = widget?.getBoundingClientRect();
     const canvasBounds = canvas?.getBoundingClientRect();
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
@@ -1382,7 +1383,7 @@ function WorkspaceWidget({
         const liveScale = Math.min(
           1,
           Math.max(0.35, (nextWidth - widgetBodyPadding) / contentReferenceWidth),
-          Math.max(0.35, (nextHeight - COLLAPSED_WIDGET_HEIGHT - widgetBodyPadding) / contentReferenceHeight),
+          Math.max(0.35, (nextHeight - labelHeight - widgetBodyPadding) / contentReferenceHeight),
         );
         widget.style.setProperty("--widget-content-scale", liveScale);
       }
@@ -1397,6 +1398,54 @@ function WorkspaceWidget({
       try { if (resizeHandle.hasPointerCapture?.(activePointerId)) resizeHandle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
       onResize(nextWidth, nextHeight, canvas?.clientWidth, nextRect.x, nextRect.y, { collapsed });
     };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
+
+  const labelResizeStart = (event) => {
+    if (locked) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const activePointerId = event.pointerId;
+    const widget = handle.closest(".workspace-widget");
+    const header = widget?.querySelector(".workspace-widget-header");
+    const canvas = widget?.closest(".workspace-widget-canvas");
+    if (!widget || !header) return;
+    try { handle.setPointerCapture?.(activePointerId); } catch { /* Window listeners remain as a fallback. */ }
+    const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
+    const startY = event.clientY;
+    const startLabelHeight = labelHeight;
+    const controlHeights = [...header.querySelectorAll("button, summary")].map((control) => control.getBoundingClientRect().height / canvasScale);
+    const minimumLabelHeight = Math.max(44, (controlHeights.length ? Math.max(...controlHeights) : 34) + 10);
+    let nextLabelHeight = startLabelHeight;
+    widget.classList.add("is-label-resizing");
+
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== activePointerId) return;
+      moveEvent.preventDefault();
+      nextLabelHeight = Math.min(MAX_WIDGET_LABEL_HEIGHT, Math.max(minimumLabelHeight, startLabelHeight + (moveEvent.clientY - startY) / canvasScale));
+      widget.style.setProperty("--widget-label-height", `${nextLabelHeight}px`);
+      if (collapsed) widget.style.height = `${nextLabelHeight}px`;
+      const liveScale = Math.min(
+        1,
+        Math.max(0.35, availableBodyWidth / contentReferenceWidth),
+        Math.max(0.35, (Number(instance.height) - nextLabelHeight - widgetBodyPadding) / contentReferenceHeight),
+      );
+      widget.style.setProperty("--widget-content-scale", liveScale);
+    };
+
+    const stop = (stopEvent) => {
+      if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== activePointerId) return;
+      widget.classList.remove("is-label-resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      try { if (handle.hasPointerCapture?.(activePointerId)) handle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
+      onLabelResize(nextLabelHeight);
+    };
+
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
@@ -1482,8 +1531,8 @@ function WorkspaceWidget({
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
-      data-collapsed-height={instance.collapsedHeight || COLLAPSED_WIDGET_HEIGHT}
-      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? `${Math.max(COLLAPSED_WIDGET_HEIGHT, Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT)}px` : `${instance.height}px`, "--widget-content-scale": contentScale }}
+      data-collapsed-height={labelHeight}
+      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? `${labelHeight}px` : `${instance.height}px`, "--widget-content-scale": contentScale, "--widget-label-height": `${labelHeight}px` }}
     >
       <header className="workspace-widget-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, onToggle)}>
         <button
@@ -1523,6 +1572,7 @@ function WorkspaceWidget({
             <button type="button" className="widget-hide-action" onClick={onHide}>Hide widget</button>
           </div>
         </details>
+        {!locked && <button type="button" className="widget-label-resize-handle" onPointerDown={labelResizeStart} aria-label={`Resize ${title} label height`} title="Drag to change label height" />}
       </header>
       {!collapsed && (
         <div className="workspace-widget-body">
@@ -7962,8 +8012,9 @@ function App() {
       })()}
       onToggle={() => toggleWorkspaceWidget(instance)}
       onResize={(width, height, canvasWidth, x = instance.x, y = instance.y, resizeState = {}) => updateWidgetInstance(instance.id, resizeState.collapsed
-        ? { width, collapsedHeight: height, x, y, xRatio: canvasWidth > 0 ? x / canvasWidth : instance.xRatio }
+        ? { width, labelHeight: height, collapsedHeight: height, x, y, xRatio: canvasWidth > 0 ? x / canvasWidth : instance.xRatio }
         : { width, height, expandedHeight: height, x, y, xRatio: canvasWidth > 0 ? x / canvasWidth : instance.xRatio }, { canvasWidth })}
+      onLabelResize={(height) => updateWidgetInstance(instance.id, { labelHeight: height, collapsedHeight: height })}
       onPosition={(x, y, canvasWidth) => {
         const highestLayer = Math.max(1, ...Object.values(workspaceLayout[workspaceMode] || {}).flat().map((item) => Number(item.zIndex) || 1));
         updateWidgetInstance(instance.id, { x, xRatio: canvasWidth > 0 ? x / canvasWidth : 0, y, zIndex: highestLayer + 1 }, { canvasWidth });

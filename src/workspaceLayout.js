@@ -20,8 +20,10 @@ export const PROTECTED_WIDGETS = new Set([
 // which also keeps them out of the widget library and hidden-widget tray.
 const REMOVED_WIDGET_TYPES = new Set(["school-guide", "settings-master"]);
 
-export const COLLAPSED_WIDGET_HEIGHT = 58;
+export const COLLAPSED_WIDGET_HEIGHT = 52;
+export const MAX_WIDGET_LABEL_HEIGHT = 140;
 export const MIN_WIDGET_WIDTH = 220;
+const LEGACY_COLLAPSED_WIDGET_HEIGHT = 58;
 
 const WIDGET_MIN_EXPANDED_HEIGHTS = {
   "mini-calendar": 360,
@@ -204,7 +206,7 @@ const getExpandedWidgetHeight = (item) => {
   const minimum = getWidgetMinimumExpandedHeight(item.type);
   const explicitExpandedHeight = finiteNumber(item.expandedHeight, Number.NaN);
   const savedHeight = finiteNumber(item.height, Number.NaN);
-  const candidate = Number.isFinite(savedHeight) && savedHeight > COLLAPSED_WIDGET_HEIGHT
+  const candidate = Number.isFinite(savedHeight) && savedHeight > LEGACY_COLLAPSED_WIDGET_HEIGHT
     ? savedHeight
     : explicitExpandedHeight;
 

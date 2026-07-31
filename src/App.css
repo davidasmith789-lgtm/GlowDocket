@@ -5529,16 +5529,48 @@ html[data-theme="dark"] {
 .workspace-widget-header {
   position: relative;
   display: grid;
-  min-height: 58px;
+  height: var(--widget-label-height, 52px);
+  min-height: var(--widget-label-height, 52px);
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 9px;
-  padding: 10px 12px;
+  padding: clamp(5px, calc((var(--widget-label-height, 52px) - 32px) / 2), 10px) 12px;
   border-bottom: 1px solid var(--border-color);
   cursor: default;
   user-select: none;
   transition: border-color 220ms ease, padding 220ms ease, min-height 220ms ease;
 }
+
+.widget-label-resize-handle {
+  position: absolute;
+  z-index: 7;
+  right: 18px;
+  bottom: -6px;
+  left: 18px;
+  width: auto;
+  height: 12px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.widget-label-resize-handle::after {
+  position: absolute;
+  right: 35%;
+  bottom: 4px;
+  left: 35%;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted-text) 45%, transparent);
+  content: "";
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.workspace-widget-header:hover .widget-label-resize-handle::after,
+.widget-label-resize-handle:focus-visible::after,
+.workspace-widget.is-label-resizing .widget-label-resize-handle::after { opacity: 1; }
 
 .workspace-widget.is-collapsed .workspace-widget-header { border-bottom: 0; }
 .workspace-widget-header > strong {
@@ -5600,7 +5632,6 @@ html[data-theme="dark"] {
 .widget-menu-popover .widget-hide-action { margin-top: 7px; color: var(--danger-color); }
 
 .App:is(.text-size-large, .text-size-xlarge) .workspace-widget-header {
-  min-height: calc(2.4rem + 22px);
   align-items: center;
   gap: 10px;
 }
@@ -6372,7 +6403,7 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
   .workspace-layout.workspace-customizable,
   .workspace-calendar-only { width: 100%; }
   .workspace-widget { border-radius: 16px; }
-  .workspace-widget-header { min-height: 54px; padding: 8px 9px; }
+  .workspace-widget-header { padding-inline: 9px; }
   .workspace-widget-body { padding: 11px; }
   .widget-drag-grip,
   .widget-collapse-button,

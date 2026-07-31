@@ -9,7 +9,7 @@ import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calen
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
-import { DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -561,6 +561,19 @@ test("custom collapsed label height survives workspace normalization", () => {
   });
 
   assert.equal(normalized.desktop.dashboard[0].collapsedHeight, 92);
+});
+
+test("widget labels have a smaller default and a persistent vertical resize handle", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.equal(COLLAPSED_WIDGET_HEIGHT, 52);
+  assert.match(source, /const labelResizeStart = \(event\) =>/);
+  assert.match(source, /className="widget-label-resize-handle" onPointerDown=\{labelResizeStart\}/);
+  assert.match(source, /onLabelResize=\{\(height\) => updateWidgetInstance\(instance\.id, \{ labelHeight: height, collapsedHeight: height \}\)\}/);
+  assert.match(css, /\.workspace-widget-header\s*\{[^}]*height:\s*var\(--widget-label-height, 52px\);[^}]*min-height:\s*var\(--widget-label-height, 52px\);/s);
+  assert.match(css, /\.widget-label-resize-handle\s*\{[^}]*cursor:\s*ns-resize;[^}]*touch-action:\s*none;/s);
 });
 
 test("workspace interaction exposes every resize edge and permits free widget overlap", async () => {
