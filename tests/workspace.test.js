@@ -93,6 +93,13 @@ test("custom workload periods reject missing and reversed dates", () => {
   assert.equal(getWorkloadPeriodRange("custom", { customStart: "2026-08-02", customEnd: "2026-07-01" }).invalid, true);
 });
 
+test("class repeat choices keep radio controls separate from wrapping text", async () => {
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(styles, /\.schedule-mode-picker input\[type="radio"\]\s*\{[^}]*width:\s*20px[^}]*flex:\s*0 0 20px/s);
+  assert.match(styles, /\.school-cycle-settings\s*\{[^}]*container-type:\s*inline-size/s);
+  assert.match(styles, /@container \(max-width: 600px\)[\s\S]*?\.schedule-mode-picker\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
+});
+
 test("placing a duplicate replaces the same widget type on the target tab", () => {
   const layout = createDefaultWorkspaceLayout();
   const widget = layout.desktop.dashboard.find((item) => item.type === "quick-match");
