@@ -560,9 +560,27 @@ export function createDefaultWorkspaceLayout(options = {}) {
     mobile: makeMode("mobile"),
     collapsed: {},
     locked: { desktop: true, chromebook: false, mobile: false },
+    savedLayouts: { desktop: {}, chromebook: {}, mobile: {} },
     defaultDesktopCanvasWidth: desktopCanvasWidth,
   };
 }
+
+const normalizeSavedLayouts = (savedLayouts) => {
+  const normalized = { desktop: {}, chromebook: {}, mobile: {} };
+  for (const mode of Object.keys(normalized)) {
+    for (const tab of Object.keys(DEFAULT_DESKTOP_LAYOUT)) {
+      const presets = savedLayouts?.[mode]?.[tab];
+      if (!Array.isArray(presets)) continue;
+      normalized[mode][tab] = presets.slice(0, 20).flatMap((preset) => {
+        if (!preset || typeof preset.id !== "string" || !preset.id || typeof preset.name !== "string" || !Array.isArray(preset.items)) return [];
+        const name = preset.name.trim().slice(0, 60);
+        if (!name) return [];
+        return [{ ...preset, name, items: structuredClone(preset.items) }];
+      });
+    }
+  }
+  return normalized;
+};
 
 export function normalizeWorkspaceLayout(value, options = {}) {
   const defaults = createDefaultWorkspaceLayout();
@@ -669,8 +687,46 @@ export function normalizeWorkspaceLayout(value, options = {}) {
       ...defaults.locked,
       ...(value.locked || {}),
     },
+    savedLayouts: normalizeSavedLayouts(value.savedLayouts),
     version: WORKSPACE_LAYOUT_VERSION,
   };
+}
+
+export function saveNamedWorkspaceLayout(layout, mode, tab, rawName) {
+  const name = String(rawName || "").trim().slice(0, 60);
+  if (!name || !Array.isArray(layout?.[mode]?.[tab])) return layout;
+  const next = structuredClone(layout);
+  next.savedLayouts = normalizeSavedLayouts(next.savedLayouts);
+  const presets = next.savedLayouts[mode][tab] || [];
+  const existingIndex = presets.findIndex((preset) => preset.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+  const now = new Date().toISOString();
+  const existing = existingIndex >= 0 ? presets[existingIndex] : null;
+  const preset = {
+    id: existing?.id || globalThis.crypto?.randomUUID?.() || `layout-${Date.now()}`,
+    name,
+    items: structuredClone(next[mode][tab]),
+    createdAt: existing?.createdAt || now,
+    updatedAt: now,
+  };
+  if (existingIndex >= 0) presets[existingIndex] = preset;
+  else presets.push(preset);
+  next.savedLayouts[mode][tab] = presets.slice(-20);
+  return next;
+}
+
+export function applyNamedWorkspaceLayout(layout, mode, tab, presetId) {
+  const preset = layout?.savedLayouts?.[mode]?.[tab]?.find((item) => item.id === presetId);
+  if (!preset || !Array.isArray(preset.items)) return layout;
+  const next = structuredClone(layout);
+  next[mode][tab] = structuredClone(preset.items);
+  return next;
+}
+
+export function deleteNamedWorkspaceLayout(layout, mode, tab, presetId) {
+  if (!layout?.savedLayouts?.[mode]?.[tab]?.some((item) => item.id === presetId)) return layout;
+  const next = structuredClone(layout);
+  next.savedLayouts[mode][tab] = next.savedLayouts[mode][tab].filter((item) => item.id !== presetId);
+  return next;
 }
 
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {

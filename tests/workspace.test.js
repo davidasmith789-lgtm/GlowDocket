@@ -9,7 +9,7 @@ import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calen
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
-import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, applyNamedWorkspaceLayout, canHideWidget, createDefaultWorkspaceLayout, deleteNamedWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, saveNamedWorkspaceLayout, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -95,6 +95,31 @@ test("dropping a widget back on its current tab keeps its position", () => {
   const widget = layout.desktop.dashboard.find((item) => item.type === "quick-match");
   const next = placeWidget(layout, "desktop", "dashboard", widget);
   assert.deepEqual(next.desktop.dashboard.find((item) => item.id === widget.id), widget);
+});
+
+test("named layouts restore one tab without changing its lock state", () => {
+  const layout = createDefaultWorkspaceLayout();
+  layout.desktop.dashboard[0].x = 77;
+  layout.desktop.dashboard[0].width = 444;
+  const saved = saveNamedWorkspaceLayout(layout, "desktop", "dashboard", "Study mode");
+  const preset = saved.savedLayouts.desktop.dashboard[0];
+  saved.desktop.dashboard[0].x = 900;
+  saved.locked.desktop = false;
+  const applied = applyNamedWorkspaceLayout(saved, "desktop", "dashboard", preset.id);
+  assert.equal(applied.desktop.dashboard[0].x, 77);
+  assert.equal(applied.desktop.dashboard[0].width, 444);
+  assert.equal(applied.locked.desktop, false);
+  assert.deepEqual(applied.desktop.todo, saved.desktop.todo);
+});
+
+test("named layouts are scoped by device mode and tab and can be deleted", () => {
+  const layout = createDefaultWorkspaceLayout();
+  const saved = saveNamedWorkspaceLayout(layout, "mobile", "todo", "Compact");
+  assert.equal(saved.savedLayouts.mobile.todo.length, 1);
+  assert.equal(saved.savedLayouts.desktop.todo, undefined);
+  const presetId = saved.savedLayouts.mobile.todo[0].id;
+  const removed = deleteNamedWorkspaceLayout(saved, "mobile", "todo", presetId);
+  assert.deepEqual(removed.savedLayouts.mobile.todo, []);
 });
 
 test("a protected widget can be hidden only when another visible copy exists", () => {

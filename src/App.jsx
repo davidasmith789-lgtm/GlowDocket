@@ -8,13 +8,16 @@ import {
 } from "./checklistUtils.js";
 import {
   canHideWidget,
+  applyNamedWorkspaceLayout,
   COLLAPSED_WIDGET_HEIGHT,
   createDefaultWorkspaceLayout,
+  deleteNamedWorkspaceLayout,
   getWidgetMinimumExpandedHeight,
   MAX_WIDGET_LABEL_HEIGHT,
   MIN_WIDGET_WIDTH,
   normalizeWorkspaceLayout,
   placeWidget,
+  saveNamedWorkspaceLayout,
   setWidgetCollapsedState,
 } from "./workspaceLayout.js";
 import { findMatchingCourse, normalizeCourseName, parsePastedAssignmentRows } from "./bulkImportUtils.js";
@@ -2261,6 +2264,8 @@ function App() {
   const [checklistNow, setChecklistNow] = useState(() => new Date());
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
   const [widgetSearch, setWidgetSearch] = useState("");
+  const [workspaceLayoutName, setWorkspaceLayoutName] = useState("");
+  const [selectedWorkspaceLayoutId, setSelectedWorkspaceLayoutId] = useState("");
   const widgetsUnavailableOnCurrentTab = ["community", "flashcards"].includes(currentTab);
   const [helpSearch, setHelpSearch] = useState("");
   const [isMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
@@ -6301,6 +6306,31 @@ function App() {
     saveWorkspace(createDefaultWorkspaceLayout({ desktopCanvasWidth: getAvailableWorkspaceWidth() }));
   };
 
+  const savedWorkspaceLayouts = workspaceLayout.savedLayouts?.[workspaceMode]?.[currentTab] || [];
+
+  const handleSaveNamedWorkspaceLayout = (event) => {
+    event.preventDefault();
+    const name = workspaceLayoutName.trim();
+    if (!name) return;
+    const existing = savedWorkspaceLayouts.find((preset) => preset.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+    saveWorkspace((previousLayout) => saveNamedWorkspaceLayout(previousLayout, workspaceMode, currentTab, name));
+    setWorkspaceLayoutName("");
+    if (existing) setSelectedWorkspaceLayoutId(existing.id);
+  };
+
+  const handleApplyNamedWorkspaceLayout = () => {
+    if (!selectedWorkspaceLayoutId) return;
+    saveWorkspace((previousLayout) => applyNamedWorkspaceLayout(previousLayout, workspaceMode, currentTab, selectedWorkspaceLayoutId));
+  };
+
+  const handleDeleteNamedWorkspaceLayout = () => {
+    if (!selectedWorkspaceLayoutId) return;
+    const selected = savedWorkspaceLayouts.find((preset) => preset.id === selectedWorkspaceLayoutId);
+    if (!selected || !window.confirm(`Delete the saved layout “${selected.name}”?`)) return;
+    saveWorkspace((previousLayout) => deleteNamedWorkspaceLayout(previousLayout, workspaceMode, currentTab, selectedWorkspaceLayoutId));
+    setSelectedWorkspaceLayoutId("");
+  };
+
   // ---------------------------------------------------------------------------
   // DERIVED DATA: FILTERING, SORTING, RECOMMENDATIONS, AND COUNTS
   // ---------------------------------------------------------------------------
@@ -8742,6 +8772,18 @@ function App() {
               <div><h2>Workspace Organizer</h2><span>Place features on this tab, recover hidden widgets, or lock the layout when everything feels right.</span></div>
               <div className="workspace-organizer-actions">
                 <button type="button" className={`btn ${workspaceLayout.locked?.[workspaceMode] ? "btn-primary" : "btn-secondary"}`} onClick={toggleWorkspaceLock}>{workspaceLayout.locked?.[workspaceMode] ? "Unlock Layout" : "Lock Layout"}</button>
+              </div>
+            </div>
+            <div className="saved-layout-manager">
+              <div className="saved-layout-copy"><strong>Saved layouts for this tab</strong><span>Save or switch the current arrangement. Your lock setting will stay the same.</span></div>
+              <form className="saved-layout-save" onSubmit={handleSaveNamedWorkspaceLayout}>
+                <label><span>Layout name</span><input value={workspaceLayoutName} onChange={(event) => setWorkspaceLayoutName(event.target.value)} maxLength="60" placeholder="Example: Study mode" /></label>
+                <button type="submit" className="btn btn-primary" disabled={!workspaceLayoutName.trim()}>Save current</button>
+              </form>
+              <div className="saved-layout-select">
+                <label><span>Choose a saved layout</span><select value={selectedWorkspaceLayoutId} onChange={(event) => setSelectedWorkspaceLayoutId(event.target.value)}><option value="">Select a layout…</option>{savedWorkspaceLayouts.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
+                <button type="button" className="btn btn-secondary" disabled={!selectedWorkspaceLayoutId} onClick={handleApplyNamedWorkspaceLayout}>Apply</button>
+                <button type="button" className="btn btn-danger" disabled={!selectedWorkspaceLayoutId} onClick={handleDeleteNamedWorkspaceLayout}>Delete</button>
               </div>
             </div>
             <label className="widget-library-search"><span>Find a widget</span><input type="search" value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search assignments, calendar, courses…" /></label>
