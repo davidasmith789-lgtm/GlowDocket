@@ -572,6 +572,15 @@ test("workspace interaction exposes every resize edge and permits free widget ov
   assert.match(source, /nextRect = desired;/);
 });
 
+test("every checklist widget view has an independent touch-friendly scroll area", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /instance\.type === "checklists" \? " is-checklists-widget"/);
+  assert.match(css, /\.workspace-widget\.is-checklists-widget \.workspace-widget-scaled-content\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;[^}]*touch-action:\s*pan-y;/s);
+});
+
 test("recommended widget scrolls vertically without visible scrollbars or horizontal movement", async () => {
   const [appSource, cssSource] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),

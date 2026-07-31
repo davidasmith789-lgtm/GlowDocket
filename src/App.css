@@ -5543,6 +5543,16 @@ html[data-theme="dark"] {
 .workspace-widget.is-recommended-widget .workspace-widget-body::-webkit-scrollbar { display: none; }
 .workspace-widget.is-small-widget .workspace-widget-body { overflow: hidden; }
 .workspace-widget.has-fixed-overflow .workspace-widget-body { overflow: hidden; }
+.workspace-widget.is-checklists-widget .workspace-widget-scaled-content {
+  height: calc(100% / var(--widget-content-scale, 1));
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
 .workspace-widget.is-display-only .workspace-widget-body {
   display: flex;
   align-items: center;
