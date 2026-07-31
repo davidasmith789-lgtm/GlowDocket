@@ -581,6 +581,15 @@ test("every checklist widget view has an independent touch-friendly scroll area"
   assert.match(css, /\.workspace-widget\.is-checklists-widget \.workspace-widget-scaled-content\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;[^}]*touch-action:\s*pan-y;/s);
 });
 
+test("global text scaling reaches button labels and large text reflows dense widgets", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /button,\s*\[role="button"\]\s*\{[^}]*font-family:\s*inherit;[^}]*font-size:\s*inherit;/s);
+  assert.match(css, /text-size-large[^}]*\.standalone-checklist-items li\s*\{[^}]*grid-template-columns:\s*auto auto minmax\(0, 1fr\) auto;/s);
+  assert.match(css, /text-size-large[^}]*\.course-overview-breakdown\s*\{[^}]*repeat\(auto-fit,/s);
+  assert.match(css, /text-size-large[^}]*\.account-dashboard-shortcuts\s*\{[^}]*repeat\(auto-fit,/s);
+  assert.match(css, /text-size-large[^}]*\.reminder-suggestion\s*\{[^}]*flex-wrap:\s*wrap;/s);
+});
+
 test("recommended widget scrolls vertically without visible scrollbars or horizontal movement", async () => {
   const [appSource, cssSource] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),

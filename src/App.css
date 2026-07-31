@@ -1120,6 +1120,11 @@ textarea {
   padding: 10px 12px;
   font: inherit;
 }
+button,
+[role="button"] {
+  font-family: inherit;
+  font-size: inherit;
+}
 .hero-status-stack { display: grid; justify-items: end; gap: 9px; }
 .account-header-button { display: grid; width: min(440px, 100%); min-height: 94px; grid-template-columns: 64px minmax(0, 1fr) auto 24px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--hero-text) 30%, transparent); border-radius: 20px; background: color-mix(in srgb, var(--card-bg) 16%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--hero-text) 18%, transparent), 0 0 42px color-mix(in srgb, var(--hero-text) 8%, transparent); color: var(--hero-text); cursor: pointer; text-align: left; backdrop-filter: blur(8px); animation: account-profile-glow 3.4s ease-in-out infinite; transition: transform var(--motion-fast) ease, background var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease; }
 .account-header-button:hover { border-color: color-mix(in srgb, var(--hero-text) 58%, transparent); background: color-mix(in srgb, var(--card-bg) 25%, transparent); box-shadow: 0 0 24px color-mix(in srgb, var(--hero-text) 34%, transparent), 0 0 54px color-mix(in srgb, var(--hero-text) 16%, transparent); transform: translateY(-2px); animation-play-state: paused; }
@@ -3267,6 +3272,47 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 }
 .App.text-size-xlarge :where(.btn, .tab-button, input, select, textarea, summary, [role="button"]) {
   min-height: 2.55em;
+}
+.App:is(.text-size-large, .text-size-xlarge) .standalone-checklist-items li {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+.App:is(.text-size-large, .text-size-xlarge) .checklist-item-date-fields,
+.App:is(.text-size-large, .text-size-xlarge) .checklist-item-deadline {
+  grid-column: 3 / -1;
+  min-width: 0;
+  text-align: left;
+}
+.App:is(.text-size-large, .text-size-xlarge) .course-overview-breakdown {
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+}
+.App:is(.text-size-large, .text-size-xlarge) .course-overview-primary {
+  grid-template-columns: minmax(0, 1fr);
+}
+.App:is(.text-size-large, .text-size-xlarge) .course-overview-primary > strong {
+  grid-column: 1;
+  grid-row: auto;
+}
+.App:is(.text-size-large, .text-size-xlarge) .course-overview-next > strong {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.App:is(.text-size-large, .text-size-xlarge) .account-dashboard-shortcuts {
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+}
+.App:is(.text-size-large, .text-size-xlarge) .account-dashboard-shortcuts > * {
+  min-height: max(7rem, max-content);
+}
+.App:is(.text-size-large, .text-size-xlarge) .account-cosmetics-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+.App:is(.text-size-large, .text-size-xlarge) :where(.account-cosmetics-card strong, .account-cosmetics-card small, .reminder-suggestion, .tab-button) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.App:is(.text-size-large, .text-size-xlarge) .reminder-suggestion {
+  align-items: flex-start;
+  flex-wrap: wrap;
 }
 .App.density-compact .card-container,
 .App.density-compact .task-card,
