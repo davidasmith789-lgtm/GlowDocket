@@ -9,7 +9,7 @@ import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calen
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
-import { DEFAULT_LAYOUT_VERSION, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, canHideWidget, createDefaultWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -599,6 +599,20 @@ test("mini calendar month rows grow vertically with the resized widget", async (
   assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.dashboard-calendar-card\s*\{[^}]*height:\s*100%;[^}]*flex-direction:\s*column;/s);
   assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*display:\s*grid !important;[^}]*grid-template-rows:\s*repeat\(6, minmax\(0, 1fr\)\);/s);
   assert.match(css, /is-mini-calendar-widget \.react-calendar__month-view__days > \.react-calendar__tile\s*\{[^}]*width:\s*100% !important;[^}]*height:\s*100%;[^}]*place-items:\s*center;/s);
+});
+
+test("small widgets keep useful dimensions and scale content continuously", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.equal(MIN_WIDGET_WIDTH, 220);
+  assert.equal(getWidgetMinimumExpandedHeight("recommended"), 240);
+  assert.equal(getWidgetMinimumExpandedHeight("quick-match"), 220);
+  assert.match(source, /availableBodyWidth = Math\.max\(1, Number\(instance\.width\) - widgetBodyPadding\)/);
+  assert.match(source, /Math\.max\(0\.35, availableBodyWidth \/ contentReferenceWidth\)/);
+  assert.doesNotMatch(source, /Math\.max\(0\.55, (?:Number\(instance\.width\)|nextWidth)/);
+  assert.match(css, /\.workspace-widget\.is-small-widget \.workspace-widget-header > strong\s*\{[^}]*position:\s*static;[^}]*text-overflow:\s*ellipsis;/s);
 });
 
 test("recommended widget scrolls vertically without visible scrollbars or horizontal movement", async () => {

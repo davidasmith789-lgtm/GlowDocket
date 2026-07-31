@@ -5506,7 +5506,7 @@ html[data-theme="dark"] {
   box-sizing: border-box;
   container-type: inline-size;
   max-width: 100%;
-  min-width: 190px;
+  min-width: 220px;
   min-height: 58px;
   flex-direction: column;
   overflow: visible;
@@ -5636,6 +5636,31 @@ html[data-theme="dark"] {
 }
 .workspace-widget.is-recommended-widget .workspace-widget-body::-webkit-scrollbar { display: none; }
 .workspace-widget.is-small-widget .workspace-widget-body { overflow: hidden; }
+.workspace-widget.is-small-widget .workspace-widget-header {
+  grid-template-columns: 28px minmax(0, 1fr) 28px 28px;
+  gap: 5px;
+  padding-inline: 7px;
+}
+.workspace-widget.is-small-widget .workspace-widget-header > strong {
+  position: static;
+  width: auto;
+  min-width: 0;
+  transform: none;
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-widget.is-small-widget :where(.widget-drag-grip, .widget-collapse-button, .widget-menu summary) {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+.workspace-widget.is-small-widget.is-locked .workspace-widget-header {
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+}
 .workspace-widget.has-fixed-overflow .workspace-widget-body { overflow: hidden; }
 .workspace-widget.is-checklists-widget .workspace-widget-scaled-content {
   height: calc(100% / var(--widget-content-scale, 1));

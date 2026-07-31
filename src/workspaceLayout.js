@@ -21,10 +21,13 @@ export const PROTECTED_WIDGETS = new Set([
 const REMOVED_WIDGET_TYPES = new Set(["school-guide", "settings-master"]);
 
 export const COLLAPSED_WIDGET_HEIGHT = 58;
+export const MIN_WIDGET_WIDTH = 220;
 
 const WIDGET_MIN_EXPANDED_HEIGHTS = {
   "mini-calendar": 360,
   "add-assignment": 360,
+  recommended: 240,
+  "quick-match": 220,
   checklists: 260,
   "course-colors": 260,
   reminders: 240,
@@ -326,7 +329,7 @@ function resolveWidgetX(item, canvasWidth, width, explicitX = undefined) {
 }
 
 function normalizeItemPosition(item, canvasWidth, fallbackWidth = 320) {
-  const width = clamp(finiteNumber(item.width, fallbackWidth), 190, canvasWidth);
+  const width = clamp(finiteNumber(item.width, fallbackWidth), MIN_WIDGET_WIDTH, canvasWidth);
   const x = resolveWidgetX(item, canvasWidth, width);
   return {
     ...item,
@@ -347,8 +350,8 @@ const sanitized = items.map((item, index) => {
   if (options.preservePositions) {
     const preserveUnmeasuredPositions = options.preserveUnmeasuredPositions === true;
     const width = preserveUnmeasuredPositions
-      ? Math.max(190, finiteNumber(item.width, 320))
-      : clamp(finiteNumber(item.width, 320), 190, canvasWidth);
+      ? Math.max(MIN_WIDGET_WIDTH, finiteNumber(item.width, 320))
+      : clamp(finiteNumber(item.width, 320), MIN_WIDGET_WIDTH, canvasWidth);
     const maxX = Math.max(0, canvasWidth - width);
     const rawX = finiteNumber(item.x, 0);
     const x = preserveUnmeasuredPositions ? Math.max(0, rawX) : clamp(rawX, 0, maxX);

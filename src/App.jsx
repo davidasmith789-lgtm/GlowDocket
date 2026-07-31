@@ -11,6 +11,7 @@ import {
   COLLAPSED_WIDGET_HEIGHT,
   createDefaultWorkspaceLayout,
   getWidgetMinimumExpandedHeight,
+  MIN_WIDGET_WIDTH,
   normalizeWorkspaceLayout,
   placeWidget,
   setWidgetCollapsedState,
@@ -1282,10 +1283,12 @@ function WorkspaceWidget({
   // Keep a widget's internal composition stable while its outer viewport is
   // resized. Smaller widgets scale their contents instead of triggering a
   // different responsive layout or hiding controls behind new wrapping.
-  const contentReferenceWidth = 520;
+  const widgetBodyPadding = 28;
+  const contentReferenceWidth = 492;
   const contentReferenceHeight = Math.max(260, minimumExpandedHeight - COLLAPSED_WIDGET_HEIGHT);
-  const availableBodyHeight = Math.max(1, Number(instance.height) - COLLAPSED_WIDGET_HEIGHT);
-  const smallWidget = Number(instance.width) <= 320 && Number(instance.height) <= 220;
+  const availableBodyWidth = Math.max(1, Number(instance.width) - widgetBodyPadding);
+  const availableBodyHeight = Math.max(1, Number(instance.height) - COLLAPSED_WIDGET_HEIGHT - widgetBodyPadding);
+  const smallWidget = Number(instance.width) <= 280 || Number(instance.height) <= 220;
   const displayOnlyWidget = instance.type.startsWith("stat-");
   const fixedOverflowWidget = [
     "mini-calendar",
@@ -1299,8 +1302,8 @@ function WorkspaceWidget({
     ? 1
     : Math.min(
         1,
-        Math.max(0.55, Number(instance.width) / contentReferenceWidth),
-        Math.max(0.55, availableBodyHeight / contentReferenceHeight),
+        Math.max(0.35, availableBodyWidth / contentReferenceWidth),
+        Math.max(0.35, availableBodyHeight / contentReferenceHeight),
       );
   const resizeStart = (event, edges = { right: true, bottom: true }) => {
     event.preventDefault();
@@ -1338,7 +1341,7 @@ function WorkspaceWidget({
       const deltaY = (moveEvent.clientY - startY) / canvasScale;
       const rawX = widgetX + deltaX;
       const rawY = widgetY + deltaY;
-      const desiredX = edges.left ? Math.min(widgetX + startWidth - 190, Math.max(0, rawX)) : widgetX;
+      const desiredX = edges.left ? Math.min(widgetX + startWidth - MIN_WIDGET_WIDTH, Math.max(0, rawX)) : widgetX;
       const desiredY = edges.top ? Math.min(widgetY + startHeight - minimumHeight, Math.max(0, rawY)) : widgetY;
       const desiredWidth = edges.left
         ? startWidth + widgetX - desiredX
@@ -1350,23 +1353,23 @@ function WorkspaceWidget({
         : edges.bottom
           ? startHeight + deltaY
           : startHeight;
-      const maxWidth = canvas ? Math.max(190, canvas.clientWidth - desiredX) : Number.POSITIVE_INFINITY;
+      const maxWidth = canvas ? Math.max(MIN_WIDGET_WIDTH, canvas.clientWidth - desiredX) : Number.POSITIVE_INFINITY;
       const desired = {
         x: desiredX,
         y: desiredY,
-        width: Math.min(maxWidth, Math.max(190, desiredWidth)),
+        width: Math.min(maxWidth, Math.max(MIN_WIDGET_WIDTH, desiredWidth)),
         height: Math.max(minimumHeight, desiredHeight),
       };
       nextRect = desired;
       nextWidth = desired.width;
       nextHeight = desired.height;
-      const hitMinimumWidth = (edges.left || edges.right) && desiredWidth <= 190;
+      const hitMinimumWidth = (edges.left || edges.right) && desiredWidth <= MIN_WIDGET_WIDTH;
       const hitMinimumHeight = (edges.top || edges.bottom) && desiredHeight <= minimumHeight;
       const hitCanvasLeft = edges.left && rawX <= 0;
       const hitCanvasTop = edges.top && rawY <= 0;
       const hitCanvasRight = edges.right && desiredWidth >= maxWidth;
       setResizeLimit(
-        hitMinimumWidth ? "Minimum width reached: the widget controls need 190 px."
+        hitMinimumWidth ? `Minimum width reached: the widget controls and content need ${MIN_WIDGET_WIDTH} px.`
           : hitMinimumHeight ? `Minimum height reached: ${collapsed ? "the label controls" : "this widget's content"} need ${minimumHeight} px.`
             : hitCanvasLeft || hitCanvasTop || hitCanvasRight ? "Workspace edge reached: there is no more canvas in this direction."
               : "",
@@ -1378,8 +1381,8 @@ function WorkspaceWidget({
         widget.style.height = `${nextHeight}px`;
         const liveScale = Math.min(
           1,
-          Math.max(0.55, nextWidth / contentReferenceWidth),
-          Math.max(0.55, (nextHeight - COLLAPSED_WIDGET_HEIGHT) / contentReferenceHeight),
+          Math.max(0.35, (nextWidth - widgetBodyPadding) / contentReferenceWidth),
+          Math.max(0.35, (nextHeight - COLLAPSED_WIDGET_HEIGHT - widgetBodyPadding) / contentReferenceHeight),
         );
         widget.style.setProperty("--widget-content-scale", liveScale);
       }
