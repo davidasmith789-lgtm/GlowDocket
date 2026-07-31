@@ -100,6 +100,18 @@ test("class repeat choices keep radio controls separate from wrapping text", asy
   assert.match(styles, /@container \(max-width: 600px\)[\s\S]*?\.schedule-mode-picker\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
 });
 
+test("detached widgets remain in the main canvas and locked drag handles stay available", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /const items = \(responsiveWorkspaceLayout\[workspaceMode\]\?\.\[tab\] \|\| \[\]\)\.filter\(\(item\) => !item\.hidden\)/);
+  assert.doesNotMatch(source, /disabled=\{locked\}[\s\S]{0,160}aria-label=\{`Move/);
+  assert.match(source, /else if \(locked\) return;/);
+  assert.match(source, /popupWidth[\s\S]*popupHeight[\s\S]*width=\$\{popupWidth\},height=\$\{popupHeight\}/);
+  assert.match(styles, /\.workspace-widget\.is-locked \.widget-drag-grip\s*\{\s*display:\s*inline-grid/);
+});
+
 test("placing a duplicate replaces the same widget type on the target tab", () => {
   const layout = createDefaultWorkspaceLayout();
   const widget = layout.desktop.dashboard.find((item) => item.type === "quick-match");

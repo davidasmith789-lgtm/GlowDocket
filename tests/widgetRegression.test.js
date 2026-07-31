@@ -14,10 +14,10 @@ test("every default widget type remains registered in the renderer", async () =>
   }
 });
 
-test("widget drag release persists a position, moves tabs, or opens a standalone window", async () => {
+test("widget drag release restores locked widgets, persists a position, moves tabs, or opens a standalone window", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /releasedOutsideWindow/);
-  assert.match(app, /if \(releasedOutsideWindow && onDetach\) onDetach\(\);\s*else if \(targetTab\) onMove\(targetTab\);\s*else onPosition\(nextX, nextY, canvas\.clientWidth\);/);
+  assert.match(app, /if \(releasedOutsideWindow && onDetach\) onDetach\(\);\s*else if \(locked\) return;\s*else if \(targetTab\) onMove\(targetTab\);\s*else onPosition\(nextX, nextY, canvas\.clientWidth\);/);
   assert.match(app, /Open in desktop window/);
   assert.match(app, /window\.open\("", `glowdocket-widget-/);
 });

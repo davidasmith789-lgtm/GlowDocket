@@ -1566,7 +1566,6 @@ function WorkspaceWidget({
   };
 
   const positionStart = (event) => {
-    if (locked) return;
     event.preventDefault();
     event.stopPropagation();
     const widget = event.currentTarget.closest(".workspace-widget");
@@ -1588,6 +1587,7 @@ function WorkspaceWidget({
     let dragFrameId = 0;
     let renderedX = initialX;
     let renderedY = initialY;
+    let pointerOutsideWindow = false;
     const dragRect = {
       width: Number(widget.dataset.widgetWidth) || widget.offsetWidth,
       height: collapsed ? labelHeight : Number(widget.dataset.expandedHeight) || widget.offsetHeight,
@@ -1597,6 +1597,7 @@ function WorkspaceWidget({
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== activePointerId) return;
       moveEvent.preventDefault();
+      pointerOutsideWindow = moveEvent.clientX < 0 || moveEvent.clientY < 0 || moveEvent.clientX > window.innerWidth || moveEvent.clientY > window.innerHeight;
       const maxX = Math.max(0, canvas.clientWidth - widget.offsetWidth);
       const desired = {
         ...dragRect,
@@ -1623,8 +1624,8 @@ function WorkspaceWidget({
       if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== activePointerId) return;
       if (dragFrameId) window.cancelAnimationFrame(dragFrameId);
       dragFrameId = 0;
-      widget.style.left = `${nextX}px`;
-      widget.style.top = `${nextY}px`;
+      widget.style.left = `${locked ? initialX : nextX}px`;
+      widget.style.top = `${locked ? initialY : nextY}px`;
       widget.style.transform = "";
       widget.classList.remove("is-dragging");
       renderWorkspaceAlignmentGuides(canvas);
@@ -1632,8 +1633,9 @@ function WorkspaceWidget({
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (dragHandle.hasPointerCapture?.(activePointerId)) dragHandle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
-      const releasedOutsideWindow = stopEvent && (stopEvent.clientX < 0 || stopEvent.clientY < 0 || stopEvent.clientX > window.innerWidth || stopEvent.clientY > window.innerHeight);
+      const releasedOutsideWindow = pointerOutsideWindow || Boolean(stopEvent && (stopEvent.clientX < 0 || stopEvent.clientY < 0 || stopEvent.clientX > window.innerWidth || stopEvent.clientY > window.innerHeight));
       if (releasedOutsideWindow && onDetach) onDetach();
+      else if (locked) return;
       else if (targetTab) onMove(targetTab);
       else onPosition(nextX, nextY, canvas.clientWidth);
     };
@@ -1658,9 +1660,8 @@ function WorkspaceWidget({
           className="widget-drag-grip"
           onPointerDown={positionStart}
           onDoubleClick={stopControlDoubleClick}
-          disabled={locked}
           aria-label={`Move ${title}`}
-          title={locked ? "Unlock the layout to move widgets" : "Drag to move"}
+          title={locked ? "Drag outside the browser to open a copy in its own window" : "Drag to move or pull outside the browser to open a copy"}
         >
           ⠿
         </button>
@@ -8131,7 +8132,10 @@ function App() {
       existing.popup.focus();
       return;
     }
-    const popup = window.open("", `glowdocket-widget-${instance.id}`, "popup=yes,width=520,height=620,resizable=yes");
+    const popupWidth = Math.round(Math.min(600, Math.max(340, Number(instance.width) || 480)));
+    const savedHeight = workspaceLayout.collapsed?.[instance.type] ? Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT : Number(instance.height);
+    const popupHeight = Math.round(Math.min(650, Math.max(280, (savedHeight || 420) + 64)));
+    const popup = window.open("", `glowdocket-widget-${instance.id}`, `popup=yes,width=${popupWidth},height=${popupHeight},resizable=yes`);
     if (!popup) {
       window.alert("Your browser blocked the widget window. Allow pop-ups for GlowDocket and try again.");
       return;
@@ -8209,13 +8213,13 @@ function App() {
   const responsiveCanvasWidth = workspaceMode === "mobile" ? workspaceCanvasWidth : appShellDesignWidth;
   const responsiveWorkspaceLayout = workspaceLayout;
   const renderWorkspaceForTab = (tab) => {
-    const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
+    const items = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden);
     return <WorkspaceCanvas height={getWorkspaceCanvasHeight(items)} scale={appShellScale} width={responsiveCanvasWidth}>
       {items.map(renderWorkspaceInstance)}
     </WorkspaceCanvas>
   };
   const renderWorkspaceExtrasForTab = (tab) => {
-    const extras = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden && !detachedWidgets.some((detached) => detached.id === item.id));
+    const extras = (responsiveWorkspaceLayout[workspaceMode]?.[tab] || []).filter((item) => !item.hidden);
     return extras.length > 0 ? <WorkspaceCanvas height={getWorkspaceCanvasHeight(extras)} scale={appShellScale} width={responsiveCanvasWidth}>{extras.map(renderWorkspaceInstance)}</WorkspaceCanvas> : null;
   };
 

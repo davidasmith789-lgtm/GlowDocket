@@ -5630,8 +5630,8 @@ html[data-theme="dark"] {
 .widget-menu summary { cursor: pointer; }
 .widget-drag-grip:active { cursor: grabbing; }
 .widget-drag-grip { touch-action: none; }
-.workspace-widget.is-locked .widget-drag-grip { display: none; }
-.workspace-widget.is-locked .workspace-widget-header { grid-template-columns: minmax(0, 1fr) auto auto; }
+.workspace-widget.is-locked .widget-drag-grip { display: inline-grid; }
+.workspace-widget.is-locked .workspace-widget-header { grid-template-columns: auto minmax(0, 1fr) auto auto; }
 .workspace-widget.is-locked { outline: 1px solid transparent; }
 .widget-menu { position: relative; }
 .widget-menu summary { cursor: pointer; list-style: none; }
