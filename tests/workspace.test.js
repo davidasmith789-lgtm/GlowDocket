@@ -9,6 +9,7 @@ import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "../src/calen
 import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandidates, rankRecommendedTasks, summarizeRecommendationWorkload } from "../src/recommendationUtils.js";
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
+import { getWorkloadPeriodRange, summarizeWorkload } from "../src/workloadUtils.js";
 import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, applyNamedWorkspaceLayout, canHideWidget, createDefaultWorkspaceLayout, deleteNamedWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, saveNamedWorkspaceLayout, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
@@ -67,6 +68,29 @@ test("countdown switches from days to hours", () => {
   const now = new Date("2026-07-06T12:00:00");
   assert.equal(formatChecklistCountdown({ dueDate: "2026-07-08" }, now), "3 days left");
   assert.equal(formatChecklistCountdown({ dueDate: "2026-07-06", dueTime: "14:30" }, now), "2h 30m left");
+});
+
+test("workload summaries support today, week, month, custom, and all remaining", () => {
+  const now = new Date(2026, 6, 15, 12);
+  const tasks = [
+    { id: 1, dueMonth: "07", dueDay: "15", estimatedMinutes: 30 },
+    { id: 2, dueMonth: "07", dueDay: "17", estimatedMinutes: 75 },
+    { id: 3, dueMonth: "07", dueDay: "28", estimatedMinutes: "" },
+    { id: 4, dueMonth: "08", dueDay: "02", estimatedMinutes: 20 },
+    { id: 5, dueMonth: "", dueDay: "", estimatedMinutes: 10 },
+  ];
+  assert.equal(summarizeWorkload(tasks, "today", { now }).knownMinutes, 30);
+  assert.equal(summarizeWorkload(tasks, "week", { now, weekStartsOn: "monday" }).knownMinutes, 105);
+  const month = summarizeWorkload(tasks, "month", { now });
+  assert.equal(month.taskCount, 3);
+  assert.equal(month.unknownCount, 1);
+  assert.equal(summarizeWorkload(tasks, "custom", { now, customStart: "2026-07-16", customEnd: "2026-08-02" }).knownMinutes, 95);
+  assert.equal(summarizeWorkload(tasks, "all", { now }).knownMinutes, 135);
+});
+
+test("custom workload periods reject missing and reversed dates", () => {
+  assert.equal(getWorkloadPeriodRange("custom", { customStart: "", customEnd: "" }).invalid, true);
+  assert.equal(getWorkloadPeriodRange("custom", { customStart: "2026-08-02", customEnd: "2026-07-01" }).invalid, true);
 });
 
 test("placing a duplicate replaces the same widget type on the target tab", () => {

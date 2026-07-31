@@ -26,6 +26,7 @@ import { getReminderActionLabel, getWorkflowLabel, MOBILE_TASK_LEVELS, nextMobil
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "./assignmentCountdown.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "./calendarWeekUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "./voiceTaskUtils.js";
+import { summarizeWorkload } from "./workloadUtils.js";
 import {
   getQuickMatchReason,
   getQuickMatchCustomPresets,
@@ -107,6 +108,9 @@ const DEFAULT_USER_SETTINGS = {
   reminderMinutes: 60,
   reminderSuggestionDismissed: false,
   dashboardReminderHours: 24,
+  workloadPeriod: "week",
+  workloadCustomStart: "",
+  workloadCustomEnd: "",
   quickMatchCustomPresets: [],
   schoolLevel: "high",
   textSize: 100,
@@ -7716,11 +7720,15 @@ function App() {
   const dueTodayCount = deadlineConfidenceCounts.today;
   const dueTomorrowCount = deadlineConfidenceCounts.tomorrow;
 
-  const totalEstimatedMinutes = activeDashboardTasks
-    .reduce((total, task) => total + (Number(task.estimatedMinutes) || 0), 0);
-
-  const estimatedHours = Math.floor(totalEstimatedMinutes / 60);
-  const estimatedMinutesLeft = totalEstimatedMinutes % 60;
+  const workloadPeriod = ["today", "week", "month", "custom", "all"].includes(userSettings.workloadPeriod) ? userSettings.workloadPeriod : "week";
+  const workloadSummary = summarizeWorkload(activeDashboardTasks, workloadPeriod, {
+    weekStartsOn: userSettings.calendarWeekStartsOn,
+    customStart: userSettings.workloadCustomStart,
+    customEnd: userSettings.workloadCustomEnd,
+  });
+  const workloadHours = Math.floor(workloadSummary.knownMinutes / 60);
+  const workloadMinutes = workloadSummary.knownMinutes % 60;
+  const workloadTimeLabel = workloadSummary.knownMinutes > 0 ? `${workloadHours}h ${workloadMinutes}m` : "No estimates";
   const overviewCourse = courses.includes(courseOverviewSelection)
     ? courseOverviewSelection
     : courses[0] || "Other";
@@ -8101,11 +8109,18 @@ function App() {
     if (type === "completed-master") return renderTaskMasterWidget("completed");
     const bucketIndex = bucketKeys.findIndex((key) => type.endsWith(`-bucket-${key}`));
     if (bucketIndex >= 0) return renderTaskMasterWidget(type.startsWith("in-progress") ? "inProgress" : "todo", bucketsOrder[bucketIndex]);
+    if (type === "stat-workload") return (
+      <div className="portable-stat workload-stat">
+        <label><span>Time period</span><select value={workloadPeriod} onChange={(event) => handleAddFieldSettingChange("workloadPeriod", event.target.value)}><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom period</option><option value="all">All remaining</option></select></label>
+        {workloadPeriod === "custom" && <div className="workload-custom-dates"><label><span>From</span><input type="date" value={userSettings.workloadCustomStart || ""} onChange={(event) => handleAddFieldSettingChange("workloadCustomStart", event.target.value)} /></label><label><span>To</span><input type="date" value={userSettings.workloadCustomEnd || ""} onChange={(event) => handleAddFieldSettingChange("workloadCustomEnd", event.target.value)} /></label></div>}
+        <strong>{workloadSummary.invalid ? "Choose dates" : workloadTimeLabel}</strong>
+        <p>{workloadSummary.invalid ? "Add a valid start and end date" : `${workloadSummary.label} · ${workloadSummary.taskCount} assignment${workloadSummary.taskCount === 1 ? "" : "s"}${workloadSummary.unknownCount > 0 ? ` · ${workloadSummary.unknownCount} unestimated` : ""}`}</p>
+      </div>
+    );
     const statContent = {
       "stat-active": [activeTasksCount, "Assignments left"],
       "stat-today": [dueTodayCount, "Need attention"],
       "stat-overdue": [overdueTasksCount, "Past deadline"],
-      "stat-workload": [`${estimatedHours}h ${estimatedMinutesLeft}m`, "Estimated remaining"],
     }[type];
     return statContent ? <div className="portable-stat"><strong>{statContent[0]}</strong><p>{statContent[1]}</p></div> : null;
   };
@@ -8925,7 +8940,7 @@ function App() {
               <div className="stat-card">
                 <span className="stat-label">Workload</span>
                 <strong>
-                  {estimatedHours}h {estimatedMinutesLeft}m
+                  {workloadTimeLabel}
                 </strong>
                 <p>Estimated remaining</p>
               </div>
