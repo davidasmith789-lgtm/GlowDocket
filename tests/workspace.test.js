@@ -563,11 +563,13 @@ test("custom collapsed label height survives workspace normalization", () => {
   assert.equal(normalized.desktop.dashboard[0].collapsedHeight, 92);
 });
 
-test("workspace interaction source exposes every collapsed resize edge and pointer capture", async () => {
+test("workspace interaction exposes every resize edge and permits free widget overlap", async () => {
   const source = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(source, /\["top", \{ top: true \}\].*\["bottom-left", \{ bottom: true, left: true \}\]/s);
   assert.match(source, /dragHandle\.setPointerCapture/);
-  assert.match(source, /another widget is blocking this direction/);
+  assert.doesNotMatch(source, /snapToEdges|another widget is blocking this direction/);
+  assert.match(source, /nextX = Math\.max\(0, Math\.min\(maxX, initialX \+/);
+  assert.match(source, /nextRect = desired;/);
 });
 
 test("recommended widget scrolls vertically without visible scrollbars or horizontal movement", async () => {

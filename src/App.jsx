@@ -682,78 +682,6 @@ function stopControlDoubleClick(event) {
   event.stopPropagation();
 }
 
-const WORKSPACE_COLLISION_GAP = 18;
-
-function getWorkspaceObstacleRects(widget, canvas) {
-  const canvasBounds = canvas.getBoundingClientRect();
-  return [...canvas.querySelectorAll(".workspace-widget")]
-    .filter((item) => item !== widget)
-    .map((item) => {
-      const bounds = item.getBoundingClientRect();
-      const isCollapsed = item.classList.contains("is-collapsed");
-      const expandedHeight = Number(item.dataset.expandedHeight);
-      const effectiveHeight = isCollapsed
-        ? Number(item.dataset.collapsedHeight) || bounds.height
-        : Number.isFinite(expandedHeight) ? expandedHeight : bounds.height;
-      return {
-        x: bounds.left - canvasBounds.left,
-        y: bounds.top - canvasBounds.top,
-        width: Number(item.dataset.widgetWidth) || bounds.width,
-        height: effectiveHeight,
-      };
-    });
-}
-
-function workspaceRectsOverlap(a, b, gap = WORKSPACE_COLLISION_GAP) {
-  return (
-    a.x < b.x + b.width + gap &&
-    a.x + a.width + gap > b.x &&
-    a.y < b.y + b.height + gap &&
-    a.y + a.height + gap > b.y
-  );
-}
-
-function isWorkspaceRectOpen(rect, obstacles) {
-  return !obstacles.some((obstacle) => workspaceRectsOverlap(rect, obstacle));
-}
-
-function chooseLegalWorkspaceRect(desired, xOnly, yOnly, lastSafe, obstacles, options = {}) {
-  if (isWorkspaceRectOpen(desired, obstacles)) return desired;
-
-  // Besides axis-only movement, try the nearest legal edges around every
-  // obstacle. This lets a widget slide through tight layouts instead of
-  // appearing frozen as soon as the pointer crosses another widget.
-  const candidates = [xOnly, yOnly];
-  if (options.snapToEdges) {
-    for (const obstacle of obstacles) {
-      candidates.push(
-      { ...desired, x: obstacle.x - desired.width - WORKSPACE_COLLISION_GAP },
-      { ...desired, x: obstacle.x + obstacle.width + WORKSPACE_COLLISION_GAP },
-      { ...desired, y: obstacle.y - desired.height - WORKSPACE_COLLISION_GAP },
-      { ...desired, y: obstacle.y + obstacle.height + WORKSPACE_COLLISION_GAP },
-      { ...desired, x: obstacle.x - desired.width - WORKSPACE_COLLISION_GAP, y: lastSafe.y },
-      { ...desired, x: obstacle.x + obstacle.width + WORKSPACE_COLLISION_GAP, y: lastSafe.y },
-      { ...desired, x: lastSafe.x, y: obstacle.y - desired.height - WORKSPACE_COLLISION_GAP },
-      { ...desired, x: lastSafe.x, y: obstacle.y + obstacle.height + WORKSPACE_COLLISION_GAP },
-      );
-    }
-  }
-
-  const legalCandidates = candidates.filter((candidate) =>
-    candidate.x >= 0 &&
-    candidate.y >= 0 &&
-    (!Number.isFinite(options.maxX) || candidate.x <= options.maxX) &&
-    isWorkspaceRectOpen(candidate, obstacles)
-  );
-  if (legalCandidates.length === 0) return lastSafe;
-
-  return legalCandidates.sort((a, b) => {
-    const aDistance = Math.abs(a.x - desired.x) + Math.abs(a.y - desired.y);
-    const bDistance = Math.abs(b.x - desired.x) + Math.abs(b.y - desired.y);
-    return aDistance - bDistance;
-  })[0];
-}
-
 function getTaskCategory(task) {
   return task?.category || "School";
 }
@@ -1390,7 +1318,6 @@ function WorkspaceWidget({
       ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT)
       : Number(instance.height);
     const minimumHeight = collapsed ? COLLAPSED_WIDGET_HEIGHT : minimumExpandedHeight;
-    const obstacles = widget && canvas ? getWorkspaceObstacleRects(widget, canvas) : [];
     const widgetBounds = widget?.getBoundingClientRect();
     const canvasBounds = canvas?.getBoundingClientRect();
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
@@ -1398,7 +1325,7 @@ function WorkspaceWidget({
     const widgetY = widgetBounds && canvasBounds ? (widgetBounds.top - canvasBounds.top) / canvasScale : 0;
     let nextWidth = startWidth;
     let nextHeight = startHeight;
-    let lastSafe = {
+    let nextRect = {
       x: widgetX,
       y: widgetY,
       width: startWidth,
@@ -1430,32 +1357,23 @@ function WorkspaceWidget({
         width: Math.min(maxWidth, Math.max(190, desiredWidth)),
         height: Math.max(minimumHeight, desiredHeight),
       };
-      const legal = chooseLegalWorkspaceRect(
-        desired,
-        { ...desired, height: lastSafe.height },
-        { ...desired, width: lastSafe.width },
-        lastSafe,
-        obstacles,
-      );
-      nextWidth = legal.width;
-      nextHeight = legal.height;
-      lastSafe = legal;
+      nextRect = desired;
+      nextWidth = desired.width;
+      nextHeight = desired.height;
       const hitMinimumWidth = (edges.left || edges.right) && desiredWidth <= 190;
       const hitMinimumHeight = (edges.top || edges.bottom) && desiredHeight <= minimumHeight;
       const hitCanvasLeft = edges.left && rawX <= 0;
       const hitCanvasTop = edges.top && rawY <= 0;
       const hitCanvasRight = edges.right && desiredWidth >= maxWidth;
-      const blockedByWidget = legal.x !== desired.x || legal.y !== desired.y || legal.width !== desired.width || legal.height !== desired.height;
       setResizeLimit(
         hitMinimumWidth ? "Minimum width reached: the widget controls need 190 px."
           : hitMinimumHeight ? `Minimum height reached: ${collapsed ? "the label controls" : "this widget's content"} need ${minimumHeight} px.`
             : hitCanvasLeft || hitCanvasTop || hitCanvasRight ? "Workspace edge reached: there is no more canvas in this direction."
-              : blockedByWidget ? "Resize stopped: another widget is blocking this direction. Move it or resize from another side."
-                : "",
+              : "",
       );
       if (widget) {
-        widget.style.left = `${legal.x}px`;
-        widget.style.top = `${legal.y}px`;
+        widget.style.left = `${desired.x}px`;
+        widget.style.top = `${desired.y}px`;
         widget.style.width = `${nextWidth}px`;
         widget.style.height = `${nextHeight}px`;
         const liveScale = Math.min(
@@ -1474,7 +1392,7 @@ function WorkspaceWidget({
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (resizeHandle.hasPointerCapture?.(activePointerId)) resizeHandle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
-      onResize(nextWidth, nextHeight, canvas?.clientWidth, lastSafe.x, lastSafe.y, { collapsed });
+      onResize(nextWidth, nextHeight, canvas?.clientWidth, nextRect.x, nextRect.y, { collapsed });
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);
@@ -1515,36 +1433,13 @@ function WorkspaceWidget({
     let dragFrameId = 0;
     let renderedX = initialX;
     let renderedY = initialY;
-    const obstacles = getWorkspaceObstacleRects(widget, canvas);
-    let lastSafe = {
-      x: initialX,
-      y: initialY,
-      width: Number(widget.dataset.widgetWidth) || widget.offsetWidth,
-      height: widget.classList.contains("is-collapsed")
-        ? widget.offsetHeight
-        : Number(widget.dataset.expandedHeight) || widget.offsetHeight,
-    };
     widget.classList.add("is-dragging");
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== activePointerId) return;
       moveEvent.preventDefault();
       const maxX = Math.max(0, canvas.clientWidth - widget.offsetWidth);
-      const desired = {
-        ...lastSafe,
-        x: Math.max(0, Math.min(maxX, initialX + (moveEvent.clientX - startX) / canvasScale)),
-        y: Math.max(0, initialY + (moveEvent.clientY - startY) / canvasScale),
-      };
-      const legal = chooseLegalWorkspaceRect(
-        desired,
-        { ...desired, y: lastSafe.y },
-        { ...desired, x: lastSafe.x },
-        lastSafe,
-        obstacles,
-        { snapToEdges: true, maxX },
-      );
-      nextX = legal.x;
-      nextY = legal.y;
-      lastSafe = legal;
+      nextX = Math.max(0, Math.min(maxX, initialX + (moveEvent.clientX - startX) / canvasScale));
+      nextY = Math.max(0, initialY + (moveEvent.clientY - startY) / canvasScale);
       renderedX = nextX;
       renderedY = nextY;
       if (!dragFrameId) {
