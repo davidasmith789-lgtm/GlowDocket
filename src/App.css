@@ -916,6 +916,11 @@ html[data-theme="dark"] .tab-row {
   background: transparent;
   color: var(--muted-text);
 }
+
+/* Primary workspace navigation stays at the requested 85% size regardless of
+   the content text-size preference. The signed-in hero header is intentionally
+   outside this selector. */
+.App .tab-row .tab-button { font-size: 13.6px; }
 .tab-button-icon { display: inline-block; margin-right: 6px; line-height: 1; }
 
 .tab-button:hover,
@@ -5632,7 +5637,6 @@ html[data-theme="dark"] {
   width: max-content;
   max-width: calc(100% - 170px);
   overflow: hidden;
-  font-size: 13.6px;
   transform: translate(-50%, -50%);
   text-align: center;
   text-overflow: ellipsis;
@@ -5731,7 +5735,7 @@ html[data-theme="dark"] {
   min-width: 0;
   transform: none;
   overflow: hidden;
-  font-size: 13.6px;
+  font-size: 0.78rem;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;

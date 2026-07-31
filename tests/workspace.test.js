@@ -700,10 +700,11 @@ test("mini calendar month rows dynamically fill the resized widget to its bottom
   assert.match(css, /is-mini-calendar-widget \.widget-resize-edge\.is-bottom::after/);
 });
 
-test("widget header titles stay at a strict 85 percent text size", async () => {
+test("primary navigation stays at 85 percent without changing widget or signed-in headers", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
-  assert.match(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
-  assert.match(css, /\.workspace-widget\.is-small-widget \.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
+  assert.match(css, /\.App \.tab-row \.tab-button\s*\{\s*font-size:\s*13\.6px;/);
+  assert.doesNotMatch(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
+  assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*13\.6px/s);
 });
 
 test("small widgets keep useful dimensions and scale content continuously", async () => {
