@@ -4144,6 +4144,10 @@ html[data-theme="dark"] .edit-notes-side {
   min-height: 0;
 }
 
+.workspace-widget.is-mini-calendar-widget .workspace-widget-body {
+  padding-bottom: 8px;
+}
+
 .workspace-widget.is-mini-calendar-widget .dashboard-calendar-card {
   display: flex;
   min-height: 0;
@@ -4165,6 +4169,11 @@ html[data-theme="dark"] .edit-notes-side {
   flex: 1;
 }
 
+.workspace-widget.is-mini-calendar-widget .react-calendar__viewContainer {
+  display: flex;
+  flex-direction: column;
+}
+
 .workspace-widget.is-mini-calendar-widget .react-calendar__month-view {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -4174,7 +4183,7 @@ html[data-theme="dark"] .edit-notes-side {
   display: grid !important;
   min-height: 0;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 .workspace-widget.is-mini-calendar-widget .react-calendar__month-view__days > .react-calendar__tile {
@@ -4185,6 +4194,24 @@ html[data-theme="dark"] .edit-notes-side {
   height: 100%;
   padding-block: 4px !important;
   place-items: center;
+}
+
+.workspace-widget.is-mini-calendar-widget .widget-resize-edge.is-bottom::after {
+  position: absolute;
+  right: 24%;
+  bottom: 5px;
+  left: 24%;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 58%, var(--border-color));
+  content: "";
+  opacity: 0.72;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.workspace-widget.is-mini-calendar-widget .widget-resize-edge.is-bottom:hover::after,
+.workspace-widget.is-mini-calendar-widget.is-resizing .widget-resize-edge.is-bottom::after {
+  opacity: 1;
+  transform: scaleX(1.12);
 }
 
 @media (max-width: 1200px) {

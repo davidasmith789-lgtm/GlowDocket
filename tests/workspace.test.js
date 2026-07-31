@@ -687,15 +687,17 @@ test("global text scaling reaches button labels and large text reflows dense wid
   assert.match(css, /text-size-large[^}]*\.reminder-suggestion\s*\{[^}]*flex-wrap:\s*wrap;/s);
 });
 
-test("mini calendar month rows grow vertically with the resized widget", async () => {
+test("mini calendar month rows dynamically fill the resized widget to its bottom edge", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
   ]);
   assert.match(source, /instance\.type === "mini-calendar" \? " is-mini-calendar-widget"/);
   assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.dashboard-calendar-card\s*\{[^}]*height:\s*100%;[^}]*flex-direction:\s*column;/s);
-  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*display:\s*grid !important;[^}]*grid-template-rows:\s*repeat\(6, minmax\(0, 1fr\)\);/s);
+  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*display:\s*grid !important;[^}]*grid-auto-rows:\s*minmax\(0, 1fr\);/s);
+  assert.doesNotMatch(css, /is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*grid-template-rows:\s*repeat\(6/s);
   assert.match(css, /is-mini-calendar-widget \.react-calendar__month-view__days > \.react-calendar__tile\s*\{[^}]*width:\s*100% !important;[^}]*height:\s*100%;[^}]*place-items:\s*center;/s);
+  assert.match(css, /is-mini-calendar-widget \.widget-resize-edge\.is-bottom::after/);
 });
 
 test("small widgets keep useful dimensions and scale content continuously", async () => {
