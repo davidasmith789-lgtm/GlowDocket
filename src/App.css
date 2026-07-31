@@ -5632,6 +5632,7 @@ html[data-theme="dark"] {
   width: max-content;
   max-width: calc(100% - 170px);
   overflow: hidden;
+  font-size: 13.6px;
   transform: translate(-50%, -50%);
   text-align: center;
   text-overflow: ellipsis;
@@ -5730,7 +5731,7 @@ html[data-theme="dark"] {
   min-width: 0;
   transform: none;
   overflow: hidden;
-  font-size: 0.78rem;
+  font-size: 13.6px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;

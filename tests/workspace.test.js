@@ -700,6 +700,12 @@ test("mini calendar month rows dynamically fill the resized widget to its bottom
   assert.match(css, /is-mini-calendar-widget \.widget-resize-edge\.is-bottom::after/);
 });
 
+test("widget header titles stay at a strict 85 percent text size", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
+  assert.match(css, /\.workspace-widget\.is-small-widget \.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
+});
+
 test("small widgets keep useful dimensions and scale content continuously", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
