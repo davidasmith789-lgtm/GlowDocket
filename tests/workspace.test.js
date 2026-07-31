@@ -581,8 +581,24 @@ test("workspace interaction exposes every resize edge and permits free widget ov
   assert.match(source, /\["top", \{ top: true \}\].*\["bottom-left", \{ bottom: true, left: true \}\]/s);
   assert.match(source, /dragHandle\.setPointerCapture/);
   assert.doesNotMatch(source, /snapToEdges|another widget is blocking this direction/);
-  assert.match(source, /nextX = Math\.max\(0, Math\.min\(maxX, initialX \+/);
+  assert.match(source, /x: Math\.max\(0, Math\.min\(maxX, initialX \+/);
   assert.match(source, /nextRect = desired;/);
+});
+
+test("widget dragging snaps matching edges and centers to yellow alignment guides", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /const WORKSPACE_SNAP_THRESHOLD = 8;/);
+  assert.match(source, /function snapWorkspaceRect\(desired, targets, maxX\)/);
+  assert.match(source, /desired\.x \+ desired\.width \/ 2/);
+  assert.match(source, /desired\.y \+ desired\.height \/ 2/);
+  assert.match(source, /moveEvent\.altKey\s*\? \{ \.\.\.desired, guides: \[\] \}/);
+  assert.match(source, /renderWorkspaceAlignmentGuides\(canvas, aligned\.guides\)/);
+  assert.match(css, /\.workspace-alignment-guide\s*\{[^}]*background:\s*#ffd400;/s);
+  assert.match(css, /\.workspace-alignment-guide\.is-vertical\s*\{[^}]*width:\s*2px;/s);
+  assert.match(css, /\.workspace-alignment-guide\.is-horizontal\s*\{[^}]*height:\s*2px;/s);
 });
 
 test("every checklist widget view has an independent touch-friendly scroll area", async () => {

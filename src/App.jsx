@@ -684,6 +684,102 @@ function stopControlDoubleClick(event) {
   event.stopPropagation();
 }
 
+const WORKSPACE_SNAP_THRESHOLD = 8;
+
+function getWorkspaceAlignmentTargets(widget, canvas, canvasScale) {
+  const canvasBounds = canvas.getBoundingClientRect();
+  const rects = [...canvas.querySelectorAll(".workspace-widget")]
+    .filter((item) => item !== widget && !item.hidden)
+    .map((item) => {
+      const bounds = item.getBoundingClientRect();
+      return {
+        x: (bounds.left - canvasBounds.left) / canvasScale,
+        y: (bounds.top - canvasBounds.top) / canvasScale,
+        width: Number(item.dataset.widgetWidth) || bounds.width / canvasScale,
+        height: item.classList.contains("is-collapsed")
+          ? Number(item.dataset.collapsedHeight) || bounds.height / canvasScale
+          : Number(item.dataset.expandedHeight) || bounds.height / canvasScale,
+      };
+    });
+  const canvasHeight = Math.max(canvas.clientHeight, ...rects.map((rect) => rect.y + rect.height), 0);
+  return {
+    vertical: [
+      { value: 0, start: 0, end: canvasHeight },
+      { value: canvas.clientWidth / 2, start: 0, end: canvasHeight },
+      { value: canvas.clientWidth, start: 0, end: canvasHeight },
+      ...rects.flatMap((rect) => [
+        { value: rect.x, start: rect.y, end: rect.y + rect.height },
+        { value: rect.x + rect.width / 2, start: rect.y, end: rect.y + rect.height },
+        { value: rect.x + rect.width, start: rect.y, end: rect.y + rect.height },
+      ]),
+    ],
+    horizontal: [
+      { value: 0, start: 0, end: canvas.clientWidth },
+      { value: canvasHeight / 2, start: 0, end: canvas.clientWidth },
+      { value: canvasHeight, start: 0, end: canvas.clientWidth },
+      ...rects.flatMap((rect) => [
+        { value: rect.y, start: rect.x, end: rect.x + rect.width },
+        { value: rect.y + rect.height / 2, start: rect.x, end: rect.x + rect.width },
+        { value: rect.y + rect.height, start: rect.x, end: rect.x + rect.width },
+      ]),
+    ],
+  };
+}
+
+function snapWorkspaceRect(desired, targets, maxX) {
+  const findClosest = (anchors, candidates) => {
+    let closest = null;
+    for (const anchor of anchors) {
+      for (const candidate of candidates) {
+        const distance = Math.abs(candidate.value - anchor.value);
+        if (distance <= WORKSPACE_SNAP_THRESHOLD && (!closest || distance < closest.distance)) {
+          closest = { ...candidate, offset: anchor.offset, distance };
+        }
+      }
+    }
+    return closest;
+  };
+  const vertical = findClosest([
+    { value: desired.x, offset: 0 },
+    { value: desired.x + desired.width / 2, offset: desired.width / 2 },
+    { value: desired.x + desired.width, offset: desired.width },
+  ], targets.vertical);
+  const horizontal = findClosest([
+    { value: desired.y, offset: 0 },
+    { value: desired.y + desired.height / 2, offset: desired.height / 2 },
+    { value: desired.y + desired.height, offset: desired.height },
+  ], targets.horizontal);
+  const x = vertical ? Math.max(0, Math.min(maxX, vertical.value - vertical.offset)) : desired.x;
+  const y = horizontal ? Math.max(0, horizontal.value - horizontal.offset) : desired.y;
+  return {
+    ...desired,
+    x,
+    y,
+    guides: [
+      ...(vertical ? [{ axis: "vertical", position: vertical.value, start: Math.min(vertical.start, y), end: Math.max(vertical.end, y + desired.height) }] : []),
+      ...(horizontal ? [{ axis: "horizontal", position: horizontal.value, start: Math.min(horizontal.start, x), end: Math.max(horizontal.end, x + desired.width) }] : []),
+    ],
+  };
+}
+
+function renderWorkspaceAlignmentGuides(canvas, guides = []) {
+  canvas.querySelectorAll(".workspace-alignment-guide").forEach((guide) => guide.remove());
+  guides.forEach((guide) => {
+    const element = document.createElement("div");
+    element.className = `workspace-alignment-guide is-${guide.axis}`;
+    if (guide.axis === "vertical") {
+      element.style.left = `${guide.position}px`;
+      element.style.top = `${guide.start}px`;
+      element.style.height = `${Math.max(0, guide.end - guide.start)}px`;
+    } else {
+      element.style.top = `${guide.position}px`;
+      element.style.left = `${guide.start}px`;
+      element.style.width = `${Math.max(0, guide.end - guide.start)}px`;
+    }
+    canvas.appendChild(element);
+  });
+}
+
 function getTaskCategory(task) {
   return task?.category || "School";
 }
@@ -1194,7 +1290,7 @@ function repairLoadedWorkspace(layout) {
 }
 
 const PERSONALIZATION_TIPS = [
-  ["Move a widget", "Grab the six-dot handle and drag. The widget you move comes to the front, and you can drag it over a navigation tab to send it there."],
+  ["Move a widget", "Grab the six-dot handle and drag. Yellow guides snap matching widget edges and centers into alignment; hold Alt or Option for free movement. Drag over a navigation tab to send the widget there."],
   ["Resize a widget", "On desktop, drag any edge or corner. On mobile, tap the resize controls below the widget so everything stays easy to reach."],
   ["Widget hiding underneath another", "Open the top widget’s three-dot menu and choose Select widget underneath. The hidden one will come forward so you can grab it."],
   ["New widget not showing", "It is probably underneath another widget. Use Select widget underneath from the covering widget’s three-dot menu."],
@@ -1485,13 +1581,27 @@ function WorkspaceWidget({
     let dragFrameId = 0;
     let renderedX = initialX;
     let renderedY = initialY;
+    const dragRect = {
+      width: Number(widget.dataset.widgetWidth) || widget.offsetWidth,
+      height: collapsed ? labelHeight : Number(widget.dataset.expandedHeight) || widget.offsetHeight,
+    };
+    const alignmentTargets = getWorkspaceAlignmentTargets(widget, canvas, canvasScale);
     widget.classList.add("is-dragging");
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== activePointerId) return;
       moveEvent.preventDefault();
       const maxX = Math.max(0, canvas.clientWidth - widget.offsetWidth);
-      nextX = Math.max(0, Math.min(maxX, initialX + (moveEvent.clientX - startX) / canvasScale));
-      nextY = Math.max(0, initialY + (moveEvent.clientY - startY) / canvasScale);
+      const desired = {
+        ...dragRect,
+        x: Math.max(0, Math.min(maxX, initialX + (moveEvent.clientX - startX) / canvasScale)),
+        y: Math.max(0, initialY + (moveEvent.clientY - startY) / canvasScale),
+      };
+      const aligned = moveEvent.altKey
+        ? { ...desired, guides: [] }
+        : snapWorkspaceRect(desired, alignmentTargets, maxX);
+      nextX = aligned.x;
+      nextY = aligned.y;
+      renderWorkspaceAlignmentGuides(canvas, aligned.guides);
       renderedX = nextX;
       renderedY = nextY;
       if (!dragFrameId) {
@@ -1510,6 +1620,7 @@ function WorkspaceWidget({
       widget.style.top = `${nextY}px`;
       widget.style.transform = "";
       widget.classList.remove("is-dragging");
+      renderWorkspaceAlignmentGuides(canvas);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);

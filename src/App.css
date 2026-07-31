@@ -5477,6 +5477,21 @@ html[data-theme="dark"] {
   overflow: visible;
   transform-origin: top left;
 }
+.workspace-alignment-guide {
+  position: absolute;
+  z-index: 10001;
+  pointer-events: none;
+  background: #ffd400;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #7a5b00 35%, transparent), 0 0 5px color-mix(in srgb, #ffd400 55%, transparent);
+}
+.workspace-alignment-guide.is-vertical {
+  width: 2px;
+  transform: translateX(-1px);
+}
+.workspace-alignment-guide.is-horizontal {
+  height: 2px;
+  transform: translateY(-1px);
+}
 
 .App:not(.mobile-app-ui) .app-shell.is-viewport-scaled {
   margin-right: 0;
