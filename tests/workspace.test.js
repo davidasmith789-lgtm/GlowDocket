@@ -124,6 +124,10 @@ test("detached widgets remain in the main canvas and locked drag handles stay av
   assert.match(source, /const items = \(responsiveWorkspaceLayout\[workspaceMode\]\?\.\[tab\] \|\| \[\]\)\.filter\(\(item\) => !item\.hidden\)/);
   assert.doesNotMatch(source, /disabled=\{locked\}[\s\S]{0,160}aria-label=\{`Move/);
   assert.match(source, /else if \(locked\) return;/);
+  assert.match(source, /const restoreOriginalPosition = locked \|\| releasedOutsideWindow;/);
+  assert.match(source, /widget\.style\.left = `\$\{restoreOriginalPosition \? initialX : nextX\}px`;/);
+  assert.match(source, /widget\.style\.top = `\$\{restoreOriginalPosition \? initialY : nextY\}px`;/);
+  assert.match(source, /if \(releasedOutsideWindow && onDetach\) onDetach\(\);[\s\S]*?else onPosition\(nextX, nextY, canvas\.clientWidth\);/);
   assert.match(source, /popupWidth[\s\S]*popupHeight[\s\S]*width=\$\{popupWidth\},height=\$\{popupHeight\}/);
   assert.match(styles, /\.workspace-widget\.is-locked \.widget-drag-grip\s*\{\s*display:\s*inline-grid/);
 });

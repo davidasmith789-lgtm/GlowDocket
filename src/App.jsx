@@ -1669,10 +1669,12 @@ function WorkspaceWidget({
     };
     const stop = (stopEvent) => {
       if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== activePointerId) return;
+      const releasedOutsideWindow = pointerOutsideWindow || Boolean(stopEvent && (stopEvent.clientX < 0 || stopEvent.clientY < 0 || stopEvent.clientX > window.innerWidth || stopEvent.clientY > window.innerHeight));
+      const restoreOriginalPosition = locked || releasedOutsideWindow;
       if (dragFrameId) window.cancelAnimationFrame(dragFrameId);
       dragFrameId = 0;
-      widget.style.left = `${locked ? initialX : nextX}px`;
-      widget.style.top = `${locked ? initialY : nextY}px`;
+      widget.style.left = `${restoreOriginalPosition ? initialX : nextX}px`;
+      widget.style.top = `${restoreOriginalPosition ? initialY : nextY}px`;
       widget.style.transform = "";
       widget.classList.remove("is-dragging");
       renderWorkspaceAlignmentGuides(canvas);
@@ -1680,7 +1682,6 @@ function WorkspaceWidget({
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (dragHandle.hasPointerCapture?.(activePointerId)) dragHandle.releasePointerCapture(activePointerId); } catch { /* Capture may already be released. */ }
-      const releasedOutsideWindow = pointerOutsideWindow || Boolean(stopEvent && (stopEvent.clientX < 0 || stopEvent.clientY < 0 || stopEvent.clientX > window.innerWidth || stopEvent.clientY > window.innerHeight));
       if (releasedOutsideWindow && onDetach) onDetach();
       else if (locked) return;
       else if (targetTab) onMove(targetTab);
