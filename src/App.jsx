@@ -6231,15 +6231,36 @@ function App() {
       if (moveEvent.pointerId !== pointerId) return;
       moveEvent.preventDefault();
       moveGhost(moveEvent.clientX, moveEvent.clientY);
-      const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".checklist-gallery-card:not(.checklist-gallery-drag-ghost)");
+      const hoveredCard = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".checklist-gallery-card:not(.checklist-gallery-drag-ghost)");
+      const hoveredTarget = hoveredCard?.dataset.reorderId !== sourceId ? hoveredCard : null;
+      const gallery = sourceCard.closest(".checklist-gallery");
+      const galleryBounds = gallery?.getBoundingClientRect();
+      const insideGallery = galleryBounds
+        && moveEvent.clientX >= galleryBounds.left && moveEvent.clientX <= galleryBounds.right
+        && moveEvent.clientY >= galleryBounds.top && moveEvent.clientY <= galleryBounds.bottom;
+      const nearestTarget = insideGallery && !hoveredTarget
+        ? [...gallery.querySelectorAll(".checklist-gallery-card")]
+          .filter((card) => card.dataset.reorderId !== sourceId)
+          .reduce((nearest, card) => {
+            const bounds = card.getBoundingClientRect();
+            const closestX = Math.max(bounds.left, Math.min(moveEvent.clientX, bounds.right));
+            const closestY = Math.max(bounds.top, Math.min(moveEvent.clientY, bounds.bottom));
+            const distance = Math.hypot(moveEvent.clientX - closestX, moveEvent.clientY - closestY);
+            return !nearest || distance < nearest.distance ? { card, distance } : nearest;
+          }, null)?.card
+        : null;
+      const target = hoveredTarget || nearestTarget;
       activeTarget?.classList.remove("drop-left", "drop-right", "drop-above", "drop-below");
       activeTarget = target && target.dataset.reorderId !== sourceId ? target : null;
       if (!activeTarget) return;
       const targetBounds = activeTarget.getBoundingClientRect();
-      const inMiddleRow = moveEvent.clientY > targetBounds.top + targetBounds.height * 0.25 && moveEvent.clientY < targetBounds.bottom - targetBounds.height * 0.25;
-      const placement = inMiddleRow
-        ? (moveEvent.clientX < targetBounds.left + targetBounds.width / 2 ? "left" : "right")
-        : (moveEvent.clientY < targetBounds.top + targetBounds.height / 2 ? "above" : "below");
+      const centerX = targetBounds.left + targetBounds.width / 2;
+      const centerY = targetBounds.top + targetBounds.height / 2;
+      const horizontalDistance = Math.abs((moveEvent.clientX - centerX) / Math.max(1, targetBounds.width));
+      const verticalDistance = Math.abs((moveEvent.clientY - centerY) / Math.max(1, targetBounds.height));
+      const placement = horizontalDistance > verticalDistance
+        ? (moveEvent.clientX < centerX ? "left" : "right")
+        : (moveEvent.clientY < centerY ? "above" : "below");
       activeTarget.classList.add(`drop-${placement}`);
       const signature = `${activeTarget.dataset.reorderId}-${placement}`;
       if (signature === activeSignature) return;
