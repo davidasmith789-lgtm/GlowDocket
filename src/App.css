@@ -4235,13 +4235,30 @@ html[data-theme="dark"] .edit-notes-side {
 }
 
 .workspace-widget.is-mini-calendar-widget .react-calendar__month-view {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.workspace-widget.is-mini-calendar-widget .react-calendar__month-view > div {
+  align-items: stretch !important;
+  min-height: 0;
+  height: 100%;
+}
+
+.workspace-widget.is-mini-calendar-widget .react-calendar__month-view > div > div {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+}
+
+.workspace-widget.is-mini-calendar-widget .react-calendar__month-view__weekdays {
+  flex: 0 0 auto;
 }
 
 .workspace-widget.is-mini-calendar-widget .react-calendar__month-view__days {
   display: grid !important;
   min-height: 0;
+  flex: 1 1 0;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
 }

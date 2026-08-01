@@ -750,7 +750,9 @@ test("mini calendar month rows dynamically fill the resized widget to its bottom
   ]);
   assert.match(source, /instance\.type === "mini-calendar" \? " is-mini-calendar-widget"/);
   assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.dashboard-calendar-card\s*\{[^}]*height:\s*100%;[^}]*flex-direction:\s*column;/s);
-  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*display:\s*grid !important;[^}]*grid-auto-rows:\s*minmax\(0, 1fr\);/s);
+  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view > div\s*\{[^}]*align-items:\s*stretch !important;[^}]*height:\s*100%;/s);
+  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view > div > div\s*\{[^}]*display:\s*flex;[^}]*height:\s*100%;[^}]*flex-direction:\s*column;/s);
+  assert.match(css, /\.workspace-widget\.is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*display:\s*grid !important;[^}]*flex:\s*1 1 0;[^}]*grid-auto-rows:\s*minmax\(0, 1fr\);/s);
   assert.doesNotMatch(css, /is-mini-calendar-widget \.react-calendar__month-view__days\s*\{[^}]*grid-template-rows:\s*repeat\(6/s);
   assert.match(css, /is-mini-calendar-widget \.react-calendar__month-view__days > \.react-calendar__tile\s*\{[^}]*width:\s*100% !important;[^}]*height:\s*100%;[^}]*place-items:\s*center;/s);
   assert.match(css, /is-mini-calendar-widget \.widget-resize-edge\.is-bottom::after/);
