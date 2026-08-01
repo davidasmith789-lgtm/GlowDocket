@@ -780,7 +780,9 @@ test("mini calendar has an independent internal bottom height handle", async () 
 
 test("primary navigation stays at 85 percent without changing widget or signed-in headers", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
-  assert.match(css, /\.App \.tab-row \.tab-button\s*\{\s*font-size:\s*13\.6px;/);
+  assert.match(css, /\.App \.tab-row \.tab-button\s*\{[^}]*font-size:\s*13\.6px !important;[^}]*text-size-adjust:\s*none;/s);
+  assert.match(css, /\.App \.tab-row \.tab-button-icon\s*\{[^}]*font-size:\s*13\.6px !important;/s);
+  assert.doesNotMatch(css, /text-size-large[^}]*:where\([^)]*, \.tab-button(?:,|\))/);
   assert.doesNotMatch(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
   assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*13\.6px/s);
 });
