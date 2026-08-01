@@ -741,6 +741,18 @@ test("mini calendar month rows dynamically fill the resized widget to its bottom
   assert.match(css, /is-mini-calendar-widget \.widget-resize-edge\.is-bottom::after/);
 });
 
+test("mini calendar has an independent internal bottom height handle", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /const startMiniCalendarHeightResize = \(event, instance\) =>/);
+  assert.match(source, /className="mini-calendar-height-handle"[\s\S]*?startMiniCalendarHeightResize\(event, instance\)[\s\S]*?aria-label="Resize the calendar height"/);
+  assert.match(source, /nextHeight = Math\.max\(minimumHeight, startHeight \+ \(moveEvent\.clientY - startY\) \/ canvasScale\)/);
+  assert.match(source, /updateWidgetInstance\(instance\.id, \{ height: nextHeight, expandedHeight: nextHeight \}\)/);
+  assert.match(css, /\.mini-calendar-height-handle\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*1px;[^}]*cursor:\s*ns-resize;[^}]*touch-action:\s*none;/s);
+});
+
 test("primary navigation stays at 85 percent without changing widget or signed-in headers", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(css, /\.App \.tab-row \.tab-button\s*\{\s*font-size:\s*13\.6px;/);

@@ -7804,7 +7804,45 @@ function App() {
     );
   };
 
-  const renderWorkspaceCalendar = () => (
+  const startMiniCalendarHeightResize = (event, instance) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const widget = handle.closest(".workspace-widget");
+    const canvas = widget?.closest(".workspace-widget-canvas");
+    if (!widget) return;
+    try { handle.setPointerCapture?.(pointerId); } catch { /* Window listeners remain as a fallback. */ }
+    const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
+    const startY = event.clientY;
+    const startHeight = Number(instance.height) || widget.getBoundingClientRect().height / canvasScale;
+    const minimumHeight = getWidgetMinimumExpandedHeight("mini-calendar");
+    let nextHeight = startHeight;
+    widget.classList.add("is-calendar-height-resizing");
+
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      nextHeight = Math.max(minimumHeight, startHeight + (moveEvent.clientY - startY) / canvasScale);
+      widget.style.height = `${nextHeight}px`;
+      widget.dataset.expandedHeight = `${nextHeight}`;
+    };
+    const stop = (stopEvent) => {
+      if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== pointerId) return;
+      widget.classList.remove("is-calendar-height-resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      try { if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId); } catch { /* Capture may already be released. */ }
+      updateWidgetInstance(instance.id, { height: nextHeight, expandedHeight: nextHeight });
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
+
+  const renderWorkspaceCalendar = (instance) => (
     <section className="dashboard-calendar-card" aria-labelledby="dashboard-calendar-title">
       <div className="dashboard-calendar-header">
         <h2 id="dashboard-calendar-title">Calendar</h2>
@@ -7829,6 +7867,7 @@ function App() {
           ) : null;
         }}
       />
+      {!workspaceLayout.locked?.[workspaceMode] && <button type="button" className="mini-calendar-height-handle" onPointerDown={(event) => startMiniCalendarHeightResize(event, instance)} aria-label="Resize the calendar height" title="Drag to stretch or shrink the calendar" />}
     </section>
   );
 
@@ -8212,9 +8251,10 @@ function App() {
     );
   };
 
-  const renderWidgetContent = (type) => {
+  const renderWidgetContent = (instance) => {
+    const type = instance.type;
     if (type === "quick-match") return renderQuickMatchCard();
-    if (type === "mini-calendar") return renderWorkspaceCalendar();
+    if (type === "mini-calendar") return renderWorkspaceCalendar(instance);
     if (type === "checklists") return renderStandaloneChecklists();
     if (type === "recommended") return renderRecommendedWidget();
     if (type === "add-assignment") return renderAddAssignmentForm("workspace");
@@ -8312,7 +8352,7 @@ function App() {
         return hasUnderneath ? () => selectWidgetUnderneath(instance) : null;
       })()}
     >
-      {renderWidgetContent(instance.type)}
+      {renderWidgetContent(instance)}
     </WorkspaceWidget>
   );
 

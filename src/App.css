@@ -4163,10 +4163,45 @@ html[data-theme="dark"] .edit-notes-side {
 }
 
 .workspace-widget.is-mini-calendar-widget .dashboard-calendar-card {
+  position: relative;
   display: flex;
   min-height: 0;
   height: 100%;
   flex-direction: column;
+}
+
+.mini-calendar-height-handle {
+  position: absolute;
+  z-index: 8;
+  right: 18%;
+  bottom: 1px;
+  left: 18%;
+  width: auto;
+  height: 14px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.mini-calendar-height-handle::after {
+  position: absolute;
+  right: 18%;
+  bottom: 3px;
+  left: 18%;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary-color) 72%, var(--border-color));
+  content: "";
+  opacity: 0.82;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.mini-calendar-height-handle:hover::after,
+.mini-calendar-height-handle:focus-visible::after,
+.workspace-widget.is-calendar-height-resizing .mini-calendar-height-handle::after {
+  opacity: 1;
+  transform: scaleX(1.12);
 }
 
 .workspace-widget.is-mini-calendar-widget .dashboard-calendar-card > .react-calendar {
