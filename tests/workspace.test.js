@@ -109,6 +109,8 @@ test("workload presets stay compact and only custom periods can scroll", async (
   assert.match(css, /\.workload-stat > label > select\s*\{[^}]*--workload-select-width[^}]*min-height:\s*34px;[^}]*font-size:\s*0\.82rem;[^}]*text-align-last:\s*center;/s);
   assert.match(css, /\.workload-stat > strong\.is-no-estimates\s*\{[^}]*font-size:\s*clamp\(0\.82rem, 3\.2cqw, 1rem\);/s);
   assert.match(css, /@container \(max-width: 319px\)[\s\S]*?\.workload-stat\s*\{[^}]*grid-template-areas:\s*"period" "value" "summary";/s);
+  assert.match(css, /@container \(max-width: 319px\)[\s\S]*?\.workload-stat > label > select\s*\{[^}]*min-height:\s*28px;[^}]*font-size:\s*0\.7rem;/s);
+  assert.match(css, /@container \(max-width: 319px\)[\s\S]*?\.workload-stat > p\s*\{[^}]*font-size:\s*clamp\(0\.56rem, 2\.5cqw, 0\.68rem\);[^}]*line-height:\s*1\.1;/s);
 });
 
 test("detached mini calendars hide their inactive internal resize handle", async () => {

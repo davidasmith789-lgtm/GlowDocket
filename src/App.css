@@ -6067,7 +6067,7 @@ html[data-theme="dark"] {
   grid-template-areas:
     "period value"
     "period summary";
-  align-content: center;
+  align-content: safe center;
   align-items: center;
   column-gap: clamp(10px, 3cqw, 18px);
   row-gap: 5px;
@@ -6086,8 +6086,12 @@ html[data-theme="dark"] {
 .workload-custom-dates { display: grid; width: 100%; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .workload-custom-dates label { display: grid; min-width: 0; gap: 2px; color: var(--muted-text); font-size: 0.56rem; font-weight: 800; line-height: 1.15; text-align: left; }
 @container (max-width: 319px) {
-  .workload-stat { grid-template-columns: minmax(0, 1fr); grid-template-areas: "period" "value" "summary"; gap: 5px; padding: 6px; }
-  .workload-stat > label { width: fit-content; justify-self: center; justify-items: center; }
+  .workload-stat { grid-template-columns: minmax(0, 1fr); grid-template-areas: "period" "value" "summary"; gap: 2px; padding: 2px 4px; }
+  .workload-stat > label { width: fit-content; justify-self: center; justify-items: center; gap: 1px; font-size: 0.58rem; line-height: 1; }
+  .workload-stat > label > select { min-width: 94px; min-height: 28px; padding: 3px 7px; font-size: 0.7rem; }
+  .workload-stat > strong { font-size: clamp(0.9rem, 6cqw, 1.2rem); line-height: 1; }
+  .workload-stat > strong.is-no-estimates { font-size: clamp(0.68rem, 3.2cqw, 0.82rem); }
+  .workload-stat > p { font-size: clamp(0.56rem, 2.5cqw, 0.68rem); line-height: 1.1; }
   .workload-custom-dates { grid-template-columns: 1fr; }
 }
 .portable-recommendations { margin: 0; }
