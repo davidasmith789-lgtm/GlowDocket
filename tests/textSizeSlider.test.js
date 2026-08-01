@@ -17,3 +17,11 @@ test("global text size uses an accessible continuous slider with legacy migratio
   assert.match(styles, /\.App:is\(\.text-size-large, \.text-size-xlarge\)[\s\S]*?\.achievement-card/);
   assert.match(communityStyles, /font-size: max\(1rem, 16px\)/);
 });
+
+test("scaled text wraps only between words and lets controls grow vertically", async () => {
+  const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+
+  assert.match(styles, /button,[\s\S]*?overflow-wrap:\s*normal;[\s\S]*?word-break:\s*normal;[\s\S]*?hyphens:\s*none;/);
+  assert.match(styles, /\.App:is\(\.text-size-large, \.text-size-xlarge\) :where\(\.btn, \.tab-button\)\s*\{[^}]*height:\s*auto;[^}]*white-space:\s*normal;/s);
+  assert.match(styles, /text-size-large[^}]*\.workspace-widget-header > strong\s*\{[^}]*word-break:\s*normal;[^}]*white-space:\s*nowrap;/s);
+});
