@@ -4169,6 +4169,10 @@ html[data-theme="dark"] .edit-notes-side {
   height: 100%;
   flex-direction: column;
 }
+.workspace-widget.is-mini-calendar-widget .dashboard-calendar-card.has-custom-height {
+  min-height: 220px;
+  flex: 0 0 auto;
+}
 
 .mini-calendar-height-handle {
   position: absolute;
@@ -4243,6 +4247,11 @@ html[data-theme="dark"] .edit-notes-side {
   height: 100%;
   padding-block: 4px !important;
   place-items: center;
+}
+
+.workspace-widget.is-mini-calendar-widget.has-fixed-overflow .workspace-widget-body {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .workspace-widget.is-mini-calendar-widget .widget-resize-edge.is-bottom::after {

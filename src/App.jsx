@@ -7809,23 +7809,26 @@ function App() {
     event.stopPropagation();
     const handle = event.currentTarget;
     const pointerId = event.pointerId;
+    const calendarCard = handle.closest(".dashboard-calendar-card");
     const widget = handle.closest(".workspace-widget");
     const canvas = widget?.closest(".workspace-widget-canvas");
-    if (!widget) return;
+    if (!widget || !calendarCard) return;
     try { handle.setPointerCapture?.(pointerId); } catch { /* Window listeners remain as a fallback. */ }
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
+    const contentScale = Number(getComputedStyle(widget).getPropertyValue("--widget-content-scale")) || 1;
+    const interactionScale = canvasScale * contentScale;
     const startY = event.clientY;
-    const startHeight = Number(instance.height) || widget.getBoundingClientRect().height / canvasScale;
-    const minimumHeight = getWidgetMinimumExpandedHeight("mini-calendar");
+    const startHeight = Number(instance.calendarContentHeight) || calendarCard.getBoundingClientRect().height / interactionScale;
+    const minimumHeight = 220;
     let nextHeight = startHeight;
     widget.classList.add("is-calendar-height-resizing");
 
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== pointerId) return;
       moveEvent.preventDefault();
-      nextHeight = Math.max(minimumHeight, startHeight + (moveEvent.clientY - startY) / canvasScale);
-      widget.style.height = `${nextHeight}px`;
-      widget.dataset.expandedHeight = `${nextHeight}`;
+      nextHeight = Math.max(minimumHeight, startHeight + (moveEvent.clientY - startY) / interactionScale);
+      calendarCard.style.height = `${nextHeight}px`;
+      calendarCard.style.flex = "0 0 auto";
     };
     const stop = (stopEvent) => {
       if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== pointerId) return;
@@ -7834,7 +7837,7 @@ function App() {
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId); } catch { /* Capture may already be released. */ }
-      updateWidgetInstance(instance.id, { height: nextHeight, expandedHeight: nextHeight });
+      updateWidgetInstance(instance.id, { calendarContentHeight: nextHeight });
     };
 
     window.addEventListener("pointermove", move);
@@ -7843,7 +7846,7 @@ function App() {
   };
 
   const renderWorkspaceCalendar = (instance) => (
-    <section className="dashboard-calendar-card" aria-labelledby="dashboard-calendar-title">
+    <section className={`dashboard-calendar-card${Number(instance.calendarContentHeight) ? " has-custom-height" : ""}`} style={Number(instance.calendarContentHeight) ? { height: `${instance.calendarContentHeight}px` } : undefined} aria-labelledby="dashboard-calendar-title">
       <div className="dashboard-calendar-header">
         <h2 id="dashboard-calendar-title">Calendar</h2>
         <button type="button" onClick={() => setCurrentTab("calendar")}>Open</button>

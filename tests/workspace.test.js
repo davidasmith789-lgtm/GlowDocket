@@ -748,9 +748,14 @@ test("mini calendar has an independent internal bottom height handle", async () 
   ]);
   assert.match(source, /const startMiniCalendarHeightResize = \(event, instance\) =>/);
   assert.match(source, /className="mini-calendar-height-handle"[\s\S]*?startMiniCalendarHeightResize\(event, instance\)[\s\S]*?aria-label="Resize the calendar height"/);
-  assert.match(source, /nextHeight = Math\.max\(minimumHeight, startHeight \+ \(moveEvent\.clientY - startY\) \/ canvasScale\)/);
-  assert.match(source, /updateWidgetInstance\(instance\.id, \{ height: nextHeight, expandedHeight: nextHeight \}\)/);
+  assert.match(source, /const interactionScale = canvasScale \* contentScale/);
+  assert.match(source, /nextHeight = Math\.max\(minimumHeight, startHeight \+ \(moveEvent\.clientY - startY\) \/ interactionScale\)/);
+  assert.match(source, /calendarCard\.style\.height = `\$\{nextHeight\}px`/);
+  assert.match(source, /updateWidgetInstance\(instance\.id, \{ calendarContentHeight: nextHeight \}\)/);
+  assert.doesNotMatch(source, /startMiniCalendarHeightResize[\s\S]*?updateWidgetInstance\(instance\.id, \{ height: nextHeight, expandedHeight: nextHeight \}\)/);
   assert.match(css, /\.mini-calendar-height-handle\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*1px;[^}]*cursor:\s*ns-resize;[^}]*touch-action:\s*none;/s);
+  assert.match(css, /\.dashboard-calendar-card\.has-custom-height\s*\{[^}]*flex:\s*0 0 auto;/s);
+  assert.match(css, /is-mini-calendar-widget\.has-fixed-overflow \.workspace-widget-body\s*\{[^}]*overflow-y:\s*auto;/s);
 });
 
 test("primary navigation stays at 85 percent without changing widget or signed-in headers", async () => {
