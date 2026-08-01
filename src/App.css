@@ -5599,8 +5599,8 @@ html[data-theme="dark"] {
   min-height: var(--widget-label-height, 52px);
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 9px;
-  padding: clamp(5px, calc((var(--widget-label-height, 52px) - 32px) / 2), 10px) 12px;
+  gap: clamp(3px, calc((var(--widget-label-height, 52px) - 24px) / 3), 9px);
+  padding: clamp(3px, calc((var(--widget-label-height, 52px) - var(--widget-header-control-size, 32px)) / 2), 10px) clamp(6px, calc(var(--widget-label-height, 52px) / 4), 12px);
   border-bottom: 1px solid var(--border-color);
   cursor: default;
   user-select: none;
@@ -5646,6 +5646,7 @@ html[data-theme="dark"] {
   width: max-content;
   max-width: calc(100% - 170px);
   overflow: hidden;
+  font-size: var(--widget-header-title-size, 1rem);
   transform: translate(-50%, -50%);
   text-align: center;
   text-overflow: ellipsis;
@@ -5657,14 +5658,17 @@ html[data-theme="dark"] {
 .widget-collapse-button,
 .widget-menu summary {
   display: inline-grid;
-  width: 32px;
-  height: 32px;
+  width: var(--widget-header-control-size, 32px);
+  min-width: var(--widget-header-control-size, 32px);
+  height: var(--widget-header-control-size, 32px);
+  min-height: var(--widget-header-control-size, 32px);
   padding: 0;
   place-items: center;
   border: 1px solid var(--border-color);
   border-radius: 9px;
   background: var(--surface-alt);
   color: var(--text-color);
+  font-size: var(--widget-header-title-size, 1rem);
 }
 .widget-drag-grip { cursor: grab; }
 .widget-collapse-button,
@@ -5707,10 +5711,10 @@ html[data-theme="dark"] {
   white-space: nowrap;
 }
 .App:is(.text-size-large, .text-size-xlarge) :where(.widget-drag-grip, .widget-collapse-button, .widget-menu summary) {
-  width: 2.35em;
-  min-width: 2.35em;
-  height: 2.35em;
-  min-height: 2.35em;
+  width: var(--widget-header-control-size, 32px);
+  min-width: var(--widget-header-control-size, 32px);
+  height: var(--widget-header-control-size, 32px);
+  min-height: var(--widget-header-control-size, 32px);
 }
 .App.text-size-xlarge .widget-menu-popover {
   width: min(240px, calc(100vw - 32px));
@@ -5745,16 +5749,16 @@ html[data-theme="dark"] {
   min-width: 0;
   transform: none;
   overflow: hidden;
-  font-size: 0.78rem;
+  font-size: var(--widget-header-title-size, 0.78rem);
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .workspace-widget.is-small-widget :where(.widget-drag-grip, .widget-collapse-button, .widget-menu summary) {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: min(28px, var(--widget-header-control-size, 28px));
+  min-width: min(28px, var(--widget-header-control-size, 28px));
+  height: min(28px, var(--widget-header-control-size, 28px));
+  min-height: min(28px, var(--widget-header-control-size, 28px));
 }
 .workspace-widget.is-small-widget.is-locked .workspace-widget-header {
   grid-template-columns: minmax(0, 1fr) 28px 28px;

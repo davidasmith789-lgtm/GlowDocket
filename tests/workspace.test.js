@@ -644,6 +644,19 @@ test("widget labels have a smaller default and a persistent vertical resize hand
   assert.match(css, /\.widget-label-resize-handle\s*\{[^}]*cursor:\s*ns-resize;[^}]*touch-action:\s*none;/s);
 });
 
+test("widget labels can shrink to a compact header with proportionally smaller controls", async () => {
+  const [source, layoutSource, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/workspaceLayout.js", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(layoutSource, /export const MIN_WIDGET_LABEL_HEIGHT = 30;/);
+  assert.match(source, /Math\.max\(MIN_WIDGET_LABEL_HEIGHT, Number\(instance\.labelHeight\)/);
+  assert.match(source, /nextLabelHeight = Math\.min\(MAX_WIDGET_LABEL_HEIGHT, Math\.max\(MIN_WIDGET_LABEL_HEIGHT,/);
+  assert.match(css, /width:\s*var\(--widget-header-control-size, 32px\);[^}]*height:\s*var\(--widget-header-control-size, 32px\);/s);
+  assert.match(css, /font-size:\s*var\(--widget-header-title-size, 1rem\);/);
+});
+
 test("workspace interaction exposes every resize edge and permits free widget overlap", async () => {
   const source = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(source, /\["top", \{ top: true \}\].*\["bottom-left", \{ bottom: true, left: true \}\]/s);

@@ -10,6 +10,7 @@ import {
   canHideWidget,
   applyNamedWorkspaceLayout,
   COLLAPSED_WIDGET_HEIGHT,
+  MIN_WIDGET_LABEL_HEIGHT,
   createDefaultWorkspaceLayout,
   deleteNamedWorkspaceLayout,
   getWidgetMinimumExpandedHeight,
@@ -1423,7 +1424,9 @@ function WorkspaceWidget({
   const widgetRef = useRef(null);
   const [resizeLimit, setResizeLimit] = useState("");
   const minimumExpandedHeight = getWidgetMinimumExpandedHeight(instance.type);
-  const labelHeight = Math.max(44, Number(instance.labelHeight) || Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT);
+  const labelHeight = Math.max(MIN_WIDGET_LABEL_HEIGHT, Number(instance.labelHeight) || Number(instance.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT);
+  const headerControlSize = Math.max(22, Math.min(32, labelHeight - 8));
+  const headerTitleSize = Math.max(0.625, Math.min(1, labelHeight * 0.019375));
   // Keep a widget's internal composition stable while its outer viewport is
   // resized. Smaller widgets scale their contents instead of triggering a
   // different responsive layout or hiding controls behind new wrapping.
@@ -1564,16 +1567,16 @@ function WorkspaceWidget({
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
     const startY = event.clientY;
     const startLabelHeight = labelHeight;
-    const controlHeights = [...header.querySelectorAll("button, summary")].map((control) => control.getBoundingClientRect().height / canvasScale);
-    const minimumLabelHeight = Math.max(44, (controlHeights.length ? Math.max(...controlHeights) : 34) + 10);
     let nextLabelHeight = startLabelHeight;
     widget.classList.add("is-label-resizing");
 
     const move = (moveEvent) => {
       if (moveEvent.pointerId !== activePointerId) return;
       moveEvent.preventDefault();
-      nextLabelHeight = Math.min(MAX_WIDGET_LABEL_HEIGHT, Math.max(minimumLabelHeight, startLabelHeight + (moveEvent.clientY - startY) / canvasScale));
+      nextLabelHeight = Math.min(MAX_WIDGET_LABEL_HEIGHT, Math.max(MIN_WIDGET_LABEL_HEIGHT, startLabelHeight + (moveEvent.clientY - startY) / canvasScale));
       widget.style.setProperty("--widget-label-height", `${nextLabelHeight}px`);
+      widget.style.setProperty("--widget-header-control-size", `${Math.max(22, Math.min(32, nextLabelHeight - 8))}px`);
+      widget.style.setProperty("--widget-header-title-size", `${Math.max(0.625, Math.min(1, nextLabelHeight * 0.019375))}rem`);
       if (collapsed) widget.style.height = `${nextLabelHeight}px`;
       const liveScale = Math.min(
         1,
@@ -1696,7 +1699,7 @@ function WorkspaceWidget({
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
       data-collapsed-height={labelHeight}
-      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? `${labelHeight}px` : `${instance.height}px`, "--widget-content-scale": contentScale, "--widget-label-height": `${labelHeight}px` }}
+      style={{ left: `${Math.max(0, Number(instance.x) || 0)}px`, top: `${instance.y || 0}px`, zIndex: instance.zIndex || 1, width: `${instance.width}px`, height: collapsed ? `${labelHeight}px` : `${instance.height}px`, "--widget-content-scale": contentScale, "--widget-label-height": `${labelHeight}px`, "--widget-header-control-size": `${headerControlSize}px`, "--widget-header-title-size": `${headerTitleSize}rem` }}
     >
       <header className="workspace-widget-header double-click-collapse-header" onDoubleClick={(event) => toggleFromHeaderDoubleClick(event, onToggle)}>
         <button

@@ -21,6 +21,7 @@ export const PROTECTED_WIDGETS = new Set([
 const REMOVED_WIDGET_TYPES = new Set(["school-guide", "settings-master"]);
 
 export const COLLAPSED_WIDGET_HEIGHT = 52;
+export const MIN_WIDGET_LABEL_HEIGHT = 30;
 export const MAX_WIDGET_LABEL_HEIGHT = 140;
 export const MIN_WIDGET_WIDTH = 220;
 const LEGACY_COLLAPSED_WIDGET_HEIGHT = 58;
@@ -220,7 +221,7 @@ const getExpandedWidgetHeight = (item) => {
 const getEffectiveWidgetHeight = (item, collapsed = {}) => {
   const isCollapsed = Boolean(collapsed?.[item.type]);
   return isCollapsed
-    ? Math.max(COLLAPSED_WIDGET_HEIGHT, finiteNumber(item.collapsedHeight, COLLAPSED_WIDGET_HEIGHT))
+    ? Math.max(MIN_WIDGET_LABEL_HEIGHT, finiteNumber(item.collapsedHeight, COLLAPSED_WIDGET_HEIGHT))
     : getExpandedWidgetHeight(item);
 };
 
