@@ -101,13 +101,19 @@ test("workload presets stay compact and only custom periods can scroll", async (
   assert.match(source, /workload-stat\$\{workloadPeriod === "custom" \? " is-custom-period" : ""\}/);
   assert.match(css, /\.workload-stat\s*\{[^}]*overflow:\s*hidden;/s);
   assert.match(css, /\.workload-stat\.is-custom-period\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s);
-  assert.match(css, /\.workload-stat > strong\s*\{[^}]*font-size:\s*clamp\(1\.05rem, 5\.5cqw, 1\.8rem\);/s);
+  assert.match(css, /\.workload-stat\s*\{[^}]*grid-template-columns:[^}]*grid-template-areas:[^}]*"period value"[^}]*"period summary";/s);
+  assert.match(css, /\.workload-stat > strong\s*\{[^}]*grid-area:\s*value;[^}]*font-size:\s*clamp\(1\.25rem, 6cqw, 2rem\);/s);
   assert.match(source, /--workload-select-width[^}]*workloadPeriodLabels\[workloadPeriod\]\.length \+ 3/);
   assert.match(source, /className=\{!workloadSummary\.invalid && workloadSummary\.knownMinutes <= 0 \? "is-no-estimates" : ""\}/);
-  assert.match(css, /\.workload-stat > label\s*\{[^}]*justify-items:\s*center;[^}]*text-align:\s*center;/s);
-  assert.match(css, /\.workload-stat > label > span\s*\{[^}]*top:\s*-3px;[^}]*margin-bottom:\s*-1px;/s);
-  assert.match(css, /\.workload-stat > label > select\s*\{[^}]*--workload-select-width[^}]*text-align-last:\s*center;/s);
-  assert.match(css, /\.workload-stat > strong\.is-no-estimates\s*\{[^}]*font-size:\s*clamp\(0\.62rem, 2\.4cqw, 0\.78rem\);/s);
+  assert.match(css, /\.workload-stat > label\s*\{[^}]*grid-area:\s*period;[^}]*font-size:\s*0\.7rem;[^}]*text-align:\s*center;/s);
+  assert.match(css, /\.workload-stat > label > select\s*\{[^}]*--workload-select-width[^}]*min-height:\s*34px;[^}]*font-size:\s*0\.82rem;[^}]*text-align-last:\s*center;/s);
+  assert.match(css, /\.workload-stat > strong\.is-no-estimates\s*\{[^}]*font-size:\s*clamp\(0\.82rem, 3\.2cqw, 1rem\);/s);
+  assert.match(css, /@container \(max-width: 319px\)[\s\S]*?\.workload-stat\s*\{[^}]*grid-template-areas:\s*"period" "value" "summary";/s);
+});
+
+test("detached mini calendars hide their inactive internal resize handle", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /\.detached-widget-content \.mini-calendar-height-handle\s*\{\s*display:\s*none;/);
 });
 
 test("class repeat choices keep radio controls separate from wrapping text", async () => {

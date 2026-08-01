@@ -5633,6 +5633,7 @@ html[data-theme="dark"] {
 .detached-widget-shell > header button { padding: 8px 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-alt); color: var(--text-color); cursor: pointer; font-weight: 800; }
 .detached-widget-content { min-width: 0; padding: 16px; overflow: auto; background: var(--card-bg); }
 .detached-widget-content > * { width: 100%; max-width: none; }
+.detached-widget-content .mini-calendar-height-handle { display: none; }
 @media (hover: hover) and (pointer: fine) {
   .detached-widget-content { scrollbar-width: none; }
   .detached-widget-content::-webkit-scrollbar { display: none; }
@@ -6061,19 +6062,34 @@ html[data-theme="dark"] {
 .portable-stat { display: grid; width: 100%; height: 100%; place-content: center; place-items: center; text-align: center; }
 .portable-stat strong { font-size: 2.4rem; }
 .portable-stat p { margin: 7px 0 0; color: var(--muted-text); }
-.workload-stat { align-content: center; gap: clamp(3px, 0.9cqh, 7px); padding: 5px; overflow: hidden; }
+.workload-stat {
+  grid-template-columns: minmax(118px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-areas:
+    "period value"
+    "period summary";
+  align-content: center;
+  align-items: center;
+  column-gap: clamp(10px, 3cqw, 18px);
+  row-gap: 5px;
+  padding: 8px 10px;
+  overflow: hidden;
+}
 .workload-stat.is-custom-period { align-content: start; overflow-x: hidden; overflow-y: auto; }
-.workload-stat > label { display: grid; width: fit-content; max-width: 100%; justify-items: center; gap: 2px; color: var(--muted-text); font-size: 0.58rem; font-weight: 800; line-height: 1.15; text-align: center; }
-.workload-stat > label > span { position: relative; top: -3px; margin-bottom: -1px; }
+.workload-stat > label { display: grid; width: 100%; max-width: 100%; grid-area: period; justify-items: stretch; gap: 5px; color: var(--muted-text); font-size: 0.7rem; font-weight: 800; line-height: 1.15; text-align: center; }
+.workload-stat > label > span { margin: 0; }
 .workload-stat select,
-.workload-stat input { width: 100%; min-width: 0; min-height: 28px; padding: 4px 6px; font-size: 0.68rem; line-height: 1.15; }
-.workload-stat > label > select { width: min(100%, calc(var(--workload-select-width, 11ch) + 22px)); min-width: 82px; min-height: 26px; padding-block: 3px; text-align: center; text-align-last: center; }
-.workload-stat > strong { font-size: clamp(1.05rem, 5.5cqw, 1.8rem); line-height: 0.95; }
-.workload-stat > strong.is-no-estimates { font-size: clamp(0.62rem, 2.4cqw, 0.78rem); line-height: 1.2; }
-.workload-stat > p { max-width: 100%; margin-top: 2px; font-size: clamp(0.58rem, 2.2cqw, 0.74rem); line-height: 1.2; overflow-wrap: normal; }
-.workload-custom-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 6px; }
+.workload-stat input { width: 100%; min-width: 0; min-height: 32px; padding: 5px 8px; font-size: 0.78rem; line-height: 1.15; }
+.workload-stat > label > select { width: min(100%, calc(var(--workload-select-width, 11ch) + 30px)); min-width: 104px; min-height: 34px; padding: 5px 9px; font-size: 0.82rem; font-weight: 800; text-align: center; text-align-last: center; }
+.workload-stat > strong { grid-area: value; align-self: end; font-size: clamp(1.25rem, 6cqw, 2rem); line-height: 1; }
+.workload-stat > strong.is-no-estimates { font-size: clamp(0.82rem, 3.2cqw, 1rem); line-height: 1.2; }
+.workload-stat > p { grid-area: summary; align-self: start; max-width: 100%; margin: 0; font-size: clamp(0.68rem, 2.5cqw, 0.82rem); line-height: 1.25; overflow-wrap: normal; }
+.workload-custom-dates { display: grid; width: 100%; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .workload-custom-dates label { display: grid; min-width: 0; gap: 2px; color: var(--muted-text); font-size: 0.56rem; font-weight: 800; line-height: 1.15; text-align: left; }
-@container (max-width: 280px) { .workload-custom-dates { grid-template-columns: 1fr; } }
+@container (max-width: 319px) {
+  .workload-stat { grid-template-columns: minmax(0, 1fr); grid-template-areas: "period" "value" "summary"; gap: 5px; padding: 6px; }
+  .workload-stat > label { width: fit-content; justify-self: center; justify-items: center; }
+  .workload-custom-dates { grid-template-columns: 1fr; }
+}
 .portable-recommendations { margin: 0; }
 .portable-task-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .portable-task-list button { display: grid; width: 100%; gap: 4px; padding: 11px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--task-bg); color: var(--text-color); text-align: left; cursor: pointer; }
