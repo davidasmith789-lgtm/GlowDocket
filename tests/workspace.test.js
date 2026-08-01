@@ -790,6 +790,9 @@ test("checklist cards use two-dimensional pointer reordering with a cursor ghost
   assert.match(source, /setChecklists\(workingItems\)/);
   assert.match(css, /\.checklist-gallery-drag-ghost\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;[^}]*animation:\s*none !important;[^}]*transition:\s*none;/s);
   assert.match(css, /\.checklist-gallery\s*\{[^}]*columns:\s*150px;[^}]*column-gap:\s*10px;/s);
+  assert.match(source, /className="standalone-checklists checklist-gallery-view"/);
+  assert.match(css, /\.checklist-gallery-view\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*flex-direction:\s*column;/s);
+  assert.match(css, /\.checklist-gallery\s*\{[^}]*height:\s*100%;[^}]*flex:\s*1 1 0;[^}]*column-fill:\s*auto;/s);
   assert.match(css, /\.checklist-gallery-card\s*\{[^}]*break-inside:\s*avoid;/s);
   assert.match(css, /\.checklist-gallery-card\.drop-before/);
   assert.match(css, /\.checklist-gallery-card\.drop-after/);

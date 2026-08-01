@@ -7711,7 +7711,7 @@ function App() {
     if (!selectedList) {
       const orderedLists = [...checklists].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
       return (
-        <section className="standalone-checklists" aria-label="Standalone checklists">
+        <section className="standalone-checklists checklist-gallery-view" aria-label="Standalone checklists">
           <div className="checklist-gallery-toolbar">
             <div><h2>Checklists</h2>{!isMobileUi && <p>Quick lists that stay separate from assignments.</p>}</div>
             <div className="checklist-gallery-actions">
