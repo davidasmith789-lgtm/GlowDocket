@@ -917,15 +917,61 @@ html[data-theme="dark"] .tab-row {
   color: var(--muted-text);
 }
 
-/* Primary workspace navigation stays at the requested 85% size regardless of
+/* Primary workspace navigation stays compact regardless of
    the content text-size preference. The signed-in hero header is intentionally
    outside this selector. */
 .App .tab-row .tab-button {
-  font-size: 13.6px !important;
+  font-size: 12px !important;
   -webkit-text-size-adjust: none;
   text-size-adjust: none;
 }
-.App .tab-row .tab-button-icon { display: inline-block; margin-right: 6px; font-size: 13.6px !important; line-height: 1; }
+.App .tab-row .tab-button-icon { display: inline-block; margin-right: 4px; font-size: 12px !important; line-height: 1; }
+
+@media (min-width: 701px) {
+  .App .tab-row {
+    max-width: 100%;
+    flex-flow: row nowrap;
+    gap: 4px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .App .tab-row::-webkit-scrollbar { display: none; }
+  .App .tab-row .tab-button {
+    min-width: 0;
+    min-height: 32px;
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    border-radius: 9px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .App .tab-row .account-action-group {
+    min-width: 0;
+    flex: 0 0 auto;
+    gap: 5px;
+    padding-left: 7px;
+  }
+  .App .tab-row .account-action-group > span { max-width: 92px; font-size: 10px; }
+  .App .tab-row .account-action-group .cloud-sync-status {
+    max-width: 112px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 4px 7px;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .App .tab-row .account-action-group .cloud-sync-error { display: none; }
+  .App .tab-row .account-action-group .btn {
+    min-height: 30px;
+    width: auto;
+    padding: 5px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
 
 .tab-button:hover,
 .btn:hover {

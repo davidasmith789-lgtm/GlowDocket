@@ -786,13 +786,16 @@ test("mini calendar has an independent internal bottom height handle", async () 
   assert.match(css, /is-mini-calendar-widget\.has-fixed-overflow \.workspace-widget-body\s*\{[^}]*overflow-y:\s*auto;/s);
 });
 
-test("primary navigation stays at 85 percent without changing widget or signed-in headers", async () => {
+test("primary navigation stays compact without changing widget or signed-in headers", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
-  assert.match(css, /\.App \.tab-row \.tab-button\s*\{[^}]*font-size:\s*13\.6px !important;[^}]*text-size-adjust:\s*none;/s);
-  assert.match(css, /\.App \.tab-row \.tab-button-icon\s*\{[^}]*font-size:\s*13\.6px !important;/s);
+  assert.match(css, /\.App \.tab-row \.tab-button\s*\{[^}]*font-size:\s*12px !important;[^}]*text-size-adjust:\s*none;/s);
+  assert.match(css, /\.App \.tab-row \.tab-button-icon\s*\{[^}]*font-size:\s*12px !important;/s);
   assert.doesNotMatch(css, /text-size-large[^}]*:where\([^)]*, \.tab-button(?:,|\))/);
-  assert.doesNotMatch(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*13\.6px;/s);
-  assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*13\.6px/s);
+  assert.doesNotMatch(css, /\.workspace-widget-header > strong\s*\{[^}]*font-size:\s*12px !important;/s);
+  assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*12px !important/s);
+  assert.match(css, /@media \(min-width: 701px\)[\s\S]*?\.App \.tab-row\s*\{[^}]*flex-flow:\s*row nowrap;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/s);
+  assert.match(css, /@media \(min-width: 701px\)[\s\S]*?\.App \.tab-row \.tab-button\s*\{[^}]*min-height:\s*32px;[^}]*padding:\s*6px 8px;[^}]*white-space:\s*nowrap;/s);
+  assert.match(css, /\.App \.tab-row \.account-action-group \.cloud-sync-status\s*\{[^}]*max-width:\s*112px;[^}]*text-overflow:\s*ellipsis;/s);
 });
 
 test("widget header titles use all space remaining between their controls", async () => {

@@ -13,7 +13,9 @@ test("global text size uses an accessible continuous slider with legacy migratio
   assert.match(app, /const legacyScales = \{ xsmall: 70, small: 85, medium: 100, large: 125, xlarge: 150 \}/);
   assert.match(app, /document\.documentElement\.style\.fontSize = `\$\{getTextScalePercent\(userSettings\.textSize\)\}%`/);
   assert.doesNotMatch(app, /<option value="xsmall">/);
-  assert.doesNotMatch(styles, /font-size:\s*[0-9]+px/);
+  const scalableStyles = styles.replaceAll(/\.App \.tab-row[\s\S]*?\}/g, "");
+  assert.doesNotMatch(scalableStyles, /font-size:\s*[0-9]+px/);
+  assert.match(styles, /\.App \.tab-row \.tab-button\s*\{[^}]*font-size:\s*12px !important;[^}]*text-size-adjust:\s*none;/s);
   assert.match(styles, /\.App:is\(\.text-size-large, \.text-size-xlarge\)[\s\S]*?\.achievement-card/);
   assert.match(communityStyles, /font-size: max\(1rem, 16px\)/);
 });

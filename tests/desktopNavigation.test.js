@@ -23,5 +23,6 @@ test("desktop navigation keeps study destinations in order and feedback on the r
   for (const icon of ["📌", "📝", "✍️", "✅", "📅", "📚", "👥", "🙋"]) {
     assert.match(nav, new RegExp(`<span className="tab-button-icon" aria-hidden="true">${icon}</span>`));
   }
-  assert.match(styles, /\.tab-button-icon \{[^}]*margin-right: 6px;/);
+  assert.match(styles, /\.tab-button-icon \{[^}]*margin-right: 4px;/);
+  assert.match(styles, /@media \(min-width: 701px\)[\s\S]*?\.App \.tab-row \{[^}]*flex-flow: row nowrap;[^}]*overflow-x: auto;[^}]*overflow-y: hidden;/);
 });
