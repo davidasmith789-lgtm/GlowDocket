@@ -8227,7 +8227,7 @@ function App() {
     const bucketIndex = bucketKeys.findIndex((key) => type.endsWith(`-bucket-${key}`));
     if (bucketIndex >= 0) return renderTaskMasterWidget(type.startsWith("in-progress") ? "inProgress" : "todo", bucketsOrder[bucketIndex]);
     if (type === "stat-workload") return (
-      <div className="portable-stat workload-stat">
+      <div className={`portable-stat workload-stat${workloadPeriod === "custom" ? " is-custom-period" : ""}`}>
         <label><span>Time period</span><select value={workloadPeriod} onChange={(event) => handleAddFieldSettingChange("workloadPeriod", event.target.value)}><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom period</option><option value="all">All remaining</option></select></label>
         {workloadPeriod === "custom" && <div className="workload-custom-dates"><label><span>From</span><input type="date" value={userSettings.workloadCustomStart || ""} onChange={(event) => handleAddFieldSettingChange("workloadCustomStart", event.target.value)} /></label><label><span>To</span><input type="date" value={userSettings.workloadCustomEnd || ""} onChange={(event) => handleAddFieldSettingChange("workloadCustomEnd", event.target.value)} /></label></div>}
         <strong>{workloadSummary.invalid ? "Choose dates" : workloadTimeLabel}</strong>

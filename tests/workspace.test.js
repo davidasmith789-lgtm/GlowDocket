@@ -93,6 +93,17 @@ test("custom workload periods reject missing and reversed dates", () => {
   assert.equal(getWorkloadPeriodRange("custom", { customStart: "2026-08-02", customEnd: "2026-07-01" }).invalid, true);
 });
 
+test("workload presets stay compact and only custom periods can scroll", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /workload-stat\$\{workloadPeriod === "custom" \? " is-custom-period" : ""\}/);
+  assert.match(css, /\.workload-stat\s*\{[^}]*overflow:\s*hidden;/s);
+  assert.match(css, /\.workload-stat\.is-custom-period\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/s);
+  assert.match(css, /\.workload-stat > strong\s*\{[^}]*font-size:\s*clamp\(1\.05rem, 5\.5cqw, 1\.8rem\);/s);
+});
+
 test("class repeat choices keep radio controls separate from wrapping text", async () => {
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(styles, /\.schedule-mode-picker input\[type="radio"\]\s*\{[^}]*width:\s*20px[^}]*flex:\s*0 0 20px/s);
