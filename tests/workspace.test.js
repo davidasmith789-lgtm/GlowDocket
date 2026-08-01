@@ -803,6 +803,14 @@ test("widget header titles use all space remaining between their controls", asyn
   assert.match(css, /\.workspace-widget\.is-small-widget\.is-locked \.workspace-widget-header\s*\{[^}]*grid-template-columns:\s*28px minmax\(0, 1fr\) 28px 28px;/s);
 });
 
+test("expanded widgets do not repeat names already shown in their headers", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /:is\(\.workspace-widget, \.detached-widget-content\) \.quick-match-header h2,[\s\S]*?:is\(\.workspace-widget, \.detached-widget-content\) \.checklist-gallery-toolbar h2,[\s\S]*?:is\(\.workspace-widget, \.detached-widget-content\) \.dashboard-calendar-header h2\s*\{\s*display:\s*none;/s);
+  assert.doesNotMatch(css, /:is\(\.workspace-widget, \.detached-widget-content\) \.quick-match-header\s*\{[^}]*display:\s*none/s);
+  assert.doesNotMatch(css, /:is\(\.workspace-widget, \.detached-widget-content\) \.checklist-gallery-toolbar\s*\{[^}]*display:\s*none/s);
+  assert.doesNotMatch(css, /:is\(\.workspace-widget, \.detached-widget-content\) \.dashboard-calendar-header\s*\{[^}]*display:\s*none/s);
+});
+
 test("checklist cards use two-dimensional pointer reordering with a cursor ghost", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),

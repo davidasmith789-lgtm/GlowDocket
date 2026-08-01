@@ -3912,6 +3912,13 @@ html[data-theme="dark"] .edit-notes-side {
   font-size: 1.25rem;
 }
 
+/* Workspace and pop-out shells already name these widgets in their own header. */
+:is(.workspace-widget, .detached-widget-content) .quick-match-header h2,
+:is(.workspace-widget, .detached-widget-content) .checklist-gallery-toolbar h2,
+:is(.workspace-widget, .detached-widget-content) .dashboard-calendar-header h2 {
+  display: none;
+}
+
 .quick-match-header p,
 .dashboard-calendar-card > p {
   margin: 5px 0 14px;
