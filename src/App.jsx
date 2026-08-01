@@ -7878,16 +7878,16 @@ function App() {
     event.stopPropagation();
     const handle = event.currentTarget;
     const pointerId = event.pointerId;
-    const calendarCard = handle.closest(".dashboard-calendar-card");
+    const calendarArea = handle.closest(".mini-calendar-resizable-area");
     const widget = handle.closest(".workspace-widget");
     const canvas = widget?.closest(".workspace-widget-canvas");
-    if (!widget || !calendarCard) return;
+    if (!widget || !calendarArea) return;
     try { handle.setPointerCapture?.(pointerId); } catch { /* Window listeners remain as a fallback. */ }
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
     const contentScale = Number(getComputedStyle(widget).getPropertyValue("--widget-content-scale")) || 1;
     const interactionScale = canvasScale * contentScale;
     const startY = event.clientY;
-    const startHeight = Number(instance.calendarContentHeight) || calendarCard.getBoundingClientRect().height / interactionScale;
+    const startHeight = Number(instance.calendarContentHeight) || calendarArea.getBoundingClientRect().height / interactionScale;
     const minimumHeight = 220;
     let nextHeight = startHeight;
     widget.classList.add("is-calendar-height-resizing");
@@ -7896,8 +7896,8 @@ function App() {
       if (moveEvent.pointerId !== pointerId) return;
       moveEvent.preventDefault();
       nextHeight = Math.max(minimumHeight, startHeight + (moveEvent.clientY - startY) / interactionScale);
-      calendarCard.style.height = `${nextHeight}px`;
-      calendarCard.style.flex = "0 0 auto";
+      calendarArea.style.height = `${nextHeight}px`;
+      calendarArea.style.flex = "0 0 auto";
     };
     const stop = (stopEvent) => {
       if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== pointerId) return;
@@ -7915,31 +7915,33 @@ function App() {
   };
 
   const renderWorkspaceCalendar = (instance) => (
-    <section className={`dashboard-calendar-card${Number(instance.calendarContentHeight) ? " has-custom-height" : ""}`} style={Number(instance.calendarContentHeight) ? { height: `${instance.calendarContentHeight}px` } : undefined} aria-labelledby="dashboard-calendar-title">
+    <section className="dashboard-calendar-card" aria-labelledby="dashboard-calendar-title">
       <div className="dashboard-calendar-header">
         <h2 id="dashboard-calendar-title">Calendar</h2>
         <button type="button" onClick={() => setCurrentTab("calendar")}>Open</button>
       </div>
       <p>Select a date to open the full calendar.</p>
-      <DeferredCalendar
-        value={selectedDate}
-        calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
-        showNeighboringMonth={userSettings.showNeighboringMonth !== false}
-        onClickDay={handleDashboardCalendarClick}
-        tileClassName={({ date, view }) => view === "month" && activeDashboardTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
-        tileContent={({ date, view }) => {
-          if (view !== "month" || userSettings.showCalendarTaskDots === false) return null;
-          const dots = getCourseDotsForDate(date);
-          return dots.length > 0 ? (
-            <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
-              {dots.map((dot) => (
-                <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
-              ))}
-            </span>
-          ) : null;
-        }}
-      />
-      {!workspaceLayout.locked?.[workspaceMode] && <button type="button" className="mini-calendar-height-handle" onPointerDown={(event) => startMiniCalendarHeightResize(event, instance)} aria-label="Resize the calendar height" title="Drag to stretch or shrink the calendar" />}
+      <div className={`mini-calendar-resizable-area${Number(instance.calendarContentHeight) ? " has-custom-height" : ""}`} style={Number(instance.calendarContentHeight) ? { height: `${instance.calendarContentHeight}px` } : undefined}>
+        <DeferredCalendar
+          value={selectedDate}
+          calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
+          showNeighboringMonth={userSettings.showNeighboringMonth !== false}
+          onClickDay={handleDashboardCalendarClick}
+          tileClassName={({ date, view }) => view === "month" && activeDashboardTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
+          tileContent={({ date, view }) => {
+            if (view !== "month" || userSettings.showCalendarTaskDots === false) return null;
+            const dots = getCourseDotsForDate(date);
+            return dots.length > 0 ? (
+              <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
+                {dots.map((dot) => (
+                  <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
+                ))}
+              </span>
+            ) : null;
+          }}
+        />
+        {!workspaceLayout.locked?.[workspaceMode] && <button type="button" className="mini-calendar-height-handle" onPointerDown={(event) => startMiniCalendarHeightResize(event, instance)} aria-label="Resize the calendar height" title="Drag to stretch or shrink the calendar" />}
+      </div>
     </section>
   );
 

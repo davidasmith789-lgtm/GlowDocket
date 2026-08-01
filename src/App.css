@@ -4169,7 +4169,14 @@ html[data-theme="dark"] .edit-notes-side {
   height: 100%;
   flex-direction: column;
 }
-.workspace-widget.is-mini-calendar-widget .dashboard-calendar-card.has-custom-height {
+.workspace-widget.is-mini-calendar-widget .mini-calendar-resizable-area {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.workspace-widget.is-mini-calendar-widget .mini-calendar-resizable-area.has-custom-height {
   min-height: 220px;
   flex: 0 0 auto;
 }
@@ -4208,7 +4215,7 @@ html[data-theme="dark"] .edit-notes-side {
   transform: scaleX(1.12);
 }
 
-.workspace-widget.is-mini-calendar-widget .dashboard-calendar-card > .react-calendar {
+.workspace-widget.is-mini-calendar-widget .mini-calendar-resizable-area > .react-calendar {
   display: flex;
   min-height: 0;
   flex: 1;

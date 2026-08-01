@@ -765,11 +765,14 @@ test("mini calendar has an independent internal bottom height handle", async () 
   assert.match(source, /className="mini-calendar-height-handle"[\s\S]*?startMiniCalendarHeightResize\(event, instance\)[\s\S]*?aria-label="Resize the calendar height"/);
   assert.match(source, /const interactionScale = canvasScale \* contentScale/);
   assert.match(source, /nextHeight = Math\.max\(minimumHeight, startHeight \+ \(moveEvent\.clientY - startY\) \/ interactionScale\)/);
-  assert.match(source, /calendarCard\.style\.height = `\$\{nextHeight\}px`/);
+  assert.match(source, /calendarArea\.style\.height = `\$\{nextHeight\}px`/);
   assert.match(source, /updateWidgetInstance\(instance\.id, \{ calendarContentHeight: nextHeight \}\)/);
   assert.doesNotMatch(source, /startMiniCalendarHeightResize[\s\S]*?updateWidgetInstance\(instance\.id, \{ height: nextHeight, expandedHeight: nextHeight \}\)/);
   assert.match(css, /\.mini-calendar-height-handle\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*1px;[^}]*cursor:\s*ns-resize;[^}]*touch-action:\s*none;/s);
-  assert.match(css, /\.dashboard-calendar-card\.has-custom-height\s*\{[^}]*flex:\s*0 0 auto;/s);
+  assert.match(source, /className=\{`mini-calendar-resizable-area\$\{Number\(instance\.calendarContentHeight\)/);
+  assert.match(css, /\.mini-calendar-resizable-area\s*\{[^}]*display:\s*flex;[^}]*flex:\s*1;[^}]*flex-direction:\s*column;/s);
+  assert.match(css, /\.mini-calendar-resizable-area\.has-custom-height\s*\{[^}]*flex:\s*0 0 auto;/s);
+  assert.match(css, /\.mini-calendar-resizable-area > \.react-calendar\s*\{[^}]*flex:\s*1;/s);
   assert.match(css, /is-mini-calendar-widget\.has-fixed-overflow \.workspace-widget-body\s*\{[^}]*overflow-y:\s*auto;/s);
 });
 
