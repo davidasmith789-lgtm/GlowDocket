@@ -4,15 +4,15 @@ import { readFile } from "node:fs/promises";
 
 const read = (relativePath) => readFile(new URL(relativePath, import.meta.url), "utf8");
 
-test("widget titles stay centered on the widget independently of header controls", async () => {
+test("widget titles stay centered within all header space left by controls", async () => {
   const styles = await read("../src/App.css");
   const titleRule = styles.match(/\.workspace-widget-header > strong \{([\s\S]*?)\}/)?.[1] || "";
 
-  assert.match(styles, /\.workspace-widget-header \{[\s\S]*?position: relative;/);
-  assert.match(titleRule, /position: absolute;/);
-  assert.match(titleRule, /left: 50%;/);
-  assert.match(titleRule, /top: 50%;/);
-  assert.match(titleRule, /transform: translate\(-50%, -50%\);/);
+  assert.match(styles, /\.workspace-widget-header \{[\s\S]*?grid-template-columns: auto minmax\(0, 1fr\) auto auto;/);
+  assert.match(titleRule, /position: static;/);
+  assert.match(titleRule, /width: 100%;/);
+  assert.match(titleRule, /min-width: 0;/);
+  assert.match(titleRule, /text-overflow: ellipsis;/);
   assert.match(titleRule, /text-align: center;/);
 });
 

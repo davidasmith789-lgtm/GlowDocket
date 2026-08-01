@@ -795,6 +795,14 @@ test("primary navigation stays at 85 percent without changing widget or signed-i
   assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*13\.6px/s);
 });
 
+test("widget header titles use all space remaining between their controls", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /\.workspace-widget-header\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto auto;/s);
+  assert.match(css, /\.workspace-widget-header > strong\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*none;[^}]*text-overflow:\s*ellipsis;/s);
+  assert.doesNotMatch(css, /\.workspace-widget-header > strong\s*\{[^}]*max-width:\s*calc\(100% - 170px\)/s);
+  assert.match(css, /\.workspace-widget\.is-small-widget\.is-locked \.workspace-widget-header\s*\{[^}]*grid-template-columns:\s*28px minmax\(0, 1fr\) 28px 28px;/s);
+});
+
 test("checklist cards use two-dimensional pointer reordering with a cursor ghost", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),

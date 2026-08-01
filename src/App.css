@@ -5713,14 +5713,13 @@ html[data-theme="dark"] {
 
 .workspace-widget.is-collapsed .workspace-widget-header { border-bottom: 0; }
 .workspace-widget-header > strong {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: max-content;
-  max-width: calc(100% - 170px);
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   overflow: hidden;
   font-size: var(--widget-header-title-size, 1rem);
-  transform: translate(-50%, -50%);
+  transform: none;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5834,7 +5833,7 @@ html[data-theme="dark"] {
   min-height: min(28px, var(--widget-header-control-size, 28px));
 }
 .workspace-widget.is-small-widget.is-locked .workspace-widget-header {
-  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  grid-template-columns: 28px minmax(0, 1fr) 28px 28px;
 }
 .workspace-widget.has-fixed-overflow .workspace-widget-body { overflow: hidden; }
 .workspace-widget.is-checklists-widget .workspace-widget-scaled-content {
