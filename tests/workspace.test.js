@@ -689,6 +689,12 @@ test("every checklist widget view has an independent touch-friendly scroll area"
   assert.match(css, /\.workspace-widget\.is-checklists-widget \.workspace-widget-scaled-content\s*\{[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;[^}]*touch-action:\s*pan-y;/s);
 });
 
+test("checklist checkboxes keep a visible fixed size and stable grid alignment", async () => {
+  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(css, /\.standalone-checklist-items > li > input\[type="checkbox"\],[\s\S]*?appearance:\s*none;[^}]*width:\s*24px;[^}]*min-width:\s*24px;[^}]*height:\s*24px;[^}]*justify-self:\s*start;/s);
+  assert.match(css, /\.standalone-checklist-items > li > input\[type="checkbox"\]:checked,[\s\S]*?background-image:\s*url\(/s);
+});
+
 test("global text scaling reaches button labels and large text reflows dense widgets", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(css, /button,\s*\[role="button"\]\s*\{[^}]*font-family:\s*inherit;[^}]*font-size:\s*inherit;/s);
