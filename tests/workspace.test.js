@@ -790,13 +790,17 @@ test("checklist cards use two-dimensional pointer reordering with a cursor ghost
   assert.match(source, /inMiddleRow[\s\S]*clientX[\s\S]*clientY/);
   assert.match(source, /setChecklists\(workingItems\)/);
   assert.match(css, /\.checklist-gallery-drag-ghost\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;[^}]*animation:\s*none !important;[^}]*transition:\s*none;/s);
-  assert.match(css, /\.checklist-gallery\s*\{[^}]*columns:\s*150px;[^}]*column-gap:\s*10px;/s);
   assert.match(source, /className="standalone-checklists checklist-gallery-view"/);
   assert.match(css, /\.checklist-gallery-view\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*flex-direction:\s*column;/s);
-  assert.match(css, /\.checklist-gallery\s*\{[^}]*height:\s*100%;[^}]*flex:\s*1 1 0;[^}]*column-fill:\s*auto;/s);
-  assert.match(css, /\.checklist-gallery-card\s*\{[^}]*break-inside:\s*avoid;/s);
-  assert.match(css, /\.checklist-gallery-card\.drop-before/);
-  assert.match(css, /\.checklist-gallery-card\.drop-after/);
+  assert.match(source, /galleryColumn:\s*nextColumn, galleryRow:\s*1/);
+  assert.match(source, /const placeChecklistCard = \(items, sourceId, targetId, placement\) =>/);
+  assert.match(source, /placement === "above" \|\| placement === "below"/);
+  assert.match(source, /gridColumn:\s*galleryPosition\.column, gridRow:\s*galleryPosition\.row/);
+  assert.match(css, /\.checklist-gallery\s*\{[^}]*display:\s*grid;[^}]*grid-auto-columns:\s*minmax\(150px, 220px\);[^}]*grid-auto-rows:\s*110px;[^}]*overflow:\s*auto;/s);
+  assert.match(css, /\.checklist-gallery-card\.drop-above/);
+  assert.match(css, /\.checklist-gallery-card\.drop-below/);
+  assert.match(css, /\.checklist-gallery-card\.drop-left/);
+  assert.match(css, /\.checklist-gallery-card\.drop-right/);
 });
 
 test("small widgets keep useful dimensions and scale content continuously", async () => {
