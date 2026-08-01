@@ -2266,6 +2266,7 @@ function App() {
   const [selectedChecklistId, setSelectedChecklistId] = useState(null);
   const [checklistSelectionMode, setChecklistSelectionMode] = useState(false);
   const [selectedChecklistIds, setSelectedChecklistIds] = useState([]);
+  const checklistDragOrderRef = useRef(null);
   const [checklistNow, setChecklistNow] = useState(() => new Date());
   const [widgetsTrayOpen, setWidgetsTrayOpen] = useState(false);
   const [widgetSearch, setWidgetSearch] = useState("");
@@ -6093,15 +6094,87 @@ function App() {
     saveChecklistData(checklists.map((list) => list.id === listId ? updater(list) : list));
   };
 
-  const handleReorderChecklist = (sourceId, targetId) => {
-    if (!sourceId || sourceId === targetId) return;
-    const items = [...checklists];
-    const sourceIndex = items.findIndex((list) => list.id === sourceId);
-    const targetIndex = items.findIndex((list) => list.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return;
-    const [moved] = items.splice(sourceIndex, 1);
-    items.splice(targetIndex, 0, moved);
-    saveChecklistData(items);
+  const reorderChecklistCollection = (items, sourceId, targetId, position = "before") => {
+    if (!sourceId || sourceId === targetId) return items;
+    const next = [...items];
+    const sourceIndex = next.findIndex((list) => list.id === sourceId);
+    if (sourceIndex < 0) return items;
+    const [moved] = next.splice(sourceIndex, 1);
+    const targetIndex = next.findIndex((list) => list.id === targetId);
+    if (targetIndex < 0) return items;
+    next.splice(targetIndex + (position === "after" ? 1 : 0), 0, moved);
+    return next;
+  };
+
+  const handleReorderChecklist = (sourceId, targetId, position = "before") => {
+    saveChecklistData(reorderChecklistCollection(checklists, sourceId, targetId, position));
+  };
+
+  const startChecklistCardReorder = (event, sourceId) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const sourceCard = handle.closest(".checklist-gallery-card");
+    if (!sourceCard) return;
+    const bounds = sourceCard.getBoundingClientRect();
+    const offsetX = event.clientX - bounds.left;
+    const offsetY = event.clientY - bounds.top;
+    const ghost = sourceCard.cloneNode(true);
+    ghost.classList.add("checklist-gallery-drag-ghost");
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.style.width = `${bounds.width}px`;
+    ghost.style.height = `${bounds.height}px`;
+    document.body.appendChild(ghost);
+    sourceCard.classList.add("is-pointer-dragging");
+    try { handle.setPointerCapture?.(pointerId); } catch { /* Window listeners remain as a fallback. */ }
+    let workingItems = [...checklists];
+    let activeTarget = null;
+    let activeSignature = "";
+    checklistDragOrderRef.current = workingItems;
+
+    const moveGhost = (clientX, clientY) => {
+      ghost.style.transform = `translate3d(${clientX - offsetX}px, ${clientY - offsetY}px, 0)`;
+    };
+    moveGhost(event.clientX, event.clientY);
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      moveEvent.preventDefault();
+      moveGhost(moveEvent.clientX, moveEvent.clientY);
+      const target = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".checklist-gallery-card:not(.checklist-gallery-drag-ghost)");
+      activeTarget?.classList.remove("drop-before", "drop-after");
+      activeTarget = target && target.dataset.reorderId !== sourceId ? target : null;
+      if (!activeTarget) return;
+      const targetBounds = activeTarget.getBoundingClientRect();
+      const inMiddleRow = moveEvent.clientY > targetBounds.top + targetBounds.height * 0.25 && moveEvent.clientY < targetBounds.bottom - targetBounds.height * 0.25;
+      const position = inMiddleRow
+        ? (moveEvent.clientX < targetBounds.left + targetBounds.width / 2 ? "before" : "after")
+        : (moveEvent.clientY < targetBounds.top + targetBounds.height / 2 ? "before" : "after");
+      activeTarget.classList.add(`drop-${position}`);
+      const signature = `${activeTarget.dataset.reorderId}-${position}`;
+      if (signature === activeSignature) return;
+      activeSignature = signature;
+      workingItems = reorderChecklistCollection(workingItems, sourceId, activeTarget.dataset.reorderId, position);
+      checklistDragOrderRef.current = workingItems;
+      setChecklists(workingItems);
+    };
+    const stop = (stopEvent) => {
+      if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== pointerId) return;
+      activeTarget?.classList.remove("drop-before", "drop-after");
+      document.querySelector(`[data-reorder-id="${CSS.escape(sourceId)}"]`)?.classList.remove("is-pointer-dragging");
+      ghost.remove();
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      try { if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId); } catch { /* Capture may already be released. */ }
+      const finalOrder = checklistDragOrderRef.current || workingItems;
+      checklistDragOrderRef.current = null;
+      try { localStorage.setItem(checklistStorageKey, JSON.stringify(finalOrder)); }
+      catch (error) { console.error("Failed to save checklist order:", error); }
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   };
 
   const handleAddChecklistItem = (listId, text) => {
@@ -7619,12 +7692,8 @@ function App() {
                   className="checklist-gallery-card"
                   data-reorder-id={list.id}
                   style={{ backgroundColor: list.color, color: getContrastText(list.color) }}
-                  draggable={!checklistSelectionMode && !isMobileUi}
-                  onDragStart={(event) => event.dataTransfer.setData("text/checklist-list", list.id)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => handleReorderChecklist(event.dataTransfer.getData("text/checklist-list"), list.id)}
                 >
-                  {!checklistSelectionMode && !isMobileUi && <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistTouchReorder(event, ".checklist-gallery-card", list.id, handleReorderChecklist)} aria-label={`Reorder ${list.title}`}>⠿</button>}
+                  {!checklistSelectionMode && <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistCardReorder(event, list.id)} aria-label={`Reorder ${list.title}`} title="Drag beside, above, or below another checklist">⠿</button>}
                   {checklistSelectionMode && <input className="checklist-list-select" type="checkbox" checked={selectedChecklistIds.includes(list.id)} onChange={(event) => setSelectedChecklistIds((ids) => event.target.checked ? [...ids, list.id] : ids.filter((id) => id !== list.id))} aria-label={`Select ${list.title || "Untitled checklist"}`} />}
                   <button type="button" className="checklist-card-open" onClick={() => checklistSelectionMode ? setSelectedChecklistIds((ids) => ids.includes(list.id) ? ids.filter((id) => id !== list.id) : [...ids, list.id]) : openChecklist(list.id)}>
                     <strong>{list.pinned ? "📌 " : ""}{list.title || "Untitled checklist"}</strong>

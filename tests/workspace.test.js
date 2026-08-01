@@ -707,6 +707,20 @@ test("primary navigation stays at 85 percent without changing widget or signed-i
   assert.doesNotMatch(css, /\.hero-card[^}]*font-size:\s*13\.6px/s);
 });
 
+test("checklist cards use two-dimensional pointer reordering with a cursor ghost", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /const startChecklistCardReorder = \(event, sourceId\) =>/);
+  assert.match(source, /cloneNode\(true\)[\s\S]*checklist-gallery-drag-ghost/);
+  assert.match(source, /inMiddleRow[\s\S]*clientX[\s\S]*clientY/);
+  assert.match(source, /setChecklists\(workingItems\)/);
+  assert.match(css, /\.checklist-gallery-drag-ghost\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;/s);
+  assert.match(css, /\.checklist-gallery-card\.drop-before/);
+  assert.match(css, /\.checklist-gallery-card\.drop-after/);
+});
+
 test("small widgets keep useful dimensions and scale content continuously", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),

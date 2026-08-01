@@ -6167,8 +6167,13 @@ html[data-theme="dark"] {
 .checklist-gallery-toolbar h2 { margin: 0; color: var(--text-color); }
 .checklist-gallery-toolbar p { margin: 4px 0 0; color: var(--muted-text); font-size: 0.8rem; }
 .checklist-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
-.checklist-gallery-card { position: relative; min-height: 110px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.25); cursor: grab; }
+.checklist-gallery-card { position: relative; min-height: 110px; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.25); transition: opacity 120ms ease, transform 160ms ease, box-shadow 160ms ease; }
 .checklist-list-grip { position: absolute; z-index: 2; top: 6px; right: 6px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: rgba(127, 127, 127, 0.18); color: inherit; cursor: grab; touch-action: none; }
+.checklist-list-grip:active { cursor: grabbing; }
+.checklist-gallery-card.is-pointer-dragging { opacity: 0.2; }
+.checklist-gallery-card.drop-before { transform: translateY(4px); box-shadow: inset 0 3px 0 var(--primary-color), inset 0 0 0 1px rgba(127, 127, 127, 0.25); }
+.checklist-gallery-card.drop-after { transform: translateY(-4px); box-shadow: inset 0 -3px 0 var(--primary-color), inset 0 0 0 1px rgba(127, 127, 127, 0.25); }
+.checklist-gallery-drag-ghost { position: fixed; z-index: 12000; top: 0; left: 0; margin: 0; opacity: 0.88; pointer-events: none; transform-origin: top left; box-shadow: 0 20px 50px rgb(0 0 0 / 30%), inset 0 0 0 2px color-mix(in srgb, var(--primary-color) 55%, transparent); cursor: grabbing; }
 .checklist-list-select { position: absolute; z-index: 2; top: 10px; right: 10px; width: 19px; height: 19px; accent-color: var(--checklist-accent); }
 .checklist-card-open { display: grid; width: 100%; height: 100%; min-height: 110px; align-content: space-between; gap: 12px; padding: 14px 48px 14px 14px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .checklist-card-open span { opacity: 0.78; font-size: 0.78rem; }
