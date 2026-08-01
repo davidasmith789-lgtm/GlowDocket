@@ -769,6 +769,44 @@ function snapWorkspaceRect(desired, targets, maxX) {
   };
 }
 
+function snapWorkspaceResizeRect(desired, edges, targets, { minWidth, minHeight, maxRight }) {
+  const closestTarget = (value, candidates) => candidates.reduce((closest, candidate) => {
+    const distance = Math.abs(candidate.value - value);
+    return distance <= WORKSPACE_SNAP_THRESHOLD && (!closest || distance < closest.distance) ? { ...candidate, distance } : closest;
+  }, null);
+  const right = desired.x + desired.width;
+  const bottom = desired.y + desired.height;
+  const vertical = edges.left ? closestTarget(desired.x, targets.vertical) : edges.right ? closestTarget(right, targets.vertical) : null;
+  const horizontal = edges.top ? closestTarget(desired.y, targets.horizontal) : edges.bottom ? closestTarget(bottom, targets.horizontal) : null;
+  const resized = { ...desired };
+  let verticalGuide = null;
+  let horizontalGuide = null;
+  if (vertical) {
+    if (edges.left && right - vertical.value >= minWidth && vertical.value >= 0) {
+      resized.x = vertical.value;
+      resized.width = right - vertical.value;
+      verticalGuide = vertical;
+    } else if (edges.right && vertical.value - desired.x >= minWidth && vertical.value <= maxRight) {
+      resized.width = vertical.value - desired.x;
+      verticalGuide = vertical;
+    }
+  }
+  if (horizontal) {
+    if (edges.top && bottom - horizontal.value >= minHeight && horizontal.value >= 0) {
+      resized.y = horizontal.value;
+      resized.height = bottom - horizontal.value;
+      horizontalGuide = horizontal;
+    } else if (edges.bottom && horizontal.value - desired.y >= minHeight) {
+      resized.height = horizontal.value - desired.y;
+      horizontalGuide = horizontal;
+    }
+  }
+  return { ...resized, guides: [
+    ...(verticalGuide ? [{ axis: "vertical", position: verticalGuide.value, start: Math.min(verticalGuide.start, resized.y), end: Math.max(verticalGuide.end, resized.y + resized.height) }] : []),
+    ...(horizontalGuide ? [{ axis: "horizontal", position: horizontalGuide.value, start: Math.min(horizontalGuide.start, resized.x), end: Math.max(horizontalGuide.end, resized.x + resized.width) }] : []),
+  ] };
+}
+
 function renderWorkspaceAlignmentGuides(canvas, guides = []) {
   canvas.querySelectorAll(".workspace-alignment-guide").forEach((guide) => guide.remove());
   guides.forEach((guide) => {
@@ -1298,7 +1336,7 @@ function repairLoadedWorkspace(layout) {
 
 const PERSONALIZATION_TIPS = [
   ["Move a widget", "Grab the six-dot handle and drag. Yellow guides snap matching widget edges and centers into alignment; hold Alt or Option for free movement. Drag over a navigation tab to send the widget there."],
-  ["Resize a widget", "On desktop, drag any edge or corner. On mobile, tap the resize controls below the widget so everything stays easy to reach."],
+  ["Resize a widget", "On desktop, drag any edge or corner. Yellow guides snap the side you are pulling into alignment; hold Alt or Option for free resizing. On mobile, tap the resize controls below the widget."],
   ["Widget hiding underneath another", "Open the top widget’s three-dot menu and choose Select widget underneath. The hidden one will come forward so you can grab it."],
   ["New widget not showing", "It is probably underneath another widget. Use Select widget underneath from the covering widget’s three-dot menu."],
   ["Add a widget", "Open Widgets beside the navigation, search for what you want, then choose Add to tab. Adding a copy never creates duplicate assignment data."],
@@ -1430,6 +1468,7 @@ function WorkspaceWidget({
     const canvasScale = Number(canvas?.dataset.workspaceScale) || 1;
     const widgetX = widgetBounds && canvasBounds ? (widgetBounds.left - canvasBounds.left) / canvasScale : 0;
     const widgetY = widgetBounds && canvasBounds ? (widgetBounds.top - canvasBounds.top) / canvasScale : 0;
+    const alignmentTargets = widget && canvas ? getWorkspaceAlignmentTargets(widget, canvas, canvasScale) : { vertical: [], horizontal: [] };
     let nextWidth = startWidth;
     let nextHeight = startHeight;
     let nextRect = {
@@ -1464,9 +1503,13 @@ function WorkspaceWidget({
         width: Math.min(maxWidth, Math.max(MIN_WIDGET_WIDTH, desiredWidth)),
         height: Math.max(minimumHeight, desiredHeight),
       };
-      nextRect = desired;
-      nextWidth = desired.width;
-      nextHeight = desired.height;
+      const aligned = moveEvent.altKey
+        ? { ...desired, guides: [] }
+        : snapWorkspaceResizeRect(desired, edges, alignmentTargets, { minWidth: MIN_WIDGET_WIDTH, minHeight: minimumHeight, maxRight: canvas?.clientWidth || Number.POSITIVE_INFINITY });
+      nextRect = aligned;
+      nextWidth = aligned.width;
+      nextHeight = aligned.height;
+      if (canvas) renderWorkspaceAlignmentGuides(canvas, aligned.guides);
       const hitMinimumWidth = (edges.left || edges.right) && desiredWidth <= MIN_WIDGET_WIDTH;
       const hitMinimumHeight = (edges.top || edges.bottom) && desiredHeight <= minimumHeight;
       const hitCanvasLeft = edges.left && rawX <= 0;
@@ -1479,8 +1522,8 @@ function WorkspaceWidget({
               : "",
       );
       if (widget) {
-        widget.style.left = `${desired.x}px`;
-        widget.style.top = `${desired.y}px`;
+        widget.style.left = `${aligned.x}px`;
+        widget.style.top = `${aligned.y}px`;
         widget.style.width = `${nextWidth}px`;
         widget.style.height = `${nextHeight}px`;
         const liveScale = Math.min(
@@ -1495,6 +1538,7 @@ function WorkspaceWidget({
       if (stopEvent?.pointerId !== undefined && stopEvent.pointerId !== activePointerId) return;
       widget?.classList.remove("is-resizing");
       setResizeLimit("");
+      if (canvas) renderWorkspaceAlignmentGuides(canvas);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
