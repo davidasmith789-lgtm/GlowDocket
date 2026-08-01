@@ -6036,6 +6036,7 @@ html[data-theme="dark"] {
 .workload-stat { align-content: center; gap: clamp(3px, 0.9cqh, 7px); padding: 5px; overflow: hidden; }
 .workload-stat.is-custom-period { align-content: start; overflow-x: hidden; overflow-y: auto; }
 .workload-stat > label { display: grid; width: fit-content; max-width: 100%; justify-items: center; gap: 2px; color: var(--muted-text); font-size: 0.58rem; font-weight: 800; line-height: 1.15; text-align: center; }
+.workload-stat > label > span { position: relative; top: -3px; margin-bottom: -1px; }
 .workload-stat select,
 .workload-stat input { width: 100%; min-width: 0; min-height: 28px; padding: 4px 6px; font-size: 0.68rem; line-height: 1.15; }
 .workload-stat > label > select { width: min(100%, calc(var(--workload-select-width, 11ch) + 22px)); min-width: 82px; min-height: 26px; padding-block: 3px; text-align: center; text-align-last: center; }

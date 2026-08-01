@@ -105,6 +105,7 @@ test("workload presets stay compact and only custom periods can scroll", async (
   assert.match(source, /--workload-select-width[^}]*workloadPeriodLabels\[workloadPeriod\]\.length \+ 3/);
   assert.match(source, /className=\{!workloadSummary\.invalid && workloadSummary\.knownMinutes <= 0 \? "is-no-estimates" : ""\}/);
   assert.match(css, /\.workload-stat > label\s*\{[^}]*justify-items:\s*center;[^}]*text-align:\s*center;/s);
+  assert.match(css, /\.workload-stat > label > span\s*\{[^}]*top:\s*-3px;[^}]*margin-bottom:\s*-1px;/s);
   assert.match(css, /\.workload-stat > label > select\s*\{[^}]*--workload-select-width[^}]*text-align-last:\s*center;/s);
   assert.match(css, /\.workload-stat > strong\.is-no-estimates\s*\{[^}]*font-size:\s*clamp\(0\.62rem, 2\.4cqw, 0\.78rem\);/s);
 });
