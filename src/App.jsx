@@ -8256,7 +8256,9 @@ function App() {
     );
   };
 
-  const renderWidgetContent = (instance) => {
+  const renderWidgetContent = (instanceOrType) => {
+    const instance = typeof instanceOrType === "string" ? { type: instanceOrType } : instanceOrType;
+    if (!instance?.type) return null;
     const type = instance.type;
     if (type === "quick-match") return renderQuickMatchCard();
     if (type === "mini-calendar") return renderWorkspaceCalendar(instance);
@@ -8989,7 +8991,7 @@ function App() {
             portalRoot={detached.portalRoot}
             onClose={() => returnDetachedWidget(detached.id)}
           >
-            {renderWidgetContent(detached.type)}
+            {renderWidgetContent(detached)}
           </DetachedWidgetWindow>
         ))}
 
