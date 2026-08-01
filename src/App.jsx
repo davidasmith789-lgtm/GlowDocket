@@ -6172,11 +6172,23 @@ function App() {
       const position = getChecklistGalleryPosition(list, index);
       return { galleryColumn: position.column, galleryRow: position.row };
     })() }));
-    const target = positioned[targetIndex];
+    const source = positioned[sourceIndex];
+    const hasCardToRight = positioned.some((list) => list.id !== sourceId && list.galleryRow === source.galleryRow && list.galleryColumn > source.galleryColumn);
+    const withoutSourceGap = positioned.map((list) => {
+      if (list.id === sourceId) return list;
+      if (hasCardToRight && list.galleryRow === source.galleryRow && list.galleryColumn > source.galleryColumn) {
+        return { ...list, galleryColumn: list.galleryColumn - 1 };
+      }
+      if (!hasCardToRight && list.galleryColumn === source.galleryColumn && list.galleryRow > source.galleryRow) {
+        return { ...list, galleryRow: list.galleryRow - 1 };
+      }
+      return list;
+    });
+    const target = withoutSourceGap.find((list) => list.id === targetId);
     const vertical = placement === "above" || placement === "below";
     const desiredColumn = target.galleryColumn + (placement === "right" ? 1 : 0);
     const desiredRow = target.galleryRow + (placement === "below" ? 1 : 0);
-    return positioned.map((list) => {
+    return withoutSourceGap.map((list) => {
       if (list.id === sourceId) return { ...list, galleryColumn: desiredColumn, galleryRow: desiredRow };
       if (vertical && list.galleryColumn === desiredColumn && list.galleryRow >= desiredRow) {
         return { ...list, galleryRow: list.galleryRow + 1 };

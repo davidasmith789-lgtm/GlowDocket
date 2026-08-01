@@ -794,6 +794,10 @@ test("checklist cards use two-dimensional pointer reordering with a cursor ghost
   assert.match(css, /\.checklist-gallery-view\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*flex-direction:\s*column;/s);
   assert.match(source, /galleryColumn:\s*nextColumn, galleryRow:\s*1/);
   assert.match(source, /const placeChecklistCard = \(items, sourceId, targetId, placement\) =>/);
+  assert.match(source, /const hasCardToRight = positioned\.some/);
+  assert.match(source, /hasCardToRight && list\.galleryRow === source\.galleryRow && list\.galleryColumn > source\.galleryColumn/);
+  assert.match(source, /!hasCardToRight && list\.galleryColumn === source\.galleryColumn && list\.galleryRow > source\.galleryRow/);
+  assert.match(source, /const target = withoutSourceGap\.find/);
   assert.match(source, /placement === "above" \|\| placement === "below"/);
   assert.match(source, /gridColumn:\s*galleryPosition\.column, gridRow:\s*galleryPosition\.row/);
   assert.match(css, /\.checklist-gallery\s*\{[^}]*display:\s*grid;[^}]*grid-auto-columns:\s*minmax\(150px, 220px\);[^}]*grid-auto-rows:\s*110px;[^}]*overflow:\s*auto;/s);
