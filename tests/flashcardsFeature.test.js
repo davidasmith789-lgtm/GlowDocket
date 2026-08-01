@@ -167,6 +167,17 @@ test("deck tiles open full personal decks while Study starts study setup", () =>
   assert.match(hubStyles, /\.flash-study \+ \.flash-modal\s*\{\s*background: transparent;/);
 });
 
+test("iPhone deck views use mobile layouts instead of desktop panels", () => {
+  assert.match(hub, /const mobileDeckView = editor[\s\S]*?: "library";/);
+  assert.match(hub, /document\.querySelector\("\.mobile-app-main"\)\?\.scrollTo/);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-editor > header\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-study\s*\{[^}]*height:\s*100dvh;[^}]*overflow-x:\s*clip;/s);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-study > header\s*\{[^}]*flex-direction:\s*column;/s);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-keyboard-hint\s*\{\s*display:\s*none;/s);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-modal > section\s*\{[^}]*height:\s*100dvh;[^}]*max-height:\s*100dvh;[^}]*safe-area-inset-bottom/s);
+  assert.match(hubStyles, /@media \(max-width: 650px\)[\s\S]*?\.flash-summary > button\s*\{[^}]*width:\s*100%;/s);
+});
+
 test("study progress follows the card and personal decks offer study or edit", () => {
   assert.match(
     hub,

@@ -94,6 +94,25 @@ export default function FlashcardsHub({
     level: getGamificationLevel(profileSettings.totalXp).level,
     name: displayName,
   }), [displayName, profileSettings.selectedBadge, profileSettings.shareFlashcardBadge, profileSettings.shareFlashcardLevel, profileSettings.sharedFlashcardBadge, profileSettings.showFlashcardName, profileSettings.totalXp]);
+  const mobileDeckView = editor
+    ? `editor:${editor.id || "new"}`
+    : viewer
+      ? `viewer:${viewer.id}`
+      : setup
+        ? `setup:${setup.deck?.id || "deck"}`
+        : study
+          ? `study:${study.deck?.id || "deck"}`
+          : summary
+            ? `summary:${summary.deck?.id || "deck"}`
+            : "library";
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    const frame = requestAnimationFrame(() => {
+      document.querySelector(".mobile-app-main")?.scrollTo?.({ top: 0, left: 0 });
+      window.scrollTo?.({ top: 0, left: 0 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isMobile, mobileDeckView]);
   const askToConfirm = (title, description, action, confirmLabel = "Confirm") =>
     setConfirmRequest({ title, description, action, confirmLabel });
   const closeConfirmation = useCallback(

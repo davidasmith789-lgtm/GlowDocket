@@ -1297,6 +1297,124 @@
     transform: rotate(680deg);
   }
 }
+
+/* Keep every deck subview phone-native, including iPhone safe areas. */
+@media (max-width: 650px) {
+  .flash-page,
+  .flash-editor,
+  .flash-viewer,
+  .flash-setup,
+  .flash-summary {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 12px 10px calc(112px + env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
+  }
+
+  .flash-editor > header {
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin: -12px -10px 14px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 9px;
+  }
+  .flash-editor > header > button,
+  .flash-editor > header > div,
+  .flash-editor > header > div button {
+    width: 100%;
+  }
+  .flash-editor > header > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: stretch;
+    gap: 8px;
+  }
+  .flash-editor > header > div span { min-width: 0; text-align: left; }
+  .flash-editor-intro { align-items: stretch; flex-direction: column; gap: 8px; }
+  .flash-editor-intro p { align-self: flex-start; }
+  .flash-deck-fields,
+  .flash-card-editor { min-width: 0; }
+  .flash-card-editor footer { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .flash-card-editor footer button,
+  .flash-editor-actions button,
+  .flash-add-card-row { width: 100%; }
+
+  .flash-viewer > header { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .flash-viewer > header > button,
+  .flash-viewer-actions,
+  .flash-viewer-actions button { width: 100%; }
+  .flash-viewer-heading { margin: 14px 0; padding: 18px 14px; border-radius: 17px; }
+  .flash-viewer-cards article { grid-template-columns: 32px minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .flash-viewer-cards article > div,
+  .flash-viewer-explanation { grid-column: 2; }
+
+  .flash-setup {
+    min-height: calc(100dvh - var(--mobile-nav-clearance, 88px));
+    align-content: start;
+    gap: 12px;
+    border: 0;
+    border-radius: 0;
+  }
+  .flash-setup > button { width: 100%; }
+
+  .flash-study {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 10px calc(16px + env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
+    overscroll-behavior: contain;
+  }
+  .flash-study > header { align-items: stretch; flex-direction: column; gap: 8px; }
+  .flash-study > header > div { min-width: 0; }
+  .flash-study > header > div :is(b, span) { display: block; overflow-wrap: anywhere; }
+  .flash-study > header > button { width: 100%; }
+  .flash-keyboard-hint { display: none; }
+  .flash-card { height: clamp(230px, 42dvh, 350px); margin: 12px auto; }
+  .flash-card-face { padding: 46px 16px 20px; }
+  .flash-card-face strong { font-size: clamp(1.25rem, 7vw, 2rem); }
+  .flash-review-actions { gap: 9px; margin-top: 10px; }
+  .flash-ratings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .flash-ratings button { min-width: 0; width: 100%; }
+
+  .flash-summary { min-height: calc(100dvh - var(--mobile-nav-clearance, 88px)); padding-top: 24px; }
+  .flash-summary > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flash-summary span { min-width: 0; padding: 12px 6px; }
+  .flash-summary > button { width: 100%; margin-top: 8px; }
+
+  .flash-modal {
+    align-items: stretch;
+    padding: 0;
+  }
+  .flash-modal > section {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    overscroll-behavior: contain;
+  }
+  .flash-modal > .flash-confirm-dialog {
+    align-self: center;
+    width: calc(100% - 28px) !important;
+    height: auto;
+    min-height: 0;
+    max-height: calc(100dvh - 28px);
+    margin: 14px;
+    padding: 22px 16px !important;
+    border-radius: 20px;
+  }
+  .flash-share-dialog > div { display: grid; grid-template-columns: minmax(0, 1fr); margin: 16px 0 0; }
+  .flash-share-dialog > div button { width: 100%; min-height: 46px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flash-confetti {
     display: none;
