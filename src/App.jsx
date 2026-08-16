@@ -2194,10 +2194,13 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarAddOpen, setCalendarAddOpen] = useState(false);
   const [calendarEventFormOpen, setCalendarEventFormOpen] = useState(false);
+  const [editingCalendarEventId, setEditingCalendarEventId] = useState(null);
   const [expandedCalendarEventId, setExpandedCalendarEventId] = useState(null);
   const [calendarEventName, setCalendarEventName] = useState("");
-  const [calendarEventTime, setCalendarEventTime] = useState("09:00");
+  const [calendarEventTime, setCalendarEventTime] = useState("");
+  const [calendarEventAmPm, setCalendarEventAmPm] = useState("");
   const [calendarEventNotes, setCalendarEventNotes] = useState("");
+  const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -6014,21 +6017,68 @@ function App() {
   ].join("-");
 
   const resetCalendarEventForm = () => {
+    setEditingCalendarEventId(null);
     setCalendarEventName("");
-    setCalendarEventTime("09:00");
+    setCalendarEventTime("");
+    setCalendarEventAmPm("");
     setCalendarEventNotes("");
+    setCalendarEventTimeError("");
+  };
+
+  const normalizeCalendarEventTime = (value, amPm) => {
+    const match = String(value || "").trim().match(/^(\d{1,2})(?::([0-5]\d))?$/);
+    if (!match || !amPm) return null;
+    const hour = Number(match[1]);
+    if (hour < 1 || hour > 12) return null;
+    const minute = match[2] || "00";
+    const hour24 = hour % 12 + (amPm === "PM" ? 12 : 0);
+    return `${String(hour24).padStart(2, "0")}:${minute}`;
+  };
+
+  const openNewCalendarEvent = () => {
+    resetCalendarEventForm();
+    setCalendarEventFormOpen(true);
+  };
+
+  const openCalendarEventEditor = (entry) => {
+    const [rawHour = "0", minute = "00"] = String(entry.time || "00:00").split(":");
+    const hour24 = Number(rawHour);
+    setEditingCalendarEventId(entry.id);
+    setCalendarEventName(entry.name || "");
+    setCalendarEventTime(`${hour24 % 12 || 12}${minute === "00" ? "" : `:${minute}`}`);
+    setCalendarEventAmPm(hour24 >= 12 ? "PM" : "AM");
+    setCalendarEventNotes(entry.notes || "");
+    setCalendarEventTimeError("");
+    setCalendarEventFormOpen(true);
   };
 
   const handleAddCalendarEvent = (event) => {
     event.preventDefault();
     const name = calendarEventName.trim();
     if (!name) return;
+    const normalizedTime = normalizeCalendarEventTime(calendarEventTime, calendarEventAmPm);
+    if (!normalizedTime) {
+      setCalendarEventTimeError("Enter an hour from 1–12, optional minutes, and choose AM or PM.");
+      return;
+    }
+    if (editingCalendarEventId) {
+      saveCalendarEvents(calendarEvents.map((entry) => entry.id === editingCalendarEventId ? {
+        ...entry,
+        name,
+        time: normalizedTime,
+        notes: calendarEventNotes.trim(),
+      } : entry));
+      setExpandedCalendarEventId(editingCalendarEventId);
+      resetCalendarEventForm();
+      setCalendarEventFormOpen(false);
+      return;
+    }
     const nextEntry = {
       id: crypto.randomUUID(),
       date: selectedCalendarDateKey,
       type: "event",
       name,
-      time: calendarEventTime || "09:00",
+      time: normalizedTime,
       notes: calendarEventNotes.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -10025,18 +10075,18 @@ function App() {
                   <div className="calendar-day-summary">
                     <div className="calendar-events-heading">
                       <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })}'s Events</strong>
-                      <button type="button" className="btn btn-primary" onClick={() => setCalendarEventFormOpen((open) => !open)}>
-                        {calendarEventFormOpen ? "Cancel" : "+ Add event or class"}
+                      <button type="button" className="btn btn-primary" onClick={openNewCalendarEvent}>
+                        + Add event or class
                       </button>
                     </div>
                     {calendarEventFormOpen && (
                       <div className="calendar-event-modal" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") setCalendarEventFormOpen(false); }} onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarEventFormOpen(false); }}>
                         <form className="calendar-event-form" role="dialog" aria-modal="true" aria-labelledby="calendar-event-form-title" onSubmit={handleAddCalendarEvent}>
-                          <div className="calendar-event-form-heading"><h3 id="calendar-event-form-title">Add event for {selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}</h3><button type="button" aria-label="Close add event" onClick={() => setCalendarEventFormOpen(false)}>×</button></div>
+                          <div className="calendar-event-form-heading"><h3 id="calendar-event-form-title">{editingCalendarEventId ? "Edit event" : `Add event for ${selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}</h3><button type="button" aria-label="Close event editor" onClick={() => setCalendarEventFormOpen(false)}>×</button></div>
                           <label><span>Name</span><input autoFocus required value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder="Event or class name" /></label>
-                          <label><span>Time</span><input type="time" required value={calendarEventTime} onChange={(event) => setCalendarEventTime(event.target.value)} /></label>
+                          <fieldset className="calendar-event-time-fields"><legend>Time</legend><label><span>Hour and minutes</span><input required inputMode="numeric" value={calendarEventTime} onChange={(event) => { setCalendarEventTime(event.target.value); setCalendarEventTimeError(""); }} placeholder="3 or 3:30" aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label><label><span>AM or PM</span><select required value={calendarEventAmPm} onChange={(event) => { setCalendarEventAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="" disabled>Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>{calendarEventTimeError && <p id="calendar-event-time-error" role="alert">{calendarEventTimeError}</p>}</fieldset>
                           <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="4" placeholder="Add notes now (optional)" /></label>
-                          <div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setCalendarEventFormOpen(false)}>Cancel</button><button type="submit" className="btn btn-primary">Add Event</button></div>
+                          <div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setCalendarEventFormOpen(false)}>Cancel</button><button type="submit" className="btn btn-primary">{editingCalendarEventId ? "Save Changes" : "Add Event"}</button></div>
                         </form>
                       </div>
                     )}
@@ -10057,7 +10107,7 @@ function App() {
                               <div className="calendar-event-notes">
                                 <label htmlFor={`calendar-event-notes-${entry.id}`}>Notes</label>
                                 <textarea id={`calendar-event-notes-${entry.id}`} value={entry.notes || ""} onChange={(event) => handleCalendarEventNotesChange(entry.id, event.target.value)} rows="4" placeholder="Add notes for this event..." />
-                                <button type="button" className="btn btn-danger" onClick={() => { if (window.confirm(`Delete “${entry.name}”?`)) handleDeleteCalendarEvent(entry.id); }}>Delete</button>
+                                <div className="calendar-event-entry-actions"><button type="button" className="btn btn-secondary" onClick={() => openCalendarEventEditor(entry)}>Edit</button><button type="button" className="btn btn-danger" onClick={() => { if (window.confirm(`Delete “${entry.name}”?`)) handleDeleteCalendarEvent(entry.id); }}>Delete</button></div>
                               </div>
                             )}
                           </div>
