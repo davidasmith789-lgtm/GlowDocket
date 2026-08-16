@@ -2037,6 +2037,9 @@ function App() {
   const workspaceStorageKey = currentUser
     ? `workspaceLayout_${currentUser}`
     : "workspaceLayout_guest";
+  const calendarEventsStorageKey = currentUser
+    ? `calendarEvents_${currentUser}`
+    : "calendarEvents_guest";
 
   // ---------------------------------------------------------------------------
   // COURSES AND COURSE COLORS
@@ -2155,6 +2158,9 @@ function App() {
   // tasks is the app's central data array. The remaining values describe what
   // the user is currently viewing; they are interface state rather than data.
   const [tasks, setTasks] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState(() =>
+    readStoredSection(localStorage, calendarEventsStorageKey, [], Array.isArray),
+  );
   const [externalPushStatus, setExternalPushStatus] = useState(EXTERNAL_PUSH_CLIENT_ENABLED ? "idle" : "client_disabled");
   const [externalPushMessage, setExternalPushMessage] = useState("");
   const [externalPushLastSync, setExternalPushLastSync] = useState("");
@@ -2187,6 +2193,12 @@ function App() {
   const [focusTaskId, setFocusTaskId] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarAddOpen, setCalendarAddOpen] = useState(false);
+  const [calendarEventFormOpen, setCalendarEventFormOpen] = useState(false);
+  const [expandedCalendarEventId, setExpandedCalendarEventId] = useState(null);
+  const [calendarEventType, setCalendarEventType] = useState("event");
+  const [calendarEventName, setCalendarEventName] = useState("");
+  const [calendarEventTime, setCalendarEventTime] = useState("09:00");
+  const [calendarEventNotes, setCalendarEventNotes] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -3464,6 +3476,7 @@ function App() {
     );
     const loadedSettings = { ...loadedSettingsBase, activeColorThemeMode: loadedThemeMode };
     const loadedChecklists = readStoredSection(localStorage, checklistStorageKey, [], Array.isArray);
+    const loadedCalendarEvents = readStoredSection(localStorage, calendarEventsStorageKey, [], Array.isArray);
     const storedWorkspace = readStoredSection(localStorage, workspaceStorageKey, null, (value) => value === null || isObject(value));
     const loadedWorkspace = repairLoadedWorkspace(storedWorkspace);
 
@@ -3473,6 +3486,7 @@ function App() {
     setUserSettings(loadedSettings);
     setTheme(loadedThemeMode);
     setChecklists(loadedChecklists);
+    setCalendarEvents(loadedCalendarEvents);
     workspaceLayoutRef.current = loadedWorkspace;
     setWorkspaceLayout(loadedWorkspace);
     setSelectedChecklistId(null);
@@ -3491,6 +3505,7 @@ function App() {
     courseColorsStorageKey,
     settingsStorageKey,
     checklistStorageKey,
+    calendarEventsStorageKey,
     workspaceStorageKey,
   ]);
 
@@ -5977,10 +5992,63 @@ function App() {
 
   const handleCalendarDateChange = (date) => {
     setSelectedDate(date);
+    setExpandedCalendarEventId(null);
 
     if (calendarAddOpen) {
       prefillDueDate(date);
     }
+  };
+
+  const saveCalendarEvents = (nextEvents) => {
+    setCalendarEvents(nextEvents);
+    try {
+      localStorage.setItem(calendarEventsStorageKey, JSON.stringify(nextEvents));
+    } catch (error) {
+      console.error("Failed to save calendar events:", error);
+    }
+  };
+
+  const selectedCalendarDateKey = [
+    selectedDate.getFullYear(),
+    String(selectedDate.getMonth() + 1).padStart(2, "0"),
+    String(selectedDate.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const resetCalendarEventForm = () => {
+    setCalendarEventType("event");
+    setCalendarEventName("");
+    setCalendarEventTime("09:00");
+    setCalendarEventNotes("");
+  };
+
+  const handleAddCalendarEvent = (event) => {
+    event.preventDefault();
+    const name = calendarEventName.trim();
+    if (!name) return;
+    const nextEntry = {
+      id: crypto.randomUUID(),
+      date: selectedCalendarDateKey,
+      type: calendarEventType === "class" ? "class" : "event",
+      name,
+      time: calendarEventTime || "09:00",
+      notes: calendarEventNotes.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    saveCalendarEvents([...calendarEvents, nextEntry]);
+    resetCalendarEventForm();
+    setCalendarEventFormOpen(false);
+    setExpandedCalendarEventId(nextEntry.id);
+  };
+
+  const handleCalendarEventNotesChange = (eventId, notes) => {
+    saveCalendarEvents(calendarEvents.map((entry) =>
+      entry.id === eventId ? { ...entry, notes } : entry
+    ));
+  };
+
+  const handleDeleteCalendarEvent = (eventId) => {
+    saveCalendarEvents(calendarEvents.filter((entry) => entry.id !== eventId));
+    setExpandedCalendarEventId(null);
   };
 
   const handleDashboardCalendarClick = (date) => {
@@ -6654,6 +6722,19 @@ function App() {
   );
   const selectedCycleDay = getCycleDayForDate(selectedDate, userSettings);
   const selectedWeeklyMeetings = getWeeklyMeetingsForDate(selectedDate, userSettings);
+  const selectedCalendarEvents = calendarEvents
+    .filter((entry) => entry?.date === selectedCalendarDateKey)
+    .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
+  const selectedTimedCalendarEntries = [
+    ...selectedWeeklyMeetings.map((meeting) => ({
+      id: `scheduled-${meeting.id}-${meeting.course}`,
+      name: meeting.course,
+      time: meeting.startTime,
+      endTime: meeting.endTime,
+      type: "scheduled-class",
+    })),
+    ...selectedCalendarEvents,
+  ].sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedScheduleCourses = userSettings.schoolScheduleMode === "weekly"
     ? [...new Set(selectedWeeklyMeetings.map((meeting) => meeting.course))]
     : [];
@@ -9944,21 +10025,47 @@ function App() {
                   </h4>
 
                   <div className="calendar-day-summary">
-                    <strong>{userSettings.schoolScheduleMode === "weekly"
-                      ? `${selectedDate.toLocaleDateString(undefined, { weekday: "long" })} classes`
-                      : selectedCycleDay || "No scheduled school cycle day"}</strong>
+                    <div className="calendar-events-heading">
+                      <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })}'s Events</strong>
+                      <button type="button" className="btn btn-primary" onClick={() => setCalendarEventFormOpen((open) => !open)}>
+                        {calendarEventFormOpen ? "Cancel" : "+ Add event or class"}
+                      </button>
+                    </div>
+                    {calendarEventFormOpen && (
+                      <form className="calendar-event-form" onSubmit={handleAddCalendarEvent}>
+                        <label><span>Type</span><select value={calendarEventType} onChange={(event) => setCalendarEventType(event.target.value)}><option value="event">Event</option><option value="class">Class</option></select></label>
+                        <label><span>Name</span><input autoFocus required value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder={calendarEventType === "class" ? "Class name" : "Event name"} /></label>
+                        <label><span>Time</span><input type="time" required value={calendarEventTime} onChange={(event) => setCalendarEventTime(event.target.value)} /></label>
+                        <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="3" placeholder="Add notes now (optional)" /></label>
+                        <button type="submit" className="btn btn-primary">Add {calendarEventType === "class" ? "Class" : "Event"}</button>
+                      </form>
+                    )}
+                    {selectedTimedCalendarEntries.length > 0 ? (
+                      <div className="calendar-class-meetings calendar-event-list">
+                        {selectedTimedCalendarEntries.map((entry) => entry.type === "scheduled-class" ? (
+                          <div className="calendar-event-row is-scheduled" key={entry.id}>
+                            <span><strong>{entry.name}</strong><small>Scheduled class</small></span>
+                            <time>{formatMeetingTime(entry.time)}–{formatMeetingTime(entry.endTime)}</time>
+                          </div>
+                        ) : (
+                          <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
+                            <button type="button" className="calendar-event-row" onClick={() => setExpandedCalendarEventId((id) => id === entry.id ? null : entry.id)} aria-expanded={expandedCalendarEventId === entry.id}>
+                              <span><strong>{entry.name}</strong><small>{entry.type === "class" ? "Class" : "Event"}</small></span>
+                              <time>{formatMeetingTime(entry.time)}</time>
+                            </button>
+                            {expandedCalendarEventId === entry.id && (
+                              <div className="calendar-event-notes">
+                                <label htmlFor={`calendar-event-notes-${entry.id}`}>Notes</label>
+                                <textarea id={`calendar-event-notes-${entry.id}`} value={entry.notes || ""} onChange={(event) => handleCalendarEventNotesChange(entry.id, event.target.value)} rows="4" placeholder="Add notes for this event..." />
+                                <button type="button" className="btn btn-danger" onClick={() => { if (window.confirm(`Delete “${entry.name}”?`)) handleDeleteCalendarEvent(entry.id); }}>Delete</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p>No events or classes are scheduled for this day.</p>}
                     {userSettings.schoolScheduleMode === "weekly" && (
-                      selectedWeeklyMeetings.length > 0 ? (
-                        <div className="calendar-class-meetings">
-                          {selectedWeeklyMeetings.map((meeting) => (
-                            <p key={`${meeting.course}-${meeting.id}`}>
-                              <strong>{meeting.course}</strong>
-                              <span>{formatMeetingTime(meeting.startTime)}–{formatMeetingTime(meeting.endTime)}</span>
-                            </p>
-                          ))}
-                          <p>Scheduled-course assignments due: {selectedWeeklyCourseTasks.length > 0 ? selectedWeeklyCourseTasks.map((task) => task.title).join(", ") : "None"}</p>
-                        </div>
-                      ) : <p>No classes are scheduled for this day.</p>
+                      <p>Scheduled-course assignments due: {selectedWeeklyCourseTasks.length > 0 ? selectedWeeklyCourseTasks.map((task) => task.title).join(", ") : "None"}</p>
                     )}
                     {userSettings.schoolScheduleMode !== "weekly" && selectedCycleDay && (
                       <p>
