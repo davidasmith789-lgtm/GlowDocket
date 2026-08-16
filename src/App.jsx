@@ -2195,7 +2195,6 @@ function App() {
   const [calendarAddOpen, setCalendarAddOpen] = useState(false);
   const [calendarEventFormOpen, setCalendarEventFormOpen] = useState(false);
   const [expandedCalendarEventId, setExpandedCalendarEventId] = useState(null);
-  const [calendarEventType, setCalendarEventType] = useState("event");
   const [calendarEventName, setCalendarEventName] = useState("");
   const [calendarEventTime, setCalendarEventTime] = useState("09:00");
   const [calendarEventNotes, setCalendarEventNotes] = useState("");
@@ -6015,7 +6014,6 @@ function App() {
   ].join("-");
 
   const resetCalendarEventForm = () => {
-    setCalendarEventType("event");
     setCalendarEventName("");
     setCalendarEventTime("09:00");
     setCalendarEventNotes("");
@@ -6028,7 +6026,7 @@ function App() {
     const nextEntry = {
       id: crypto.randomUUID(),
       date: selectedCalendarDateKey,
-      type: calendarEventType === "class" ? "class" : "event",
+      type: "event",
       name,
       time: calendarEventTime || "09:00",
       notes: calendarEventNotes.trim(),
@@ -10032,25 +10030,27 @@ function App() {
                       </button>
                     </div>
                     {calendarEventFormOpen && (
-                      <form className="calendar-event-form" onSubmit={handleAddCalendarEvent}>
-                        <label><span>Type</span><select value={calendarEventType} onChange={(event) => setCalendarEventType(event.target.value)}><option value="event">Event</option><option value="class">Class</option></select></label>
-                        <label><span>Name</span><input autoFocus required value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder={calendarEventType === "class" ? "Class name" : "Event name"} /></label>
-                        <label><span>Time</span><input type="time" required value={calendarEventTime} onChange={(event) => setCalendarEventTime(event.target.value)} /></label>
-                        <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="3" placeholder="Add notes now (optional)" /></label>
-                        <button type="submit" className="btn btn-primary">Add {calendarEventType === "class" ? "Class" : "Event"}</button>
-                      </form>
+                      <div className="calendar-event-modal" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") setCalendarEventFormOpen(false); }} onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarEventFormOpen(false); }}>
+                        <form className="calendar-event-form" role="dialog" aria-modal="true" aria-labelledby="calendar-event-form-title" onSubmit={handleAddCalendarEvent}>
+                          <div className="calendar-event-form-heading"><h3 id="calendar-event-form-title">Add event for {selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}</h3><button type="button" aria-label="Close add event" onClick={() => setCalendarEventFormOpen(false)}>×</button></div>
+                          <label><span>Name</span><input autoFocus required value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder="Event or class name" /></label>
+                          <label><span>Time</span><input type="time" required value={calendarEventTime} onChange={(event) => setCalendarEventTime(event.target.value)} /></label>
+                          <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="4" placeholder="Add notes now (optional)" /></label>
+                          <div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setCalendarEventFormOpen(false)}>Cancel</button><button type="submit" className="btn btn-primary">Add Event</button></div>
+                        </form>
+                      </div>
                     )}
                     {selectedTimedCalendarEntries.length > 0 ? (
                       <div className="calendar-class-meetings calendar-event-list">
                         {selectedTimedCalendarEntries.map((entry) => entry.type === "scheduled-class" ? (
                           <div className="calendar-event-row is-scheduled" key={entry.id}>
-                            <span><strong>{entry.name}</strong><small>Scheduled class</small></span>
+                            <span><strong>{entry.name}</strong></span>
                             <time>{formatMeetingTime(entry.time)}–{formatMeetingTime(entry.endTime)}</time>
                           </div>
                         ) : (
                           <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
                             <button type="button" className="calendar-event-row" onClick={() => setExpandedCalendarEventId((id) => id === entry.id ? null : entry.id)} aria-expanded={expandedCalendarEventId === entry.id}>
-                              <span><strong>{entry.name}</strong><small>{entry.type === "class" ? "Class" : "Event"}</small></span>
+                              <span><strong>{entry.name}</strong></span>
                               <time>{formatMeetingTime(entry.time)}</time>
                             </button>
                             {expandedCalendarEventId === entry.id && (
