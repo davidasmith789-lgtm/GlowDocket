@@ -2577,12 +2577,20 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
 }
 .calendar-tile-details i { width: 6px; height: 6px; border-radius: 50%; }
 .calendar-day-summary {
-  margin: 10px 0 16px;
-  padding: 12px;
+  margin: 0;
+  padding: 16px;
   border-radius: 10px;
   background: rgb(59 130 246 / 10%);
 }
 .calendar-day-summary p { margin: 5px 0 0; }
+.calendar-day-sections { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.calendar-day-section { min-width: 0; border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent); border-radius: 14px; }
+.calendar-events-section { order: 1; }
+.calendar-assignments-section { order: 2; padding: 16px; background: var(--card-bg); }
+.calendar-day-sections.assignments-first .calendar-events-section { order: 2; }
+.calendar-day-sections.assignments-first .calendar-assignments-section { order: 1; }
+.calendar-assignments-section > h4 { margin: 0 0 14px; }
+.calendar-assignments-section > .placeholder-text { margin: 0; }
 .calendar-events-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .calendar-events-heading .btn { padding: 7px 12px; }
 .calendar-event-modal { position: fixed; z-index: 12000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(2 6 23 / 55%); }

@@ -125,6 +125,7 @@ const DEFAULT_USER_SETTINGS = {
   gamification: DEFAULT_GAMIFICATION,
   calendarWeekStartsOn: "sunday",
   calendarViewMode: "month",
+  calendarDaySectionOrder: "events-first",
   showNeighboringMonth: true,
   showCalendarCycleLabels: true,
   showCalendarTaskDots: true,
@@ -10068,11 +10069,8 @@ function App() {
                   />
               )}
 
-                  <h4 style={{ marginTop: "20px" }}>
-                    Assignments for {selectedDate.toDateString()}
-                  </h4>
-
-                  <div className="calendar-day-summary">
+                  <div className={`calendar-day-sections ${userSettings.calendarDaySectionOrder === "assignments-first" ? "assignments-first" : "events-first"}`}>
+                  <div className="calendar-day-summary calendar-day-section calendar-events-section">
                     <div className="calendar-events-heading">
                       <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })}'s Events</strong>
                       <button type="button" className="btn btn-primary" onClick={openNewCalendarEvent}>
@@ -10132,6 +10130,11 @@ function App() {
                       </p>
                     )}
                   </div>
+
+                  <section className="calendar-day-section calendar-assignments-section" aria-labelledby="calendar-selected-assignments-title">
+                  <h4 id="calendar-selected-assignments-title">
+                    Assignments for {selectedDate.toDateString()}
+                  </h4>
 
                   {selectedDateTasks.length === 0 ? (
                     <p className="placeholder-text">
@@ -10238,6 +10241,8 @@ function App() {
                       {renderAddAssignmentForm("calendar")}
                     </div>
                   )}
+                  </section>
+                  </div>
             </div>
           )}
           {/* SETTINGS: central home for appearance and future app preferences. */}
@@ -11083,6 +11088,13 @@ function App() {
                         <select value={userSettings.calendarViewMode || "month"} onChange={(e) => handleAddFieldSettingChange("calendarViewMode", e.target.value)}>
                           <option value="month">Month</option>
                           <option value="week">Week</option>
+                        </select>
+                      </label>
+                      <label className="settings-select-row settings-option-card">
+                        <span>Selected-day order</span>
+                        <select value={userSettings.calendarDaySectionOrder || "events-first"} onChange={(e) => handleAddFieldSettingChange("calendarDaySectionOrder", e.target.value)}>
+                          <option value="events-first">Events above assignments</option>
+                          <option value="assignments-first">Assignments above events</option>
                         </select>
                       </label>
                     </div>
