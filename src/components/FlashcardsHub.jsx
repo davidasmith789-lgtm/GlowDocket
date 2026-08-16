@@ -113,8 +113,8 @@ export default function FlashcardsHub({
     });
     return () => cancelAnimationFrame(frame);
   }, [isMobile, mobileDeckView]);
-  const askToConfirm = (title, description, action, confirmLabel = "Confirm") =>
-    setConfirmRequest({ title, description, action, confirmLabel });
+  const askToConfirm = (title, description, action, confirmLabel = "Confirm", clearBackdrop = false) =>
+    setConfirmRequest({ title, description, action, confirmLabel, clearBackdrop });
   const closeConfirmation = useCallback(
     (accepted) => {
       const action = confirmRequest?.action;
@@ -973,6 +973,7 @@ export default function FlashcardsHub({
                       }
                     },
                     "Delete Deck",
+                    true,
                   )
                 }
               >

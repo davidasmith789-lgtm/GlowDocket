@@ -595,6 +595,9 @@
 .flash-study + .flash-modal {
   background: transparent;
 }
+.flash-modal.flash-modal-clear-backdrop {
+  background: transparent;
+}
 .flash-confirm-dialog h2,
 .flash-confirm-dialog p {
   color: var(--text-color) !important;

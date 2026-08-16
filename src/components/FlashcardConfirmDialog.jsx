@@ -29,7 +29,7 @@ export default function FlashcardConfirmDialog({ request, onClose }) {
   }, [request, onClose]);
   if (!request) return null;
   return (
-    <div className="flash-modal">
+    <div className={`flash-modal${request.clearBackdrop ? " flash-modal-clear-backdrop" : ""}`}>
       <section
         className="flash-confirm-dialog"
         ref={ref}
