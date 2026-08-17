@@ -377,6 +377,7 @@
   .mobile-checklist-fullscreen .checklist-item-delete { grid-column: 3; grid-row: 1; width: 44px; height: 44px; }
   .mobile-checklist-fullscreen .checklist-item-date-fields { grid-column: 2 / 4; grid-row: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-checklist-fullscreen .checklist-item-date-fields input { width: 100%; min-width: 0; }
+  .mobile-checklist-fullscreen .checklist-date-clear { grid-column: 1 / -1; min-height: 42px; }
   .mobile-checklist-fullscreen .checklist-item-deadline { grid-column: 2 / 4; grid-row: 3; min-width: 0; text-align: left; }
 }
 
@@ -6493,6 +6494,7 @@ html[data-theme="dark"] {
 .standalone-checklist-items li.is-done .checklist-item-text { opacity: 0.65; text-decoration: line-through; }
 .checklist-item-date-fields { display: flex; gap: 5px; }
 .checklist-item-date-fields input { width: auto; min-width: 120px; padding: 6px; }
+.checklist-date-clear { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-alt); color: var(--text-color); font-weight: 700; cursor: pointer; }
 .checklist-item-deadline { display: grid; min-width: 110px; text-align: right; }
 .checklist-item-deadline strong { font-size: 0.82rem; }
 .checklist-item-deadline span { color: var(--muted-text); font-size: 0.72rem; }

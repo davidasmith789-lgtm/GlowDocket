@@ -6520,6 +6520,13 @@ function App() {
     }));
   };
 
+  const handleClearChecklistItemDeadline = (listId, itemId) => {
+    updateChecklist(listId, (list) => ({
+      ...list,
+      items: (list.items || []).map((item) => item.id === itemId ? { ...item, dueDate: "", dueTime: "" } : item),
+    }));
+  };
+
   const handleDeleteChecklistItem = (listId, itemId) => {
     if (!window.confirm("Delete this checklist item permanently?")) return;
     updateChecklist(listId, (list) => ({ ...list, items: (list.items || []).filter((item) => item.id !== itemId) }));
@@ -8165,6 +8172,7 @@ function App() {
                 <div className="checklist-item-date-fields">
                   <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
                   {userSettings.checklistTimesEnabled && <input type="time" value={item.dueTime || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueTime", event.target.value)} aria-label={`Due time for ${item.text}`} />}
+                  {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear date</button>}
                 </div>
                 {item.dueDate && <div className="checklist-item-deadline"><strong>{formatChecklistDeadline(item)}</strong><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
                 <button type="button" className="checklist-item-delete" onClick={() => handleDeleteChecklistItem(selectedList.id, item.id)} aria-label={`Delete ${item.text}`}>×</button>

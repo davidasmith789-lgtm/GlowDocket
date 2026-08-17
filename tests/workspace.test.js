@@ -70,6 +70,17 @@ test("countdown switches from days to hours", () => {
   assert.equal(formatChecklistCountdown({ dueDate: "2026-07-06", dueTime: "14:30" }, now), "2h 30m left");
 });
 
+test("checklist due dates can be cleared on mobile and desktop", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /handleClearChecklistItemDeadline/);
+  assert.match(source, /dueDate: "", dueTime: ""/);
+  assert.match(source, /className="checklist-date-clear"/);
+  assert.match(css, /\.mobile-checklist-fullscreen \.checklist-date-clear/);
+});
+
 test("workload summaries support today, week, month, custom, and all remaining", () => {
   const now = new Date(2026, 6, 15, 12);
   const tasks = [
