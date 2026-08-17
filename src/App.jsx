@@ -125,6 +125,7 @@ const DEFAULT_USER_SETTINGS = {
   gamification: DEFAULT_GAMIFICATION,
   calendarWeekStartsOn: "sunday",
   calendarViewMode: "month",
+  timeFormat: "12h",
   calendarDaySectionOrder: "events-first",
   showNeighboringMonth: true,
   showCalendarCycleLabels: true,
@@ -656,7 +657,7 @@ const COLOR_CSS_VARIABLES = {
 
 const SETTINGS_SECTIONS = [
   { id: "account", icon: "👤", label: "Account", description: "Preferred name, email, and password." },
-  { id: "personalization", icon: "🎨", label: "Personalization", description: "Theme, layout, type, and every color." },
+  { id: "personalization", icon: "🎨", label: "Preferences", description: "Theme, time format, layout, type, and every color." },
   { id: "assignments", icon: "📝", label: "Assignment Options", description: "Fields, defaults, and workflow behavior." },
   { id: "checklists", icon: "☑️", label: "Checklists", description: "Standalone list deadlines and appearance." },
   { id: "calendar", icon: "📅", label: "Calendar", description: "Week layout and calendar details." },
@@ -2675,6 +2676,17 @@ function App() {
     setSyncRetryNonce((value) => value + 1);
   };
 
+  const useMilitaryTime = userSettings.timeFormat === "24h";
+  const formatAssignmentTime = (time, amPm = "PM") => {
+    const normalized = normalizeDueTime(time);
+    if (!normalized) return "No time";
+    if (!useMilitaryTime) return `${normalized} ${amPm || ""}`.trim();
+    const [rawHour, minute = "00"] = normalized.split(":");
+    let hour = Number(rawHour) % 12;
+    if (amPm === "PM") hour += 12;
+    return `${String(hour).padStart(2, "0")}:${minute}`;
+  };
+
   // Build the one-line details shown beneath task names in several tabs.
   const formatTaskDetails = (task) => {
     const hasDate = task.dueMonth && task.dueDay;
@@ -2682,10 +2694,7 @@ function App() {
     const dateLabel = hasDate
       ? `${monthLabel} ${Number(task.dueDay)}`
       : "No date";
-    const normalizedDueTime = normalizeDueTime(task.dueHour);
-    const timeLabel = normalizedDueTime
-      ? `${normalizedDueTime} ${task.dueAmPm || ""}`
-      : "No time";
+    const timeLabel = formatAssignmentTime(task.dueHour, task.dueAmPm);
     const repeatLabel =
       task.repeat && task.repeat !== "NONE"
         ? ` | 🔁 Repeats: ${formatRepeatLabel(task.repeat)}`
@@ -6031,6 +6040,11 @@ function App() {
   };
 
   const normalizeCalendarEventTime = (value, amPm) => {
+    if (useMilitaryTime) {
+      const militaryMatch = String(value || "").trim().match(/^(\d{1,2})(?::([0-5]\d))?$/);
+      if (!militaryMatch || Number(militaryMatch[1]) > 23) return null;
+      return `${String(Number(militaryMatch[1])).padStart(2, "0")}:${militaryMatch[2] || "00"}`;
+    }
     const match = String(value || "").trim().match(/^(\d{1,2})(?::([0-5]\d))?$/);
     if (!match || !amPm) return null;
     const hour = Number(match[1]);
@@ -6059,7 +6073,7 @@ function App() {
     setCalendarEntryMode(isActivity ? "activity" : "event");
     setEditingCalendarEventId(entry.id);
     setCalendarEventName(entry.name || (isActivity ? "Day notes" : ""));
-    setCalendarEventTime(isActivity ? "" : `${hour24 % 12 || 12}${minute === "00" ? "" : `:${minute}`}`);
+    setCalendarEventTime(isActivity ? "" : useMilitaryTime ? `${String(hour24).padStart(2, "0")}:${minute}` : `${hour24 % 12 || 12}${minute === "00" ? "" : `:${minute}`}`);
     setCalendarEventAmPm(isActivity ? "" : hour24 >= 12 ? "PM" : "AM");
     setCalendarEventNotes(entry.notes || "");
     setCalendarEventTimeError("");
@@ -6072,7 +6086,7 @@ function App() {
     if (!name) return;
     const normalizedTime = calendarEntryMode === "activity" ? "" : normalizeCalendarEventTime(calendarEventTime, calendarEventAmPm);
     if (calendarEntryMode !== "activity" && !normalizedTime) {
-      setCalendarEventTimeError("Enter an hour from 1–12, optional minutes, and choose AM or PM.");
+      setCalendarEventTimeError(useMilitaryTime ? "Enter a time from 00:00 to 23:59." : "Enter an hour from 1–12, optional minutes, and choose AM or PM.");
       return;
     }
     if (editingCalendarEventId) {
@@ -7144,7 +7158,7 @@ function App() {
               {deadline && (
                 <span className="subtask-deadline">
                   {monthNames[deadline.getMonth()]} {deadline.getDate()} at{" "}
-                  {normalizeDueTime(subtask.dueHour)} {subtask.dueAmPm}
+                  {formatAssignmentTime(subtask.dueHour, subtask.dueAmPm)}
                   {(bucket === "Overdue 🚨" || bucket === "Due Today ⏰") &&
                     ` · ${bucket}`}
                 </span>
@@ -7422,7 +7436,7 @@ function App() {
           {guidedEntryStep === 3 && <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="LOW">Low</option><option value="MED">Medium</option><option value="HIGH">High</option></select></label>}
           {guidedEntryStep === 4 && <label>Notes<textarea value={guidedNotes} onChange={(event) => setGuidedNotes(event.target.value)} rows="5" placeholder="Optional notes" /></label>}
           {guidedEntryStep === 5 && <><div className="guided-checklist-add"><input value={newSubtaskText} onChange={(event) => setNewSubtaskText(event.target.value)} placeholder="Related task to complete" /><button type="button" className="btn btn-secondary" onClick={handleAddDraftSubtask} disabled={!newSubtaskText.trim()}>Add</button></div>{draftSubtasks.length > 0 ? <ol className="creation-related-task-list">{draftSubtasks.map((item) => <li key={item.id}><input type="checkbox" checked={false} readOnly tabIndex="-1" aria-hidden="true" /><span>{item.text}</span><button type="button" className="subtask-remove-button" onClick={() => handleRemoveDraftSubtask(item.id)}>Remove</button></li>)}</ol> : <p className="subtask-form-hint">No related tasks added.</p>}</>}
-          {guidedEntryStep === 6 && <dl className="guided-entry-review"><div><dt>Name</dt><dd>{taskName || "Missing"}</dd></div><div><dt>Course</dt><dd>{selectedCourse || "Other"}</dd></div><div><dt>Due</dt><dd>{dueMonth && dueDay ? `${dueMonth}/${dueDay} at ${dueHour} ${dueAmPm}` : "Missing"}</dd></div><div><dt>Priority</dt><dd>{{ LOW: "Low", MED: "Medium", HIGH: "High" }[priority]}</dd></div><div><dt>Notes</dt><dd>{guidedNotes || "None"}</dd></div><div><dt>Related tasks</dt><dd>{draftSubtasks.length} item{draftSubtasks.length === 1 ? "" : "s"}</dd></div></dl>}
+          {guidedEntryStep === 6 && <dl className="guided-entry-review"><div><dt>Name</dt><dd>{taskName || "Missing"}</dd></div><div><dt>Course</dt><dd>{selectedCourse || "Other"}</dd></div><div><dt>Due</dt><dd>{dueMonth && dueDay ? `${dueMonth}/${dueDay} at ${formatAssignmentTime(dueHour, dueAmPm)}` : "Missing"}</dd></div><div><dt>Priority</dt><dd>{{ LOW: "Low", MED: "Medium", HIGH: "High" }[priority]}</dd></div><div><dt>Notes</dt><dd>{guidedNotes || "None"}</dd></div><div><dt>Related tasks</dt><dd>{draftSubtasks.length} item{draftSubtasks.length === 1 ? "" : "s"}</dd></div></dl>}
           <div className="guided-entry-actions">
             <button type="button" className="btn btn-secondary" onClick={() => { if (guidedEntryStep > 0) setGuidedEntryStep((step) => step - 1); else if (!taskName && !selectedCourse && !guidedNotes && draftSubtasks.length === 0 || window.confirm("Exit guided entry without saving?")) setGuidedEntryOpen(false); }}>{guidedEntryStep > 0 ? "Back" : "Exit"}</button>
             {guidedEntryStep > 3 && guidedEntryStep < 6 && <button type="button" className="btn btn-secondary" onClick={() => setGuidedEntryStep((step) => step + 1)}>Skip</button>}
@@ -8318,7 +8332,7 @@ function App() {
             <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`}>
               <button type="button" className="reminder-widget-main" onClick={() => handleReminderTaskClick(task)}>
                 <span><strong>{task.title}</strong><small>{getTaskCourseOrCategory(task)}</small></span>
-                <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></span>
+                <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !useMilitaryTime })}</small></span>
               </button>
               {getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
             </li>
@@ -10173,7 +10187,7 @@ function App() {
                         <form className="calendar-event-form" role="dialog" aria-modal="true" aria-labelledby="calendar-event-form-title" onSubmit={handleAddCalendarEvent}>
                           <div className="calendar-event-form-heading"><h3 id="calendar-event-form-title">{editingCalendarEventId ? `Edit ${calendarEntryMode}` : `Add ${calendarEntryMode} for ${selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}</h3><button type="button" aria-label={`Close ${calendarEntryMode} editor`} onClick={() => setCalendarEventFormOpen(false)}>×</button></div>
                           <label className="calendar-event-name-field"><input autoFocus required aria-label={`${calendarEntryMode} name`} value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder={`${calendarEntryMode[0].toUpperCase()}${calendarEntryMode.slice(1)} name`} /></label>
-                          {calendarEntryMode === "event" && <fieldset className="calendar-event-time-fields"><label className="calendar-event-time-input"><span>Time</span><input required inputMode="numeric" value={calendarEventTime} onChange={(event) => { setCalendarEventTime(event.target.value); setCalendarEventTimeError(""); }} placeholder="1 or 1:11" aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label><label><span>AM or PM</span><select required value={calendarEventAmPm} onChange={(event) => { setCalendarEventAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="" disabled>Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>{calendarEventTimeError && <p id="calendar-event-time-error" role="alert">{calendarEventTimeError}</p>}</fieldset>}
+                          {calendarEntryMode === "event" && <fieldset className={`calendar-event-time-fields${useMilitaryTime ? " uses-military-time" : ""}`}><label className="calendar-event-time-input"><span>Time</span><input required inputMode="numeric" value={calendarEventTime} onChange={(event) => { setCalendarEventTime(event.target.value); setCalendarEventTimeError(""); }} placeholder={useMilitaryTime ? "13:00 or 13:11" : "1 or 1:11"} aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label>{!useMilitaryTime && <label><span>AM or PM</span><select required value={calendarEventAmPm} onChange={(event) => { setCalendarEventAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="" disabled>Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>}{calendarEventTimeError && <p id="calendar-event-time-error" role="alert">{calendarEventTimeError}</p>}</fieldset>}
                           <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="4" placeholder="Add notes now (optional)" /></label>
                           <div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setCalendarEventFormOpen(false)}>Cancel</button><button type="submit" className="btn btn-primary">{editingCalendarEventId ? "Save Changes" : `Add ${calendarEntryMode}`}</button></div>
                         </form>
@@ -10184,13 +10198,13 @@ function App() {
                         {selectedTimedCalendarEntries.map((entry) => entry.type === "scheduled-class" ? (
                           <div className="calendar-event-row is-scheduled" key={entry.id}>
                             <span><strong>{entry.name}</strong></span>
-                            <time>{formatMeetingTime(entry.time)}–{formatMeetingTime(entry.endTime)}</time>
+                            <time>{formatMeetingTime(entry.time, useMilitaryTime)}–{formatMeetingTime(entry.endTime, useMilitaryTime)}</time>
                           </div>
                         ) : (
                           <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
                             <button type="button" className="calendar-event-row" onClick={() => setExpandedCalendarEventId((id) => id === entry.id ? null : entry.id)} aria-expanded={expandedCalendarEventId === entry.id}>
                               <span><strong>{entry.name}</strong></span>
-                              <time>{formatMeetingTime(entry.time)}</time>
+                              <time>{formatMeetingTime(entry.time, useMilitaryTime)}</time>
                             </button>
                             {expandedCalendarEventId === entry.id && (
                               <div className="calendar-event-notes">
@@ -10597,6 +10611,13 @@ function App() {
                             <option value="serif">Classic Serif</option>
                             <option value="readable">Highly Readable</option>
                             <option value="mono">Typewriter Mono</option>
+                          </select>
+                        </label>
+                        <label className="settings-select-row settings-option-card">
+                          <span>Time format</span>
+                          <select value={userSettings.timeFormat || "12h"} onChange={(event) => handleAddFieldSettingChange("timeFormat", event.target.value)}>
+                            <option value="12h">AM/PM (default)</option>
+                            <option value="24h">Military time (24-hour)</option>
                           </select>
                         </label>
                         <label className="settings-select-row settings-option-card">

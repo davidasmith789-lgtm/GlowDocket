@@ -34,9 +34,10 @@ export function expandMeetingsToIndividualDays(meetings) {
   });
 }
 
-export function formatMeetingTime(time) {
+export function formatMeetingTime(time, useMilitaryTime = false) {
   if (!/^\d{2}:\d{2}$/.test(String(time || ""))) return "Time not set";
   const [hour, minute] = time.split(":").map(Number);
+  if (useMilitaryTime) return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
   const suffix = hour >= 12 ? "PM" : "AM";
   return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${suffix}`;
 }
