@@ -566,7 +566,7 @@
     flex: 1;
   }
   .community-page.is-mobile {
-    padding-bottom: calc(var(--mobile-nav-clearance, 90px) + 22px);
+    padding-bottom: 22px;
   }
   .community-page.is-mobile .community-search-toggle {
     display: flex;
@@ -606,7 +606,7 @@
 }
 @media (max-width: 560px) {
   .community-page.is-mobile {
-    padding: 10px 10px calc(var(--mobile-nav-clearance, 90px) + 22px);
+    padding: 10px 10px 22px;
   }
   .community-hero {
     gap: 14px;

@@ -29,6 +29,19 @@ test("mobile keyboard, horizontal labels, notes spacing, and trash toast stay ha
   assert.match(styles, /mobile-app-ui \.delete-undo-toast[\s\S]{0,400}grid-template-columns: minmax\(0, 1fr\) auto/);
 });
 
+test("mobile pages reserve bottom navigation space only once", async () => {
+  const [styles, flashcards, community] = await Promise.all([
+    read("../src/App.css"),
+    read("../src/components/FlashcardsHub.css"),
+    read("../src/components/CommunityHub.css"),
+  ]);
+  assert.match(styles, /Authoritative end-of-cascade mobile overrides[\s\S]*?\.mobile-app-main \{ min-height: 0; padding-bottom: 28px;/);
+  assert.match(flashcards, /\.flash-page,[\s\S]*?padding: 12px 10px 22px;/);
+  assert.match(flashcards, /\.flash-setup \{\s*min-height: 0;/);
+  assert.match(community, /\.community-page\.is-mobile \{\s*padding-bottom: 22px;/);
+  assert.doesNotMatch(community, /community-page\.is-mobile[\s\S]{0,100}padding[^;]*mobile-nav-clearance/);
+});
+
 test("assignment dialogs trap focus and restore it to their trigger", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /dialogTriggerRef\.current = document\.activeElement/);
