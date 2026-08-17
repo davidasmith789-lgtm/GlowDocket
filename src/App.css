@@ -8692,3 +8692,28 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .portable-course-color-row { grid-template-columns: minmax(0, 1fr) 44px minmax(60px, auto); gap: 6px; }
   .mobile-app-ui .portable-course-color-row .course-color-selector { width: 44px; min-width: 44px; }
 }
+
+/* Keep the phone checklist list in the dashboard's normal vertical scroll flow. */
+@media (max-width: 767px) {
+  .mobile-dashboard-checklists,
+  .mobile-dashboard-checklists .standalone-checklists,
+  .mobile-dashboard-checklists .checklist-gallery-view {
+    height: auto;
+    min-height: max-content;
+    overflow: visible;
+  }
+  .mobile-dashboard-checklists .checklist-gallery {
+    height: auto;
+    min-height: max-content;
+    flex: 0 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-columns: auto;
+    grid-auto-rows: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+  .mobile-dashboard-checklists .checklist-gallery-card {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+}
