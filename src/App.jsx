@@ -10147,7 +10147,7 @@ function App() {
                       const showTaskDots = userSettings.showCalendarTaskDots !== false && dots.length > 0;
 
                       return dayColor || showTaskDots || showCycleDay ? <>
-                        {dayColor && <><span className="calendar-day-color-overlay" style={{ backgroundColor: dayColor }} /><span className="calendar-colored-date-number" style={{ color: getContrastText(dayColor) }}>{date.getDate()}</span></>}
+                        {dayColor && <span className={`calendar-day-color-overlay ${getContrastText(dayColor) === "#ffffff" ? "uses-light-number" : "uses-dark-number"}`} style={{ backgroundColor: dayColor }} />}
                         {(showTaskDots || showCycleDay) && <div className="calendar-tile-details">
                           {showCycleDay && <span>{cycleDay}</span>}
                           {showTaskDots && (
@@ -10173,7 +10173,7 @@ function App() {
                           <option value="date">Only this day</option>
                           <option value="weekday">All {selectedDate.toLocaleDateString(undefined, { weekday: "long" })}s</option>
                           {selectedCycleDay && <option value="cycle">All {selectedCycleDay}s</option>}
-                          {selectedColorEntryNames.map(([key, label]) => <option key={key} value={`entry:${key}`}>All “{label}” days</option>)}
+                          {selectedColorEntryNames.map(([key, label]) => <option key={key} value={`entry:${key}`}>Every day with “{label}”</option>)}
                         </select>
                         <button type="button" className="calendar-color-action" onClick={() => updateCalendarDayColor("")} title="Clear this color rule">Clear</button>
                         <button type="button" className="calendar-color-action" onClick={undoCalendarDayColor} disabled={calendarDayColorUndoStack.length === 0} title="Undo last day color change">Undo</button>
