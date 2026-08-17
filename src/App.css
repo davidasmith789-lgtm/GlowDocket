@@ -8390,6 +8390,13 @@ html[data-theme="dark"] .sync-conflict-dialog {
     margin: 0;
     padding: calc(14px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 14px max(14px, env(safe-area-inset-left, 0px));
   }
+  .mobile-app-main.mobile-add-fullscreen > .mobile-add-header {
+    align-items: center;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+    padding-bottom: 8px;
+  }
+  .mobile-add-header h2 { margin-top: 1px; font-size: 1.18rem; line-height: 1.2; }
+  .mobile-add-header button { flex-basis: 42px; width: 42px; height: 42px; font-size: 1.65rem; }
   .mobile-app-main.mobile-add-fullscreen > .mobile-add-scroll-body {
     position: relative;
     z-index: 1;
@@ -8598,15 +8605,12 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid { min-height: max-content; height: auto; max-height: none; padding-bottom: 12px; overflow: visible; align-content: start; }
   .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.settings-section, .settings-section-wide, .settings-collapsible-content, .privacy-data-panel, .privacy-data-summary) { min-height: 0; height: auto; max-height: none; overflow: visible; }
 
-  /* Keep the assignment form attached to the phone's visible bottom edge. */
+  /* Let iOS recalculate the complete screen after its keyboard and browser bars move. */
   .mobile-app-main.mobile-add-fullscreen {
-    top: var(--taskcabinet-visual-mobile-top, 0px);
-    right: auto;
-    bottom: auto;
-    left: var(--taskcabinet-visual-mobile-left, 0px);
-    width: var(--taskcabinet-visible-mobile-width, 100vw);
-    height: var(--taskcabinet-visible-mobile-height, 100dvh);
-    max-height: var(--taskcabinet-visible-mobile-height, 100dvh);
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     margin: 0;
     box-sizing: border-box;
   }

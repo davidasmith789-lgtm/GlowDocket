@@ -9399,7 +9399,7 @@ function App() {
 
             {currentTab === "mobile-add" && (
               <>
-                <header className="mobile-fullscreen-header inline-mobile-fullscreen-header"><div><p>New assignment</p><h2>{schoolLevelCopy.addLabel}</h2><span>Add the basics now and optional details when you need them.</span></div><button type="button" onClick={closeMobileAdd} aria-label="Close Add Assignment">×</button></header>
+                <header className="mobile-fullscreen-header inline-mobile-fullscreen-header mobile-add-header"><div><p>New assignment</p><h2>{schoolLevelCopy.addLabel}</h2></div><button type="button" onClick={closeMobileAdd} aria-label="Close Add Assignment">×</button></header>
                 <div className="mobile-add-scroll-body"><section className="mobile-app-card mobile-app-add-screen">{renderAddAssignmentForm("mobile")}</section></div>
               </>
             )}
