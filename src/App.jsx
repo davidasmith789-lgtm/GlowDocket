@@ -129,6 +129,7 @@ const DEFAULT_USER_SETTINGS = {
   showNeighboringMonth: true,
   showCalendarCycleLabels: true,
   showCalendarTaskDots: true,
+  calendarDayColors: { dates: {}, weekdays: {}, cycleDays: {} },
   checklistTimesEnabled: false,
   settingsSectionOrder: ["personalization", "assignments", "checklists", "calendar", "reminders", "cycle", "accessibility", "privacy", "storage"],
   mobileSettingsExpandedCards: {},
@@ -2203,6 +2204,7 @@ function App() {
   const [calendarEventAmPm, setCalendarEventAmPm] = useState("");
   const [calendarEventNotes, setCalendarEventNotes] = useState("");
   const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
+  const [calendarDayColorScope, setCalendarDayColorScope] = useState("date");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -6786,6 +6788,30 @@ function App() {
     .filter((entry) => entry?.date === selectedCalendarDateKey)
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedCalendarActivities = selectedCalendarEvents.filter((entry) => entry.type === "day-note");
+  const calendarDayColors = userSettings.calendarDayColors || { dates: {}, weekdays: {}, cycleDays: {} };
+  const getCalendarDayColor = (date) => {
+    const dateKey = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    const cycleDay = getCycleDayForDate(date, userSettings);
+    return calendarDayColors.dates?.[dateKey]
+      || (cycleDay && calendarDayColors.cycleDays?.[cycleDay])
+      || calendarDayColors.weekdays?.[date.getDay()]
+      || "";
+  };
+  const selectedDayColor = getCalendarDayColor(selectedDate) || "#6366f1";
+  const updateCalendarDayColor = (color) => {
+    const effectiveScope = calendarDayColorScope === "cycle" && !selectedCycleDay ? "date" : calendarDayColorScope;
+    const next = {
+      dates: { ...(calendarDayColors.dates || {}) },
+      weekdays: { ...(calendarDayColors.weekdays || {}) },
+      cycleDays: { ...(calendarDayColors.cycleDays || {}) },
+    };
+    const target = effectiveScope === "weekday" ? next.weekdays : effectiveScope === "cycle" ? next.cycleDays : next.dates;
+    const key = effectiveScope === "weekday" ? selectedDate.getDay() : effectiveScope === "cycle" ? selectedCycleDay : selectedCalendarDateKey;
+    if (!key && key !== 0) return;
+    if (color) target[key] = color;
+    else delete target[key];
+    handleAddFieldSettingChange("calendarDayColors", next);
+  };
   const selectedTimedCalendarEntries = [
     ...selectedWeeklyMeetings.map((meeting) => ({
       id: `scheduled-${meeting.id}-${meeting.course}`,
@@ -10035,10 +10061,11 @@ function App() {
                         const dayTasks = calendarTasks.filter((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate());
                         const dots = getCourseDotsForDate(date);
                         const cycleDay = getCycleDayForDate(date, userSettings);
+                        const dayColor = getCalendarDayColor(date);
                         return (
-                          <button type="button" key={date.toISOString()} className={`${isSameCalendarDay(date, selectedDate) ? "selected" : ""}${isSameCalendarDay(date, new Date()) ? " today" : ""}${dayTasks.some((task) => getTaskDueBucket(task).startsWith("Overdue")) ? " calendar-overdue-day" : ""}`} onClick={() => handleCalendarDateChange(date)}>
+                          <button type="button" key={date.toISOString()} style={dayColor ? { backgroundColor: `${dayColor}8c`, color: getContrastText(dayColor) } : undefined} className={`${isSameCalendarDay(date, selectedDate) ? "selected" : ""}${isSameCalendarDay(date, new Date()) ? " today" : ""}${dayTasks.some((task) => getTaskDueBucket(task).startsWith("Overdue")) ? " calendar-overdue-day" : ""}`} onClick={() => handleCalendarDateChange(date)}>
                             <span className="weekly-day-name">{date.toLocaleDateString(undefined, { weekday: "short" })}</span>
-                            <strong>{date.getDate()}</strong>
+                            <strong style={dayColor ? { color: getContrastText(dayColor) } : undefined}>{date.getDate()}</strong>
                             <small>{date.toLocaleDateString(undefined, { month: "short" })}</small>
                             {userSettings.showCalendarCycleLabels !== false && cycleDay && <span className="weekly-cycle-day">{cycleDay}</span>}
                             {userSettings.showCalendarTaskDots !== false && dots.length > 0 && <span className="calendar-course-dots">{dots.map((dot) => <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />)}</span>}
@@ -10061,12 +10088,14 @@ function App() {
                       if (view !== "month") return null;
                       const dots = getCourseDotsForDate(date);
                       const cycleDay = getCycleDayForDate(date, userSettings);
+                      const dayColor = getCalendarDayColor(date);
 
                       const showCycleDay = userSettings.showCalendarCycleLabels !== false && cycleDay;
                       const showTaskDots = userSettings.showCalendarTaskDots !== false && dots.length > 0;
 
-                      return showTaskDots || showCycleDay ? (
-                        <div className="calendar-tile-details">
+                      return dayColor || showTaskDots || showCycleDay ? <>
+                        {dayColor && <><span className="calendar-day-color-overlay" style={{ backgroundColor: dayColor }} /><span className="calendar-colored-date-number" style={{ color: getContrastText(dayColor) }}>{date.getDate()}</span></>}
+                        {(showTaskDots || showCycleDay) && <div className="calendar-tile-details">
                           {showCycleDay && <span>{cycleDay}</span>}
                           {showTaskDots && (
                             <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
@@ -10075,11 +10104,22 @@ function App() {
                               ))}
                             </span>
                           )}
-                        </div>
-                      ) : null;
+                        </div>}
+                      </> : null;
                     }}
                   />
               )}
+
+                  <section className="calendar-day-color-controls" aria-label="Day color">
+                    <strong>Day Color</strong>
+                    <input type="color" value={selectedDayColor} onChange={(event) => updateCalendarDayColor(event.target.value)} aria-label="Choose day color" />
+                    <select value={calendarDayColorScope === "cycle" && !selectedCycleDay ? "date" : calendarDayColorScope} onChange={(event) => setCalendarDayColorScope(event.target.value)} aria-label="Apply day color to">
+                      <option value="date">Only {selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</option>
+                      <option value="weekday">All {selectedDate.toLocaleDateString(undefined, { weekday: "long" })}s</option>
+                      {selectedCycleDay && <option value="cycle">All {selectedCycleDay}s</option>}
+                    </select>
+                    <button type="button" className="btn btn-secondary" onClick={() => updateCalendarDayColor("")}>Clear</button>
+                  </section>
 
                   <div className={`calendar-day-sections ${userSettings.calendarDaySectionOrder === "assignments-first" ? "assignments-first" : "events-first"}`}>
                   <div className="calendar-day-summary calendar-day-section calendar-events-section">
