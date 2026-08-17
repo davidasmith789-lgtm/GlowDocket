@@ -56,6 +56,7 @@ test("customizable logo exposes independent theme layers with safe defaults", as
     read("../src/App.jsx"), read("../src/GlowDocketLogo.jsx"), read("../src/App.css"),
   ]);
   const keys = ["logoBackground", "logoGradientStart", "logoGradientEnd", "logoStar", "logoGlow", "logoSpeedLines"];
+  assert.match(app, /if \(typeof colorId !== "string"\) return null;/);
   for (const key of keys) {
     assert.equal(app.includes(`key: "${key}"`), true);
     assert.equal(app.includes(`${key}: ["--logo-`), true);

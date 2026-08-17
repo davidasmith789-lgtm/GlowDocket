@@ -1,0 +1,14 @@
+{
+  "name": "GlowDocket",
+  "short_name": "GlowDocket",
+  "description": "Organize assignments, courses, deadlines, checklists, and study plans.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#f97316",
+  "icons": [
+    { "src": "/glowdocket-icon-192-sunset.png?v=1", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/glowdocket-icon-512-sunset.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/glowdocket-maskable-512-sunset.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -121,6 +121,7 @@ const DEFAULT_USER_SETTINGS = {
   showHeaderSubtitle: true,
   pageColorWashEnabled: true,
   pageColorWashColor: "#6366f1",
+  mobileBookmarkLogo: "midnight",
   reduceMotion: false,
   gamification: DEFAULT_GAMIFICATION,
   calendarWeekStartsOn: "sunday",
@@ -151,6 +152,13 @@ const DEFAULT_USER_SETTINGS = {
 
 const ACCOUNTS_STORAGE_KEY = "taskacadia_accounts";
 const AUTH_USER_STORAGE_KEY = "taskacadia_authenticated_user";
+const MOBILE_BOOKMARK_LOGOS = [
+  { id: "midnight", label: "Midnight dark" },
+  { id: "classic", label: "Classic light" },
+  { id: "sunset", label: "Sunset orange" },
+  { id: "violet", label: "Violet pink" },
+  { id: "forest", label: "Forest green" },
+];
 const MOBILE_SETTINGS_FIRST_CARD = {
   personalization: "appearance",
   account: "preferred-name",
@@ -373,6 +381,7 @@ const getCelebrationColorsForStyle = (savedColors, celebrationId) => {
 };
 
 const normalizeHexColor = (colorId) => {
+  if (typeof colorId !== "string") return null;
   const match = colorId.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!match) return null;
 
@@ -1942,6 +1951,7 @@ function parseLocalVoiceAssignments(transcript, courses, defaults) {
  * returned JSX with the current page and updates only the necessary elements.
  */
 function App() {
+  const isMobileDevice = window.matchMedia("(max-width: 767px)").matches;
   useEffect(() => startAdaptiveMotionMonitor(), []);
 
   // ---------------------------------------------------------------------------
@@ -2032,8 +2042,9 @@ function App() {
     ? `courseColors_${currentUser}`
     : "courseColors_guest";
   const settingsStorageKey = currentUser
-    ? `settings_${currentUser}`
-    : "settings_guest";
+    ? `${isMobileDevice ? "mobileSettings" : "settings"}_${currentUser}`
+    : isMobileDevice ? "mobileSettings_guest" : "settings_guest";
+  const desktopSettingsStorageKey = currentUser ? `settings_${currentUser}` : "settings_guest";
   const checklistStorageKey = currentUser
     ? `checklists_${currentUser}`
     : "checklists_guest";
@@ -2072,7 +2083,11 @@ function App() {
   });
   const [userSettings, setUserSettings] = useState(() => {
     try {
-      const storedSettings = localStorage.getItem(settingsStorageKey);
+      let storedSettings = localStorage.getItem(settingsStorageKey);
+      if (!storedSettings && isMobileDevice) {
+        storedSettings = localStorage.getItem(desktopSettingsStorageKey);
+        if (storedSettings) localStorage.setItem(settingsStorageKey, storedSettings);
+      }
       if (storedSettings) return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(storedSettings) };
       const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
       return { ...DEFAULT_USER_SETTINGS, customColors: midnightNeon?.colors || THEME_COLOR_DEFAULTS.dark };
@@ -2342,7 +2357,7 @@ function App() {
   const [selectedWorkspaceLayoutId, setSelectedWorkspaceLayoutId] = useState("");
   const widgetsUnavailableOnCurrentTab = ["community", "flashcards"].includes(currentTab);
   const [helpSearch, setHelpSearch] = useState("");
-  const [isMobileUi] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  const [isMobileUi] = useState(isMobileDevice);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const mobileSettingsScrollRef = useRef(null);
@@ -2575,7 +2590,7 @@ function App() {
           };
           needsUpload = Boolean(hydrationChoice.needsUpload);
         }
-        const localDeviceSettings = JSON.parse(localStorage.getItem(`settings_${currentUser}`) || "{}");
+        const localDeviceSettings = JSON.parse(localStorage.getItem(desktopSettingsStorageKey) || "{}");
         applyCloudStateToLocal(localStorage, currentUser, selected, {
           externalPushEnabled: Boolean(localDeviceSettings.externalPushEnabled),
           notificationsEnabled: Boolean(localDeviceSettings.notificationsEnabled),
@@ -2590,7 +2605,9 @@ function App() {
         setTasks(selected.tasks);
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
-        setUserSettings((settings) => ({ ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, activeColorThemeMode: settings.activeColorThemeMode, customColors: settings.customColors }));
+        setUserSettings((settings) => isMobileDevice
+          ? { ...DEFAULT_USER_SETTINGS, ...settings, gamification: selected.userSettings?.gamification || settings.gamification, signInDays: selected.userSettings?.signInDays || settings.signInDays }
+          : { ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, activeColorThemeMode: settings.activeColorThemeMode, customColors: settings.customColors });
         setChecklists(selected.checklists);
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
         workspaceLayoutRef.current = repairedWorkspace;
@@ -2610,7 +2627,10 @@ function App() {
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
-    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
+    const desktopSettings = isMobileDevice
+      ? { ...DEFAULT_USER_SETTINGS, ...readStoredSection(localStorage, currentUser ? `settings_${currentUser}` : "settings_guest", {}, (value) => Boolean(value && typeof value === "object" && !Array.isArray(value))), gamification: userSettings.gamification, signInDays: userSettings.signInDays }
+      : userSettings;
+    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings: desktopSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
     if (getCloudStateFingerprint(snapshot) === cloudLastSavedFingerprintRef.current) {
       saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, false);
@@ -2659,7 +2679,7 @@ function App() {
     };
     cloudSaveTimerRef.current = window.setTimeout(flush, 750);
     return () => window.clearTimeout(cloudSaveTimerRef.current);
-  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce]);
+  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce, isMobileDevice]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
@@ -2762,6 +2782,19 @@ function App() {
     const appBarColor = normalizeHexColor(activeColors.page || "") || THEME_COLOR_DEFAULTS[theme].page;
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", appBarColor);
   }, [currentUser, theme, userSettings.customColors]);
+
+  useEffect(() => {
+    const requestedLogo = userSettings.mobileBookmarkLogo === "default" ? "midnight" : userSettings.mobileBookmarkLogo || "midnight";
+    const logoId = MOBILE_BOOKMARK_LOGOS.some((option) => option.id === requestedLogo) ? requestedLogo : "midnight";
+    const appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+    const pngIcon = document.querySelector('link[rel="icon"][type="image/png"]');
+    const manifest = document.querySelector('link[rel="manifest"]');
+    const suffix = logoId === "classic" ? "" : `-${logoId}`;
+    const version = logoId === "classic" ? "2" : "1";
+    appleIcon?.setAttribute("href", `/apple-touch-icon${suffix}.png?v=${version}`);
+    pngIcon?.setAttribute("href", `/glowdocket-icon-192${suffix}.png?v=${version}`);
+    manifest?.setAttribute("href", logoId === "classic" ? "/manifest.webmanifest" : `/manifest-${logoId}.webmanifest`);
+  }, [userSettings.mobileBookmarkLogo]);
 
   useEffect(() => {
     const handleInstallPrompt = (event) => {
@@ -3481,7 +3514,11 @@ function App() {
     const loadedTasks = readStoredSection(localStorage, currentStorageKey, [], Array.isArray);
     const loadedCourses = readStoredSection(localStorage, courseStorageKey, ["Other"], (value) => Array.isArray(value) && value.every((course) => typeof course === "string"));
     const loadedCourseColors = readStoredSection(localStorage, courseColorsStorageKey, {}, isObject);
-    const storedSettings = readStoredSection(localStorage, settingsStorageKey, {}, isObject);
+    let storedSettings = readStoredSection(localStorage, settingsStorageKey, {}, isObject);
+    if (isMobileDevice && Object.keys(storedSettings).length === 0) {
+      storedSettings = readStoredSection(localStorage, desktopSettingsStorageKey, {}, isObject);
+      if (Object.keys(storedSettings).length > 0) localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+    }
     const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
     const loadedSettingsBase = Object.keys(storedSettings).length > 0
       ? { ...DEFAULT_USER_SETTINGS, ...storedSettings }
@@ -3520,9 +3557,11 @@ function App() {
     courseStorageKey,
     courseColorsStorageKey,
     settingsStorageKey,
+    desktopSettingsStorageKey,
     checklistStorageKey,
     calendarEventsStorageKey,
     workspaceStorageKey,
+    isMobileDevice,
   ]);
 
   useEffect(() => {
@@ -6123,6 +6162,29 @@ function App() {
     ));
   };
 
+  const handleScheduledClassNotesChange = (scheduledClass, notes) => {
+    const existingNote = calendarEvents.find((entry) =>
+      entry?.date === selectedCalendarDateKey &&
+      entry.type === "scheduled-class-note" &&
+      entry.scheduledClassId === scheduledClass.id
+    );
+    if (existingNote) {
+      saveCalendarEvents(calendarEvents.map((entry) =>
+        entry.id === existingNote.id ? { ...entry, notes } : entry
+      ));
+      return;
+    }
+    saveCalendarEvents([...calendarEvents, {
+      id: crypto.randomUUID(),
+      date: selectedCalendarDateKey,
+      type: "scheduled-class-note",
+      scheduledClassId: scheduledClass.id,
+      name: scheduledClass.name,
+      notes,
+      createdAt: new Date().toISOString(),
+    }]);
+  };
+
   const handleDeleteCalendarEvent = (eventId) => {
     saveCalendarEvents(calendarEvents.filter((entry) => entry.id !== eventId));
     setExpandedCalendarEventId(null);
@@ -6872,8 +6934,12 @@ function App() {
       time: meeting.startTime,
       endTime: meeting.endTime,
       type: "scheduled-class",
+      notes: selectedCalendarEvents.find((entry) =>
+        entry.type === "scheduled-class-note" &&
+        entry.scheduledClassId === `scheduled-${meeting.id}-${meeting.course}`
+      )?.notes || "",
     })),
-    ...selectedCalendarEvents.filter((entry) => entry.type !== "day-note"),
+    ...selectedCalendarEvents.filter((entry) => !["day-note", "scheduled-class-note"].includes(entry.type)),
   ].sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedScheduleCourses = userSettings.schoolScheduleMode === "weekly"
     ? [...new Set(selectedWeeklyMeetings.map((meeting) => meeting.course))]
@@ -10196,9 +10262,17 @@ function App() {
                     {selectedTimedCalendarEntries.length > 0 ? (
                       <div className="calendar-class-meetings calendar-event-list">
                         {selectedTimedCalendarEntries.map((entry) => entry.type === "scheduled-class" ? (
-                          <div className="calendar-event-row is-scheduled" key={entry.id}>
-                            <span><strong>{entry.name}</strong></span>
-                            <time>{formatMeetingTime(entry.time, useMilitaryTime)}–{formatMeetingTime(entry.endTime, useMilitaryTime)}</time>
+                          <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
+                            <button type="button" className="calendar-event-row is-scheduled" onClick={() => setExpandedCalendarEventId((id) => id === entry.id ? null : entry.id)} aria-expanded={expandedCalendarEventId === entry.id}>
+                              <span><strong>{entry.name}</strong><small>Class notes</small></span>
+                              <time>{formatMeetingTime(entry.time, useMilitaryTime)}–{formatMeetingTime(entry.endTime, useMilitaryTime)}</time>
+                            </button>
+                            {expandedCalendarEventId === entry.id && (
+                              <div className="calendar-event-notes">
+                                <label htmlFor={`scheduled-class-notes-${entry.id}`}>Notes for this day's class</label>
+                                <textarea id={`scheduled-class-notes-${entry.id}`} value={entry.notes || ""} onChange={(event) => handleScheduledClassNotesChange(entry, event.target.value)} rows="4" placeholder={`Add notes for today's ${entry.name} class...`} />
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
@@ -10668,6 +10742,24 @@ function App() {
                           />
                         </label>
                       </div>
+                      {isMobileUi && (
+                        <div className="mobile-bookmark-logo-settings">
+                          <label className="settings-select-row settings-option-card">
+                            <span>Mobile bookmark logo</span>
+                            <select value={userSettings.mobileBookmarkLogo === "default" ? "midnight" : userSettings.mobileBookmarkLogo || "midnight"} onChange={(event) => handleAddFieldSettingChange("mobileBookmarkLogo", event.target.value)}>
+                              {MOBILE_BOOKMARK_LOGOS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                            </select>
+                            <small>Choose a reliable Home Screen icon preset. Custom colors below continue to personalize the logo inside GlowDocket.</small>
+                          </label>
+                          <div className="logo-color-preview"><GlowDocketLogo label="Mobile bookmark logo preview" /><span>Custom logo preview</span></div>
+                          <div className="color-control-grid">
+                            {COLOR_PERSONALIZATION_FIELDS.filter((field) => field.group === "Logo").map((field) => {
+                              const value = userSettings.customColors?.[field.key] || THEME_COLOR_DEFAULTS[theme][field.key];
+                              return <label className="color-control" key={`mobile-bookmark-${field.key}`}><span>{field.label}</span><div><input type="color" value={value} onChange={(event) => handleCustomColorChange(field.key, event.target.value)} aria-label={`Mobile bookmark ${field.label} color`} /><input type="text" value={value.toUpperCase()} readOnly aria-label={`Mobile bookmark ${field.label} hex color`} /></div></label>;
+                            })}
+                          </div>
+                        </div>
+                      )}
                       <label className="settings-toggle settings-toggle-copy">
                         <span><strong>Reduce motion</strong><small>Turn off interface animation and smooth scrolling.</small></span>
                         <input
