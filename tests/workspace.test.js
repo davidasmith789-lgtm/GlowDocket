@@ -81,6 +81,16 @@ test("checklist due dates can be cleared on mobile and desktop", async () => {
   assert.match(css, /\.mobile-checklist-fullscreen \.checklist-date-clear/);
 });
 
+test("empty checklist dates use a compact labeled picker", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /checklist-date-picker\$\{item\.dueDate \? "" : " is-empty"\}/);
+  assert.match(source, /!item\.dueDate && <span aria-hidden="true">Select date<\/span>/);
+  assert.match(css, /\.checklist-date-picker\.is-empty\s*\{[^}]*width:\s*118px;/s);
+});
+
 test("workload summaries support today, week, month, custom, and all remaining", () => {
   const now = new Date(2026, 6, 15, 12);
   const tasks = [

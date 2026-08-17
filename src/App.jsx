@@ -8170,7 +8170,10 @@ function App() {
                 <input type="checkbox" checked={item.isDone} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "isDone", event.target.checked)} />
                 <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} />
                 <div className="checklist-item-date-fields">
-                  <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
+                  <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
+                    {!item.dueDate && <span aria-hidden="true">Select date</span>}
+                    <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
+                  </label>
                   {userSettings.checklistTimesEnabled && <input type="time" value={item.dueTime || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueTime", event.target.value)} aria-label={`Due time for ${item.text}`} />}
                   {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear date</button>}
                 </div>
