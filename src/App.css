@@ -8381,6 +8381,7 @@ html[data-theme="dark"] .sync-conflict-dialog {
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: none;
+    isolation: isolate;
   }
   .mobile-app-main.mobile-add-fullscreen > .inline-mobile-fullscreen-header {
     position: relative;
@@ -8390,6 +8391,8 @@ html[data-theme="dark"] .sync-conflict-dialog {
     padding: calc(14px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 14px max(14px, env(safe-area-inset-left, 0px));
   }
   .mobile-app-main.mobile-add-fullscreen > .mobile-add-scroll-body {
+    position: relative;
+    z-index: 1;
     min-width: 0;
     min-height: 0;
     flex: 1 1 auto;
@@ -8401,7 +8404,18 @@ html[data-theme="dark"] .sync-conflict-dialog {
     scroll-padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
     -webkit-overflow-scrolling: touch;
   }
-  .mobile-add-fullscreen .mobile-add-scroll-body .mobile-app-add-screen { margin-top: 0; }
+  .mobile-add-fullscreen .mobile-add-scroll-body .mobile-app-add-screen {
+    position: relative;
+    z-index: 1;
+    min-height: max-content;
+    margin-top: 0;
+    overflow: visible;
+  }
+  .mobile-add-fullscreen .assignment-entry-form {
+    min-height: max-content;
+    overflow: visible;
+  }
+  .mobile-add-fullscreen .assignment-entry-form > * { flex-shrink: 0; }
 
   .mobile-app-ui .settings-content.mobile-settings-panel-open {
     position: fixed;
