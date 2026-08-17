@@ -936,6 +936,7 @@
 }
 @media (max-width: 560px) {
   .community-page.is-mobile { scroll-behavior: smooth; }
+  .community-page.is-mobile .community-link-editor > legend { float: left; width: 100%; box-sizing: border-box; margin: 0 0 8px; padding: 0; text-align: center; }
   .community-page.is-mobile :where(.community-search-toggle, .community-card, .community-empty, .community-notice, .community-detail-heading) { text-align: center; }
   .community-page.is-mobile .community-card :where(h2, p, span, strong, small, b) { text-align: center; }
   .community-page.is-mobile :where(.community-card-meta, .community-card-footer, .community-detail-byline) { justify-content: center; text-align: center; }

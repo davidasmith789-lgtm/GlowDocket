@@ -25,6 +25,7 @@
   .flash-profile-sharing label > span,
   .flash-profile-sharing-preview { text-align: center; }
   .flash-profile-sharing label { align-items: center; }
+  .flash-profile-sharing fieldset > legend { float: left; width: 100%; box-sizing: border-box; margin: 0 0 4px; padding: 0; }
   .flash-profile-sharing-preview { justify-items: center; }
   .flash-profile-sharing-preview .flash-public-profile { margin-inline: auto; }
 }

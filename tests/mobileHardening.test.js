@@ -42,6 +42,18 @@ test("mobile pages reserve bottom navigation space only once", async () => {
   assert.doesNotMatch(community, /community-page\.is-mobile[\s\S]{0,100}padding[^;]*mobile-nav-clearance/);
 });
 
+test("mobile fieldset headings stay fully inside their boxes", async () => {
+  const [styles, sharing, community] = await Promise.all([
+    read("../src/App.css"),
+    read("../src/components/FlashcardProfileSharingControls.css"),
+    read("../src/components/CommunityHub.css"),
+  ]);
+  assert.match(styles, /feedback-screenshot-fieldset legend \{[^}]*float: left;[^}]*width: 100%;[^}]*padding: 0;/);
+  assert.match(styles, /schedule-mode-picker > legend \{[^}]*float: left;[^}]*width: 100%;/);
+  assert.match(sharing, /fieldset > legend \{[^}]*float: left;[^}]*width: 100%;/);
+  assert.match(community, /community-link-editor > legend \{[^}]*float: left;[^}]*width: 100%;/);
+});
+
 test("assignment dialogs trap focus and restore it to their trigger", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /dialogTriggerRef\.current = document\.activeElement/);

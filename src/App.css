@@ -192,6 +192,7 @@
   .mobile-app-ui :where(.mobile-app-card, .mobile-app-sheet, .account-dashboard-card, .settings-card, .task-card, .recommended-plan-item, .checklist-gallery-card, .friendly-empty) { text-align: center; }
   .mobile-app-ui :where(.mobile-app-card, .mobile-app-sheet, .account-dashboard-card, .settings-card, .task-card, .recommended-plan-item, .checklist-gallery-card) :where(h2, h3, h4, p, strong, small) { text-align: center; }
   .mobile-app-ui :where(input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]) { text-align: left; }
+  .mobile-app-ui .schedule-mode-picker > legend { float: left; width: 100%; box-sizing: border-box; margin: 0 0 7px; padding: 0; text-align: center; }
   :root { --mobile-nav-content-height: 70px; }
 
   .mobile-app-main {
@@ -1200,6 +1201,7 @@ html[data-theme="dark"] .recommendations-form label {
   .recommendations-page { padding: 18px 14px; }
   .recommendations-form-footer { align-items: stretch; flex-direction: column; }
   .recommendations-form-footer .btn { width: 100%; min-height: 46px; }
+  .feedback-screenshot-fieldset legend { float: left; width: 100%; box-sizing: border-box; margin: 0 0 2px; padding: 0; text-align: center; }
   .feedback-screenshot-preview { grid-template-columns: 1fr; }
   .feedback-screenshot-preview .btn, .feedback-file-button { width: 100%; }
 }
