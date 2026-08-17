@@ -2620,6 +2620,9 @@ button.calendar-event-row:hover { background: color-mix(in srgb, var(--primary-c
 .calendar-event-notes textarea { width: 100%; box-sizing: border-box; resize: vertical; }
 .calendar-event-notes .btn { justify-self: start; }
 .calendar-event-entry-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.calendar-day-notes { display: grid; gap: 7px; margin-top: 16px; }
+.calendar-day-notes > span { font-weight: 800; }
+.calendar-day-notes textarea { width: 100%; box-sizing: border-box; resize: vertical; }
 
 .task-attachments-panel {
   margin-top: 14px;

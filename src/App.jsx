@@ -6095,6 +6095,24 @@ function App() {
     ));
   };
 
+  const handleCalendarDayNotesChange = (notes) => {
+    const existingNote = calendarEvents.find((entry) => entry?.date === selectedCalendarDateKey && entry.type === "day-note");
+    if (existingNote) {
+      saveCalendarEvents(notes
+        ? calendarEvents.map((entry) => entry.id === existingNote.id ? { ...entry, notes } : entry)
+        : calendarEvents.filter((entry) => entry.id !== existingNote.id));
+      return;
+    }
+    if (!notes) return;
+    saveCalendarEvents([...calendarEvents, {
+      id: crypto.randomUUID(),
+      date: selectedCalendarDateKey,
+      type: "day-note",
+      notes,
+      createdAt: new Date().toISOString(),
+    }]);
+  };
+
   const handleDeleteCalendarEvent = (eventId) => {
     saveCalendarEvents(calendarEvents.filter((entry) => entry.id !== eventId));
     setExpandedCalendarEventId(null);
@@ -6774,6 +6792,7 @@ function App() {
   const selectedCalendarEvents = calendarEvents
     .filter((entry) => entry?.date === selectedCalendarDateKey)
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
+  const selectedDayNote = selectedCalendarEvents.find((entry) => entry.type === "day-note");
   const selectedTimedCalendarEntries = [
     ...selectedWeeklyMeetings.map((meeting) => ({
       id: `scheduled-${meeting.id}-${meeting.course}`,
@@ -6782,7 +6801,7 @@ function App() {
       endTime: meeting.endTime,
       type: "scheduled-class",
     })),
-    ...selectedCalendarEvents,
+    ...selectedCalendarEvents.filter((entry) => entry.type !== "day-note"),
   ].sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedScheduleCourses = userSettings.schoolScheduleMode === "weekly"
     ? [...new Set(selectedWeeklyMeetings.map((meeting) => meeting.course))]
@@ -10074,7 +10093,7 @@ function App() {
                     <div className="calendar-events-heading">
                       <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })}'s Events</strong>
                       <button type="button" className="btn btn-primary" onClick={openNewCalendarEvent}>
-                        + Add event or class
+                        Add event
                       </button>
                     </div>
                     {calendarEventFormOpen && (
@@ -10112,6 +10131,10 @@ function App() {
                         ))}
                       </div>
                     ) : <p>No events or classes are scheduled for this day.</p>}
+                    <label className="calendar-day-notes">
+                      <span>Day Notes</span>
+                      <textarea value={selectedDayNote?.notes || ""} onChange={(event) => handleCalendarDayNotesChange(event.target.value)} rows="4" placeholder="Add things happening today without a specific time..." />
+                    </label>
                     {userSettings.schoolScheduleMode === "weekly" && (
                       <p>Scheduled-course assignments due: {selectedWeeklyCourseTasks.length > 0 ? selectedWeeklyCourseTasks.map((task) => task.title).join(", ") : "None"}</p>
                     )}
