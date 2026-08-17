@@ -865,6 +865,18 @@
     padding: 20px 18px;
     border-radius: 20px;
   }
+  .flash-page.mobile > header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border-radius: 16px;
+  }
+  .flash-page.mobile > header h1 { margin: 0; font-size: 1.7rem; line-height: 1.1; }
+  .flash-page.mobile .flash-header-actions,
+  .flash-page.mobile .flash-header-actions button { width: auto; }
+  .flash-page.mobile .flash-header-actions button { min-height: 42px; padding: 8px 12px; white-space: nowrap; }
+  .flash-page.mobile > nav { margin-top: 10px; }
   .flash-page > header p {
     margin: 16px 0 0;
     line-height: 1.45;

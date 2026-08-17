@@ -1162,12 +1162,12 @@ export default function FlashcardsHub({
       <main className={`flash-page${isMobile ? " mobile" : ""}`}>
         <header>
           <div>
-            <span>Study smarter</span>
+            {!isMobile && <span>Study smarter</span>}
             <h1>Flashcards</h1>
-            <p>
+            {!isMobile && <p>
               Build decks, study at your pace, and track confidence without
               daily card deadlines.
-            </p>
+            </p>}
           </div>
           <div className="flash-header-actions">
             <button
@@ -1178,7 +1178,7 @@ export default function FlashcardsHub({
             </button>
           </div>
         </header>
-        {rewardSummary && (
+        {rewardSummary && !isMobile && (
           <section className={`flash-level-card${xpGuideOpen ? " is-guide-open" : ""}`} aria-label={`Account level ${accountLevel.level}, ${accountLevel.name}`}>
             {xpGuideOpen && (
               <div className="flash-level-showcase">
