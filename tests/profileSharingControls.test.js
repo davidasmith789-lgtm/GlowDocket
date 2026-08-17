@@ -36,3 +36,8 @@ test("profile sharing is visible from both account surfaces", () => {
   assert.match(appStyles, /\.account-profile-sharing-card\s*\{\s*grid-column: 1 \/ -1;/);
   assert.match(appStyles, /\.account-profile-sharing-card \.flash-profile-sharing-content\s*\{[^}]*grid-template-columns: minmax\(0, 1\.35fr\) minmax\(240px, \.65fr\)/s);
 });
+
+test("mobile boxed profile sharing content is centered", () => {
+  assert.match(styles, /@media \(max-width: 560px\)[\s\S]*?\.flash-profile-sharing\s*\{[^}]*text-align:\s*center;/);
+  assert.match(styles, /\.flash-profile-sharing-preview\s*\{\s*justify-items:\s*center;/);
+});

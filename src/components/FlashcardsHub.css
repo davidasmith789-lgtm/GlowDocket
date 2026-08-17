@@ -169,6 +169,7 @@
   border-radius: 18px;
   background: var(--card-bg);
 }
+.flash-search-toggle { display: none; }
 .flash-toolbar .flash-search-field {
   grid-column: span 1;
 }
@@ -824,6 +825,14 @@
   font-size: 2rem;
 }
 @media (max-width: 650px) {
+  .flash-page.mobile .flash-search-toggle { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-top: 12px; padding: 12px 14px; text-align: center; }
+  .flash-search-toggle > span { display: grid; gap: 2px; }
+  .flash-search-toggle small { color: var(--muted-text); font-size: .72rem; font-weight: 650; }
+  .flash-search-toggle > b { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--primary-color) 14%, transparent); font-size: 1.2rem; }
+  .flash-page.mobile :where(.flash-toolbar, .flash-deck-tile, .flash-empty, .flash-notice) { text-align: center; }
+  .flash-page.mobile .flash-toolbar label { text-align: center; }
+  .flash-page.mobile .flash-deck-tile :where(h2, h3, p, span, small, strong) { text-align: center; }
+  .flash-page.mobile .flash-deck-meta, .flash-page.mobile .flash-deck-actions { justify-content: center; }
   .flash-modal > .flash-import-dialog > .flash-import-guide .flash-import-example-grid { grid-template-columns: 1fr; }
   .flash-deck-fields > label:nth-child(n) { position: static; width: auto; height: auto; align-self: start; grid-column: 1; grid-row: auto; }
   .flash-deck-fields .flash-description-field { height: 120px; }

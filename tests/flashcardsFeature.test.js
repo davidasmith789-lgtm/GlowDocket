@@ -206,6 +206,14 @@ test("mobile Community search starts closed and expands on demand", () => {
   assert.match(hubStyles, /\.flash-header-actions,[\s\S]{0,100}\.flash-header-actions button[\s\S]{0,50}width: 100%/);
 });
 
+test("mobile Flashcards search starts closed and expands on demand", () => {
+  assert.match(hub, /mobileSearchOpen, setMobileSearchOpen\] = useState\(false\)/);
+  assert.match(hub, /className="flash-search-toggle"/);
+  assert.match(hub, /aria-expanded=\{mobileSearchOpen\}/);
+  assert.match(hub, /\{\(!isMobile \|\| mobileSearchOpen\) && <div className="flash-toolbar"/);
+  assert.match(hubStyles, /\.flash-page\.mobile \.flash-search-toggle\s*\{[^}]*display:\s*grid;/s);
+});
+
 test("Full Color Studio exposes Community and Flashcards feature colors", () => {
   assert.match(appSource, /communityAccent[\s\S]*group: "Community"/);
   assert.match(appSource, /flashcardAccent[\s\S]*group: "Flashcards"/);

@@ -74,6 +74,7 @@ export default function FlashcardsHub({
     [progress, setProgress] = useState({}),
     [rewardSummary, setRewardSummary] = useState(null),
     [xpGuideOpen, setXpGuideOpen] = useState(false),
+    [mobileSearchOpen, setMobileSearchOpen] = useState(false),
     [confirmRequest, setConfirmRequest] = useState(null),
     [celebrating, setCelebrating] = useState(false),
     [shareDeck, setShareDeck] = useState(null),
@@ -1252,7 +1253,13 @@ export default function FlashcardsHub({
             <button key={value} className={section === value ? "active" : ""} onClick={() => setSection(value)}>{label}</button>
           ))}
         </nav>
-        <div className="flash-toolbar">
+        {isMobile && (
+          <button type="button" className="flash-search-toggle" aria-expanded={mobileSearchOpen} aria-controls="flash-search-filters" onClick={() => setMobileSearchOpen((open) => !open)}>
+            <span><strong>Search & filters</strong><small>Find decks by title, course, or topic</small></span>
+            <b aria-hidden="true">{mobileSearchOpen ? "−" : "+"}</b>
+          </button>
+        )}
+        {(!isMobile || mobileSearchOpen) && <div className="flash-toolbar" id="flash-search-filters">
           <label className="flash-search-field">
             <span>Search your library</span>
             <input
@@ -1292,7 +1299,7 @@ export default function FlashcardsHub({
               )}
             </select>
           </label>
-        </div>
+        </div>}
         {loading ? (
           <p>Loading decks…</p>
         ) : decks.length === 0 ? (
