@@ -6350,6 +6350,10 @@ function App() {
     const color = userSettings.customColors?.checklistPalette1 || THEME_COLOR_DEFAULTS[theme].checklistPalette1;
     const nextColumn = Math.max(0, ...checklists.map((list, index) => Math.max(1, Number(list.galleryColumn) || index + 1))) + 1;
     saveChecklistData([...checklists, { id, title: "Untitled checklist", color, pinned: false, items: [], galleryColumn: nextColumn, galleryRow: 1, createdAt: new Date().toISOString() }]);
+    if (isMobileUi) {
+      window.history.pushState({ taskcabinetMobilePanel: "checklist" }, "");
+      setSelectedChecklistId(id);
+    }
   };
 
   const updateChecklist = (listId, updater) => {
@@ -8092,20 +8096,24 @@ function App() {
             <div className="checklist-gallery">
               {orderedLists.map((list, index) => {
                 const galleryPosition = getChecklistGalleryPosition(list, index);
+                const completedItems = (list.items || []).filter((item) => item.isDone).length;
+                const totalItems = (list.items || []).length;
+                const completionPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
                 return (
                 <article
                   key={list.id}
-                  className="checklist-gallery-card"
+                  className={`checklist-gallery-card${isMobileUi ? " mobile-checklist-list-card" : ""}`}
                   data-reorder-id={list.id}
                   data-gallery-column={galleryPosition.column}
                   data-gallery-row={galleryPosition.row}
                   style={{ backgroundColor: list.color, color: getContrastText(list.color), gridColumn: galleryPosition.column, gridRow: galleryPosition.row }}
                 >
-                  {!checklistSelectionMode && <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistCardReorder(event, list.id)} aria-label={`Reorder ${list.title}`} title="Drag beside, above, or below another checklist">⠿</button>}
+                  {!checklistSelectionMode && !isMobileUi && <button type="button" className="checklist-list-grip" onPointerDown={(event) => startChecklistCardReorder(event, list.id)} aria-label={`Reorder ${list.title}`} title="Drag beside, above, or below another checklist">⠿</button>}
                   {checklistSelectionMode && <input className="checklist-list-select" type="checkbox" checked={selectedChecklistIds.includes(list.id)} onChange={(event) => setSelectedChecklistIds((ids) => event.target.checked ? [...ids, list.id] : ids.filter((id) => id !== list.id))} aria-label={`Select ${list.title || "Untitled checklist"}`} />}
                   <button type="button" className="checklist-card-open" onClick={() => checklistSelectionMode ? setSelectedChecklistIds((ids) => ids.includes(list.id) ? ids.filter((id) => id !== list.id) : [...ids, list.id]) : openChecklist(list.id)}>
                     <strong>{list.pinned ? "📌 " : ""}{list.title || "Untitled checklist"}</strong>
-                    <span>{(list.items || []).filter((item) => item.isDone).length}/{(list.items || []).length} checked</span>
+                    <span>{completedItems}/{totalItems} checked</span>
+                    {isMobileUi && <><span className="mobile-checklist-progress" aria-hidden="true"><i style={{ width: `${completionPercent}%` }} /></span><b className="mobile-checklist-chevron" aria-hidden="true">›</b></>}
                   </button>
                 </article>
                 );
@@ -8119,7 +8127,7 @@ function App() {
     return (
       <section className={`standalone-checklists checklist-editor${isMobileUi ? " mobile-checklist-fullscreen" : ""}`} style={{ "--active-list-color": selectedList.color, "--active-list-text": getContrastText(selectedList.color) }}>
         <div className="checklist-editor-toolbar">
-          {isMobileUi ? <button type="button" className="mobile-checklist-close" onClick={closeChecklist} aria-label="Close checklist">×</button> : <button type="button" className="btn btn-secondary" onClick={closeChecklist}>← Lists</button>}
+          {isMobileUi ? <button type="button" className="mobile-checklist-close" onClick={closeChecklist} aria-label="Back to checklists">‹</button> : <button type="button" className="btn btn-secondary" onClick={closeChecklist}>← Lists</button>}
           <button type="button" className={`checklist-pin-button${selectedList.pinned ? " active" : ""}`} onClick={() => updateChecklist(selectedList.id, (list) => ({ ...list, pinned: !list.pinned }))}>{selectedList.pinned ? "Unpin" : "Pin"}</button>
         </div>
         <input className="checklist-title-input" value={selectedList.title} onChange={(event) => updateChecklist(selectedList.id, (list) => ({ ...list, title: event.target.value }))} aria-label="Checklist title" />
