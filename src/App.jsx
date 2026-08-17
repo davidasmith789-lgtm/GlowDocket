@@ -2608,7 +2608,7 @@ function App() {
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
         setUserSettings((settings) => isMobileDevice
-          ? { ...DEFAULT_USER_SETTINGS, ...settings, gamification: selected.userSettings?.gamification || settings.gamification, signInDays: selected.userSettings?.signInDays || settings.signInDays }
+          ? { ...DEFAULT_USER_SETTINGS, ...settings, gamification: selected.userSettings?.gamification || settings.gamification, signInDays: selected.userSettings?.signInDays || settings.signInDays, calendarDayColors: selected.userSettings?.calendarDayColors || settings.calendarDayColors }
           : { ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, activeColorThemeMode: settings.activeColorThemeMode, customColors: settings.customColors });
         setChecklists(selected.checklists);
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
@@ -2630,7 +2630,7 @@ function App() {
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
     const desktopSettings = isMobileDevice
-      ? { ...DEFAULT_USER_SETTINGS, ...readStoredSection(localStorage, currentUser ? `settings_${currentUser}` : "settings_guest", {}, (value) => Boolean(value && typeof value === "object" && !Array.isArray(value))), gamification: userSettings.gamification, signInDays: userSettings.signInDays }
+      ? { ...DEFAULT_USER_SETTINGS, ...readStoredSection(localStorage, currentUser ? `settings_${currentUser}` : "settings_guest", {}, (value) => Boolean(value && typeof value === "object" && !Array.isArray(value))), gamification: userSettings.gamification, signInDays: userSettings.signInDays, calendarDayColors: userSettings.calendarDayColors }
       : userSettings;
     const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings: desktopSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;

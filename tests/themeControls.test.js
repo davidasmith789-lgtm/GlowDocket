@@ -42,3 +42,10 @@ test("background account updates merge persisted settings without erasing device
   assert.match(app, /JSON\.stringify\(\{ \.\.\.persisted, signInDays: nextSignInDays \}\)/);
   assert.doesNotMatch(app, /setItem\(settingsStorageKey, JSON\.stringify\(updated\)\);[^}]*record this sign-in day/s);
 });
+
+test("calendar day colors cross the mobile cloud-sync boundary", async () => {
+  const app = await read("../src/App.jsx");
+
+  assert.match(app, /calendarDayColors: selected\.userSettings\?\.calendarDayColors \|\| settings\.calendarDayColors/);
+  assert.match(app, /calendarDayColors: userSettings\.calendarDayColors/);
+});
