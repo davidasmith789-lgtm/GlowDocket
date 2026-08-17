@@ -8552,6 +8552,28 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-app-ui .settings-content.mobile-settings-panel-open .mobile-settings-scroll-body { min-height: 0; flex: 1 1 auto; padding: 14px max(14px, env(safe-area-inset-right, 0px)) calc(36px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px)); overflow-x: clip; overflow-y: auto; overscroll-behavior-y: contain; touch-action: pan-y; scroll-padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch; }
   .mobile-app-ui .settings-content.mobile-settings-panel-open .settings-grid { min-height: max-content; height: auto; max-height: none; padding-bottom: 12px; overflow: visible; align-content: start; }
   .mobile-app-ui .settings-content.mobile-settings-panel-open :is(.settings-section, .settings-section-wide, .settings-collapsible-content, .privacy-data-panel, .privacy-data-summary) { min-height: 0; height: auto; max-height: none; overflow: visible; }
+
+  /* Keep the assignment form attached to the phone's visible bottom edge. */
+  .mobile-app-main.mobile-add-fullscreen {
+    height: var(--taskcabinet-visible-mobile-height, 100dvh);
+    max-height: var(--taskcabinet-visible-mobile-height, 100dvh);
+  }
+
+  /* The full calendar is a page on phones, not a card nested inside the page. */
+  .mobile-app-ui .workspace-calendar-only {
+    width: calc(100% + 28px);
+    max-width: none;
+    margin-right: -14px;
+    margin-left: -14px;
+  }
+  .mobile-app-ui .workspace-calendar-only .calendar-panel {
+    min-height: calc(var(--taskcabinet-visible-mobile-height, 100dvh) - var(--mobile-nav-clearance));
+    padding: 12px 10px calc(var(--mobile-nav-clearance) + 16px);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .mobile-app-ui .workspace-calendar-only .react-calendar__month-view__days { gap: 3px; }
 }
 
 @media (max-width: 360px) {

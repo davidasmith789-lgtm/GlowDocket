@@ -9199,7 +9199,7 @@ function App() {
           <main id="mobile-main-content" className={`mobile-app-main${currentTab === "mobile-add" ? " mobile-add-fullscreen" : ""}${mobileTaskTabActive ? " mobile-task-page" : ""}`} tabIndex="-1">
             {currentTab === "dashboard" && (
               <>
-                {renderMobilePageTitle("Today", `Ready when you are, ${displayName || "student"}.`, dueTodayCount > 0 ? `${dueTodayCount} assignment${dueTodayCount === 1 ? "" : "s"} due today.` : "Nothing is due today.")}
+                {renderMobilePageTitle("", dueTodayCount > 0 ? `${dueTodayCount} assignment${dueTodayCount === 1 ? "" : "s"} due today.` : "Nothing is due today.", "")}
                 <section className="mobile-app-stat-strip" aria-label="Assignment summary">
                   <button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button>
                   <button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button>
