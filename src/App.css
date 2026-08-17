@@ -2600,8 +2600,9 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
 .calendar-event-form-heading button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; color: var(--text-color); background: var(--surface-alt); font-size: 1.5rem; cursor: pointer; }
 .calendar-event-form label { display: grid; gap: 5px; font-weight: 700; }
 .calendar-event-form :is(input, select, textarea) { width: 100%; box-sizing: border-box; }
+.calendar-event-name-field { grid-column: 1 / -1; }
 .calendar-event-time-fields { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 12px; margin: 0; padding: 0; border: 0; }
-.calendar-event-time-fields legend { margin-bottom: 5px; font-weight: 800; }
+.calendar-event-time-input > span { text-align: center; }
 .calendar-event-time-fields p { grid-column: 1 / -1; margin: 0; color: var(--danger-color, #dc2626); font-size: .86rem; font-weight: 700; }
 .calendar-event-notes-field { grid-column: 1 / -1; }
 .calendar-event-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 10px; }
