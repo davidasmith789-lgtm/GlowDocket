@@ -2790,7 +2790,7 @@ function App() {
     const pngIcon = document.querySelector('link[rel="icon"][type="image/png"]');
     const manifest = document.querySelector('link[rel="manifest"]');
     const suffix = logoId === "classic" ? "" : `-${logoId}`;
-    const version = logoId === "classic" ? "2" : "1";
+    const version = ["classic", "midnight"].includes(logoId) ? "2" : "1";
     appleIcon?.setAttribute("href", `/apple-touch-icon${suffix}.png?v=${version}`);
     pngIcon?.setAttribute("href", `/glowdocket-icon-192${suffix}.png?v=${version}`);
     manifest?.setAttribute("href", logoId === "classic" ? "/manifest.webmanifest" : `/manifest-${logoId}.webmanifest`);

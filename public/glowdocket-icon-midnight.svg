@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%" role="img" aria-labelledby="title">
+  <title id="title">GlowDocket Midnight</title>
+  <defs>
+    <linearGradient id="brand" x1="22" y1="24" x2="101" y2="103" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <rect width="120" height="120" fill="#151b2e"/>
+  <path d="M13 86h27M9 96h35M18 106h29" fill="none" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+  <path fill="url(#brand)" d="M51 20c-23 0-39 17-39 40s16 39 39 39h18V61H49a7 7 0 0 0 0 14h5v10h-3c-15 0-25-10-25-25s10-26 25-26h31c8 0 13-4 16-11-4-2-9-3-16-3H51Z"/>
+  <path fill="url(#brand)" d="M61 54h22c19 0 31 13 31 31 0 19-12 31-31 31H61V54Zm15 15v32h7c10 0 16-6 16-16s-6-16-16-16h-7Z"/>
+  <path d="m92 13 4 12 12 4-12 4-4 12-4-12-12-4 12-4 4-12Z" fill="#a78bfa" opacity=".78" filter="url(#glow)"/>
+  <path d="m92 13 4 12 12 4-12 4-4 12-4-12-12-4 12-4 4-12Z" fill="#fff"/>
+</svg>
