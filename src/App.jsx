@@ -3609,6 +3609,9 @@ function App() {
       const fieldHasFocus = document.activeElement?.matches?.("input, textarea, select");
       const keyboardIsOpen = fieldHasFocus && viewport.height < stableMobileHeight * 0.82;
       document.documentElement.style.setProperty("--taskcabinet-visible-mobile-height", `${viewport.height}px`);
+      document.documentElement.style.setProperty("--taskcabinet-visible-mobile-width", `${viewport.width}px`);
+      document.documentElement.style.setProperty("--taskcabinet-visual-mobile-top", `${viewport.offsetTop}px`);
+      document.documentElement.style.setProperty("--taskcabinet-visual-mobile-left", `${viewport.offsetLeft}px`);
       if (!keyboardIsOpen) {
         stableMobileHeight = viewport.height;
         document.documentElement.style.setProperty("--taskcabinet-mobile-height", `${stableMobileHeight}px`);
@@ -3622,6 +3625,9 @@ function App() {
       viewport.removeEventListener("scroll", updateMobileViewport);
       document.documentElement.style.removeProperty("--taskcabinet-mobile-height");
       document.documentElement.style.removeProperty("--taskcabinet-visible-mobile-height");
+      document.documentElement.style.removeProperty("--taskcabinet-visible-mobile-width");
+      document.documentElement.style.removeProperty("--taskcabinet-visual-mobile-top");
+      document.documentElement.style.removeProperty("--taskcabinet-visual-mobile-left");
     };
   }, [isMobileUi]);
 

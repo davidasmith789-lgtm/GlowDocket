@@ -78,6 +78,15 @@ test("mobile Add Assignment methods retain import, manual, then voice order", as
   assert.doesNotMatch(styles, /assignment-entry-form > \.voice-assignment-panel \{ order: -/);
 });
 
+test("mobile Add Assignment follows Safari's visible viewport", async () => {
+  const [app, styles] = await Promise.all([read("../src/App.jsx"), read("../src/App.css")]);
+  assert.match(app, /--taskcabinet-visible-mobile-width/);
+  assert.match(app, /--taskcabinet-visual-mobile-top/);
+  assert.match(app, /--taskcabinet-visual-mobile-left/);
+  assert.match(styles, /mobile-app-main\.mobile-add-fullscreen[\s\S]{0,300}top: var\(--taskcabinet-visual-mobile-top/);
+  assert.match(styles, /mobile-app-main\.mobile-add-fullscreen[\s\S]{0,400}width: var\(--taskcabinet-visible-mobile-width/);
+});
+
 test("mobile recommendation wording stays concise", async () => {
   const app = await read("../src/App.jsx");
   assert.match(app, /mobile-app-section-heading[^\n]*<h3>Best Next Steps<\/h3>/);

@@ -8579,8 +8579,15 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
   /* Keep the assignment form attached to the phone's visible bottom edge. */
   .mobile-app-main.mobile-add-fullscreen {
+    top: var(--taskcabinet-visual-mobile-top, 0px);
+    right: auto;
+    bottom: auto;
+    left: var(--taskcabinet-visual-mobile-left, 0px);
+    width: var(--taskcabinet-visible-mobile-width, 100vw);
     height: var(--taskcabinet-visible-mobile-height, 100dvh);
     max-height: var(--taskcabinet-visible-mobile-height, 100dvh);
+    margin: 0;
+    box-sizing: border-box;
   }
 
   /* The full calendar is a page on phones, not a card nested inside the page. */
