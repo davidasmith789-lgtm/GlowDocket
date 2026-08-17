@@ -8716,4 +8716,14 @@ html[data-theme="dark"] .sync-conflict-dialog {
     grid-column: 1 !important;
     grid-row: auto !important;
   }
+
+  .mobile-home-order-panel { display: grid; gap: 12px; padding-bottom: calc(var(--mobile-nav-clearance) + 20px); }
+  .mobile-home-order-bubble { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 7px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--card-bg); box-shadow: var(--shadow-card); transition: transform 150ms ease, border-color 150ms ease, opacity 150ms ease; }
+  .mobile-home-order-bubble.is-dragging { z-index: 2; opacity: .62; transform: scale(.98); }
+  .mobile-home-order-bubble.is-drag-target { border-color: var(--primary-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 22%, transparent); }
+  .mobile-home-order-drag { display: flex; min-width: 0; min-height: 50px; align-items: center; gap: 12px; padding: 8px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--text-color); cursor: grab; font-size: 1rem; font-weight: 850; text-align: left; touch-action: none; }
+  .mobile-home-order-drag span { color: var(--primary-color); font-size: 1.25rem; }
+  .mobile-home-order-actions { display: flex; gap: 4px; padding-right: 3px; }
+  .mobile-home-order-actions button { display: grid; width: 40px; height: 40px; min-height: 40px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--surface-alt); color: var(--text-color); font-size: 1.05rem; font-weight: 900; }
+  .mobile-home-order-actions button:disabled { opacity: .3; }
 }

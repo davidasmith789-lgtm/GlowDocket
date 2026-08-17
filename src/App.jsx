@@ -126,6 +126,7 @@ const DEFAULT_USER_SETTINGS = {
   gamification: DEFAULT_GAMIFICATION,
   calendarWeekStartsOn: "sunday",
   calendarViewMode: "month",
+  mobileHomeSectionOrder: ["summary", "plan", "quick", "checklists", "reminders", "course-overview"],
   timeFormat: "12h",
   calendarDaySectionOrder: "events-first",
   showNeighboringMonth: true,
@@ -8960,6 +8961,54 @@ function App() {
   const mobileUsesOwnScreen = isMobileUi && mobileOwnedTabs.includes(currentTab);
   const mobileTaskTabActive = ["todo", "inProgress", "completed"].includes(currentTab);
   const mobileMoreActive = ["settings", "recommendations", "mobile-tools", "mobile-courses", "community", "flashcards"].includes(currentTab);
+  const mobileHomeSectionLabels = {
+    summary: "Assignment summary",
+    plan: "Best Next Steps",
+    quick: "Find a quick task",
+    checklists: "Checklists",
+    reminders: "Reminders",
+    "course-overview": `${schoolLevelCopy.courseLabel} overview`,
+  };
+  const defaultMobileHomeOrder = Object.keys(mobileHomeSectionLabels);
+  const savedMobileHomeOrder = Array.isArray(userSettings.mobileHomeSectionOrder) ? userSettings.mobileHomeSectionOrder : [];
+  const mobileHomeSectionOrder = [...new Set([...savedMobileHomeOrder.filter((id) => defaultMobileHomeOrder.includes(id)), ...defaultMobileHomeOrder])];
+  const saveMobileHomeSectionOrder = (nextOrder) => handleAddFieldSettingChange("mobileHomeSectionOrder", nextOrder);
+  const moveMobileHomeSection = (sectionId, direction) => {
+    const currentIndex = mobileHomeSectionOrder.indexOf(sectionId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= mobileHomeSectionOrder.length) return;
+    const nextOrder = [...mobileHomeSectionOrder];
+    [nextOrder[currentIndex], nextOrder[nextIndex]] = [nextOrder[nextIndex], nextOrder[currentIndex]];
+    saveMobileHomeSectionOrder(nextOrder);
+  };
+  const startMobileHomeSectionDrag = (event, sectionId) => {
+    event.preventDefault();
+    const source = event.currentTarget.closest(".mobile-home-order-bubble");
+    const pointerId = event.pointerId;
+    source?.classList.add("is-dragging");
+    try { event.currentTarget.setPointerCapture(pointerId); } catch { /* Window listeners remain available. */ }
+    const move = (moveEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
+      document.querySelectorAll(".mobile-home-order-bubble.is-drag-target").forEach((item) => item.classList.remove("is-drag-target"));
+      document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".mobile-home-order-bubble")?.classList.add("is-drag-target");
+    };
+    const stop = (stopEvent) => {
+      if (stopEvent.pointerId !== pointerId) return;
+      const targetId = document.elementFromPoint(stopEvent.clientX, stopEvent.clientY)?.closest?.(".mobile-home-order-bubble")?.dataset.homeSectionId;
+      source?.classList.remove("is-dragging");
+      document.querySelectorAll(".mobile-home-order-bubble.is-drag-target").forEach((item) => item.classList.remove("is-drag-target"));
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      if (!targetId || targetId === sectionId) return;
+      const nextOrder = mobileHomeSectionOrder.filter((id) => id !== sectionId);
+      nextOrder.splice(nextOrder.indexOf(targetId), 0, sectionId);
+      saveMobileHomeSectionOrder(nextOrder);
+    };
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
   const selectedMobileSettingsSection = SETTINGS_SECTIONS.find((section) => section.id === settingsSection) || SETTINGS_SECTIONS[0];
   const normalizedHelpSearch = helpSearch.trim().toLowerCase();
   const visiblePersonalizationTips = PERSONALIZATION_TIPS
@@ -9169,6 +9218,15 @@ function App() {
       })}
     </ul>
   );
+  const renderMobileHomeSection = (sectionId) => {
+    if (sectionId === "summary") return <section key={sectionId} className="mobile-app-stat-strip" aria-label="Assignment summary"><button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button><button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button><button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button></section>;
+    if (sectionId === "plan") return <section key={sectionId} className="mobile-app-card mobile-app-plan-card"><div className="mobile-app-section-heading"><div><h3>Best Next Steps</h3></div><button type="button" onClick={() => openMobileTab("todo")}>View tasks</button></div>{renderRecommendedWidget()}</section>;
+    if (sectionId === "quick") return <section key={sectionId} className="mobile-app-card mobile-app-quick-card"><div className="mobile-app-section-heading"><div><h3>Find a quick task</h3></div></div>{renderQuickMatchCard()}</section>;
+    if (sectionId === "checklists") return <section key={sectionId} className="mobile-app-card mobile-dashboard-checklists"><div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button><button type="button" onClick={() => openMobileTab("mobile-tools")}>Arrange</button></div></div>{renderStandaloneChecklists()}</section>;
+    if (sectionId === "reminders") return <section key={sectionId} className="mobile-app-card mobile-home-reminders"><div className="mobile-app-section-heading"><div><span>Plan ahead</span><h3>Reminders</h3></div></div>{renderRemindersWidget()}</section>;
+    if (sectionId === "course-overview") return <section key={sectionId} className="mobile-app-card mobile-home-course-overview"><div className="mobile-app-section-heading"><div><span>By subject</span><h3>{schoolLevelCopy.courseLabel} overview</h3></div></div>{renderCourseOverviewWidget()}</section>;
+    return null;
+  };
   return (
     <div
       className={`App ${theme} school-level-${userSettings.schoolLevel || "high"} ${getTextSizeClass(userSettings.textSize)} font-${userSettings.fontFamily || "sans"} density-${userSettings.interfaceDensity || "comfortable"} task-actions-${userSettings.taskActionLayout || "wrap"}${userSettings.pageColorWashEnabled !== false ? " page-color-wash" : ""}${userSettings.showTaskCourseBadge === false ? " hide-task-course-badges" : ""}${userSettings.showTaskDetailLine === false ? " hide-task-detail-lines" : ""}${userSettings.showTaskCountdown === false ? " hide-task-countdowns" : ""}${userSettings.showTaskChecklistProgress === false ? " hide-task-checklist-progress" : ""}${userSettings.showTaskReminderIndicator === false ? " hide-task-reminder-indicators" : ""}${userSettings.reduceMotion ? " reduce-motion" : ""}${isStandalone ? " is-standalone" : ""}${isMobileUi && currentUser ? " mobile-app-ui" : ""}${isMobileUi && (mobileMoreOpen || mobileSettingsOpen || mobileSummaryCategory || selectedChecklistId) ? " mobile-overlay-open" : ""}`}
@@ -9371,23 +9429,7 @@ function App() {
             {currentTab === "dashboard" && (
               <>
                 {renderMobilePageTitle("", dueTodayCount > 0 ? `${dueTodayCount} assignment${dueTodayCount === 1 ? "" : "s"} due today.` : "Nothing is due today.", "")}
-                <section className="mobile-app-stat-strip" aria-label="Assignment summary">
-                  <button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button>
-                  <button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button>
-                  <button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button>
-                </section>
-                <section className="mobile-app-card mobile-app-plan-card">
-                  <div className="mobile-app-section-heading"><div><h3>Best Next Steps</h3></div><button type="button" onClick={() => openMobileTab("todo")}>View tasks</button></div>
-                  {renderRecommendedWidget()}
-                </section>
-                <section className="mobile-app-card mobile-app-quick-card">
-                  <div className="mobile-app-section-heading"><div><h3>Find a quick task</h3></div></div>
-                  {renderQuickMatchCard()}
-                </section>
-                <section className="mobile-app-card mobile-dashboard-checklists">
-                  <div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button><button type="button" onClick={() => openMobileTab("mobile-tools")}>More tools</button></div></div>
-                  {renderStandaloneChecklists()}
-                </section>
+                {mobileHomeSectionOrder.map(renderMobileHomeSection)}
               </>
             )}
 
@@ -9414,9 +9456,15 @@ function App() {
 
             {currentTab === "mobile-tools" && (
               <>
-                {renderMobilePageTitle("", "Study tools", "The same GlowDocket features, arranged for a phone.")}
-                <section className="mobile-app-card"><div className="mobile-app-section-heading"><div><span>Plan ahead</span><h3>Reminders</h3></div></div>{renderRemindersWidget()}</section>
-                <section className="mobile-app-card"><div className="mobile-app-section-heading"><div><span>By subject</span><h3>{schoolLevelCopy.courseLabel} overview</h3></div></div>{renderCourseOverviewWidget()}</section>
+                {renderMobilePageTitle("", "Home orientation", "Drag the bubbles to choose what appears first on Home.")}
+                <section className="mobile-home-order-panel" aria-label="Arrange mobile Home sections">
+                  {mobileHomeSectionOrder.map((sectionId, index) => (
+                    <article className="mobile-home-order-bubble" data-home-section-id={sectionId} key={sectionId}>
+                      <button type="button" className="mobile-home-order-drag" onPointerDown={(event) => startMobileHomeSectionDrag(event, sectionId)} aria-label={`Drag ${mobileHomeSectionLabels[sectionId]}`}><span aria-hidden="true">⠿</span>{mobileHomeSectionLabels[sectionId]}</button>
+                      <span className="mobile-home-order-actions"><button type="button" disabled={index === 0} onClick={() => moveMobileHomeSection(sectionId, -1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} up`}>↑</button><button type="button" disabled={index === mobileHomeSectionOrder.length - 1} onClick={() => moveMobileHomeSection(sectionId, 1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} down`}>↓</button></span>
+                    </article>
+                  ))}
+                </section>
               </>
             )}
 
@@ -11760,7 +11808,7 @@ function App() {
                 <section className="mobile-app-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-more-title" onClick={(event) => event.stopPropagation()}>
                   <header><div><span id="mobile-more-title">GlowDocket</span></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close account menu">×</button></header>
                   <div className="mobile-app-menu-grid">
-                    <button type="button" onClick={() => openMobileTab("mobile-tools")}><strong>Study tools</strong><span>Reminders and course overview</span></button>
+                    <button type="button" onClick={() => openMobileTab("mobile-tools")}><strong>Home orientation</strong><span>Choose the order of Home sections</span></button>
                     <button type="button" onClick={() => openMobileTab("mobile-courses")}><strong>Courses & colors</strong><span>Manage your subjects</span></button>
                     {communityEnabled && <button type="button" onClick={() => openMobileTab("community")}><strong>Community</strong><span>Course advice and study guides</span></button>}
                     {flashcardsEnabled && <button type="button" onClick={() => openMobileTab("flashcards")}><strong>Flashcards</strong><span>Create and study decks</span></button>}
