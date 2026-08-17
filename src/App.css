@@ -8608,11 +8608,27 @@ html[data-theme="dark"] .sync-conflict-dialog {
   /* Let iOS recalculate the complete screen after its keyboard and browser bars move. */
   .mobile-app-main.mobile-add-fullscreen {
     inset: 0;
+    display: block;
     width: 100%;
     height: 100dvh;
     max-height: 100dvh;
     margin: 0;
     box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-app-main.mobile-add-fullscreen > .mobile-add-header {
+    position: sticky;
+    z-index: 10;
+    top: 0;
+  }
+  .mobile-app-main.mobile-add-fullscreen > .mobile-add-scroll-body {
+    min-height: auto;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    overflow: visible;
   }
 
   /* The full calendar is a page on phones, not a card nested inside the page. */
