@@ -8726,4 +8726,11 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-home-order-actions { display: flex; gap: 4px; padding-right: 3px; }
   .mobile-home-order-actions button { display: grid; width: 40px; height: 40px; min-height: 40px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--surface-alt); color: var(--text-color); font-size: 1.05rem; font-weight: 900; }
   .mobile-home-order-actions button:disabled { opacity: .3; }
+  .mobile-home-order-actions .mobile-home-order-remove { border-color: color-mix(in srgb, var(--danger-color) 35%, var(--border-color)); color: var(--danger-color); }
+  .mobile-home-available { display: grid; gap: 8px; margin-top: 8px; padding: 16px; border: 1px dashed var(--border-color); border-radius: 20px; background: color-mix(in srgb, var(--surface-alt) 72%, transparent); }
+  .mobile-home-available h3, .mobile-home-available p { margin: 0; }
+  .mobile-home-available p { color: var(--muted-text); font-size: .8rem; }
+  .mobile-home-available > div { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mobile-home-available > div > button { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--card-bg); color: var(--text-color); font-weight: 800; }
+  .mobile-home-available > div > button span { color: var(--primary-color); font-size: 1.2rem; }
 }

@@ -127,6 +127,7 @@ const DEFAULT_USER_SETTINGS = {
   calendarWeekStartsOn: "sunday",
   calendarViewMode: "month",
   mobileHomeSectionOrder: ["summary", "plan", "quick", "checklists", "reminders", "course-overview"],
+  mobileHomeHiddenSections: [],
   timeFormat: "12h",
   calendarDaySectionOrder: "events-first",
   showNeighboringMonth: true,
@@ -8971,8 +8972,17 @@ function App() {
   };
   const defaultMobileHomeOrder = Object.keys(mobileHomeSectionLabels);
   const savedMobileHomeOrder = Array.isArray(userSettings.mobileHomeSectionOrder) ? userSettings.mobileHomeSectionOrder : [];
-  const mobileHomeSectionOrder = [...new Set([...savedMobileHomeOrder.filter((id) => defaultMobileHomeOrder.includes(id)), ...defaultMobileHomeOrder])];
+  const mobileHomeHiddenSections = Array.isArray(userSettings.mobileHomeHiddenSections) ? userSettings.mobileHomeHiddenSections.filter((id) => defaultMobileHomeOrder.includes(id)) : [];
+  const mobileHomeSectionOrder = [...new Set([...savedMobileHomeOrder.filter((id) => defaultMobileHomeOrder.includes(id)), ...defaultMobileHomeOrder])].filter((id) => !mobileHomeHiddenSections.includes(id));
   const saveMobileHomeSectionOrder = (nextOrder) => handleAddFieldSettingChange("mobileHomeSectionOrder", nextOrder);
+  const removeMobileHomeSection = (sectionId) => {
+    saveMobileHomeSectionOrder(mobileHomeSectionOrder.filter((id) => id !== sectionId));
+    handleAddFieldSettingChange("mobileHomeHiddenSections", [...new Set([...mobileHomeHiddenSections, sectionId])]);
+  };
+  const addMobileHomeSection = (sectionId) => {
+    saveMobileHomeSectionOrder([...mobileHomeSectionOrder, sectionId]);
+    handleAddFieldSettingChange("mobileHomeHiddenSections", mobileHomeHiddenSections.filter((id) => id !== sectionId));
+  };
   const moveMobileHomeSection = (sectionId, direction) => {
     const currentIndex = mobileHomeSectionOrder.indexOf(sectionId);
     const nextIndex = currentIndex + direction;
@@ -9461,9 +9471,10 @@ function App() {
                   {mobileHomeSectionOrder.map((sectionId, index) => (
                     <article className="mobile-home-order-bubble" data-home-section-id={sectionId} key={sectionId}>
                       <button type="button" className="mobile-home-order-drag" onPointerDown={(event) => startMobileHomeSectionDrag(event, sectionId)} aria-label={`Drag ${mobileHomeSectionLabels[sectionId]}`}><span aria-hidden="true">⠿</span>{mobileHomeSectionLabels[sectionId]}</button>
-                      <span className="mobile-home-order-actions"><button type="button" disabled={index === 0} onClick={() => moveMobileHomeSection(sectionId, -1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} up`}>↑</button><button type="button" disabled={index === mobileHomeSectionOrder.length - 1} onClick={() => moveMobileHomeSection(sectionId, 1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} down`}>↓</button></span>
+                      <span className="mobile-home-order-actions"><button type="button" disabled={index === 0} onClick={() => moveMobileHomeSection(sectionId, -1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} up`}>↑</button><button type="button" disabled={index === mobileHomeSectionOrder.length - 1} onClick={() => moveMobileHomeSection(sectionId, 1)} aria-label={`Move ${mobileHomeSectionLabels[sectionId]} down`}>↓</button><button type="button" className="mobile-home-order-remove" onClick={() => removeMobileHomeSection(sectionId)} aria-label={`Remove ${mobileHomeSectionLabels[sectionId]} from Home`}>×</button></span>
                     </article>
                   ))}
+                  {mobileHomeHiddenSections.length > 0 && <div className="mobile-home-available"><h3>Available sections</h3><p>Add any section back to the bottom of Home.</p><div>{mobileHomeHiddenSections.map((sectionId) => <button type="button" key={sectionId} onClick={() => addMobileHomeSection(sectionId)}><span>+</span>{mobileHomeSectionLabels[sectionId]}</button>)}</div></div>}
                 </section>
               </>
             )}
