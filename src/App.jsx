@@ -129,7 +129,7 @@ const DEFAULT_USER_SETTINGS = {
   showNeighboringMonth: true,
   showCalendarCycleLabels: true,
   showCalendarTaskDots: true,
-  calendarDayColors: { dates: {}, weekdays: {}, cycleDays: {} },
+  calendarDayColors: { dates: {}, weekdays: {}, cycleDays: {}, entryNames: {} },
   checklistTimesEnabled: false,
   settingsSectionOrder: ["personalization", "assignments", "checklists", "calendar", "reminders", "cycle", "accessibility", "privacy", "storage"],
   mobileSettingsExpandedCards: {},
@@ -2205,6 +2205,7 @@ function App() {
   const [calendarEventNotes, setCalendarEventNotes] = useState("");
   const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
   const [calendarDayColorScope, setCalendarDayColorScope] = useState("date");
+  const [calendarDayColorUndoStack, setCalendarDayColorUndoStack] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -6788,29 +6789,67 @@ function App() {
     .filter((entry) => entry?.date === selectedCalendarDateKey)
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedCalendarActivities = selectedCalendarEvents.filter((entry) => entry.type === "day-note");
-  const calendarDayColors = userSettings.calendarDayColors || { dates: {}, weekdays: {}, cycleDays: {} };
+  const calendarDayColors = userSettings.calendarDayColors || { dates: {}, weekdays: {}, cycleDays: {}, entryNames: {} };
+  const normalizeCalendarColorRule = (rule) => typeof rule === "string" ? { color: rule, updatedAt: 0 } : rule;
+  const getCalendarColorScopeTarget = (colors, scope, date = selectedDate) => {
+    const cycleDay = getCycleDayForDate(date, userSettings);
+    if (scope === "weekday") return { target: colors.weekdays, key: date.getDay() };
+    if (scope === "cycle" && cycleDay) return { target: colors.cycleDays, key: cycleDay };
+    if (scope.startsWith("entry:")) return { target: colors.entryNames, key: scope.slice(6) };
+    const dateKey = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+    return { target: colors.dates, key: dateKey };
+  };
   const getCalendarDayColor = (date) => {
     const dateKey = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
     const cycleDay = getCycleDayForDate(date, userSettings);
-    return calendarDayColors.dates?.[dateKey]
-      || (cycleDay && calendarDayColors.cycleDays?.[cycleDay])
-      || calendarDayColors.weekdays?.[date.getDay()]
-      || "";
+    const dayEntryNames = calendarEvents
+      .filter((entry) => entry?.date === dateKey && ["event", "day-note"].includes(entry.type) && entry.name)
+      .map((entry) => entry.name.trim().toLowerCase());
+    const candidates = [
+      calendarDayColors.weekdays?.[date.getDay()],
+      cycleDay && calendarDayColors.cycleDays?.[cycleDay],
+      ...dayEntryNames.map((name) => calendarDayColors.entryNames?.[name]),
+      calendarDayColors.dates?.[dateKey],
+    ].map(normalizeCalendarColorRule).filter((rule) => rule?.color);
+    return candidates.reduce((latest, rule) => Number(rule.updatedAt || 0) >= Number(latest?.updatedAt || 0) ? rule : latest, null)?.color || "";
   };
-  const selectedDayColor = getCalendarDayColor(selectedDate) || "#6366f1";
+  const calendarBackgroundColor = normalizeHexColor(userSettings.customColors?.calendar)
+    || THEME_COLOR_DEFAULTS[userSettings.activeColorThemeMode === "light" ? "light" : "dark"].calendar;
+  const selectedDayColor = getCalendarDayColor(selectedDate) || calendarBackgroundColor;
+  const selectedColorEntryNames = [...new Map(selectedCalendarEvents.filter((entry) => entry.name && ["event", "day-note"].includes(entry.type)).map((entry) => [entry.name.trim().toLowerCase(), entry.name.trim()])).entries()];
+  const saveCalendarDayColors = (next) => {
+    setCalendarDayColorUndoStack((history) => [...history.slice(-9), calendarDayColors]);
+    handleAddFieldSettingChange("calendarDayColors", next);
+  };
   const updateCalendarDayColor = (color) => {
     const effectiveScope = calendarDayColorScope === "cycle" && !selectedCycleDay ? "date" : calendarDayColorScope;
     const next = {
       dates: { ...(calendarDayColors.dates || {}) },
       weekdays: { ...(calendarDayColors.weekdays || {}) },
       cycleDays: { ...(calendarDayColors.cycleDays || {}) },
+      entryNames: { ...(calendarDayColors.entryNames || {}) },
     };
-    const target = effectiveScope === "weekday" ? next.weekdays : effectiveScope === "cycle" ? next.cycleDays : next.dates;
-    const key = effectiveScope === "weekday" ? selectedDate.getDay() : effectiveScope === "cycle" ? selectedCycleDay : selectedCalendarDateKey;
+    const { target, key } = getCalendarColorScopeTarget(next, effectiveScope);
     if (!key && key !== 0) return;
-    if (color) target[key] = color;
+    if (color) target[key] = { color, updatedAt: Date.now() };
     else delete target[key];
-    handleAddFieldSettingChange("calendarDayColors", next);
+    saveCalendarDayColors(next);
+  };
+  const changeCalendarDayColorScope = (nextScope) => {
+    if (nextScope === calendarDayColorScope) return;
+    const next = { dates: { ...(calendarDayColors.dates || {}) }, weekdays: { ...(calendarDayColors.weekdays || {}) }, cycleDays: { ...(calendarDayColors.cycleDays || {}) }, entryNames: { ...(calendarDayColors.entryNames || {}) } };
+    const { target, key } = getCalendarColorScopeTarget(next, calendarDayColorScope);
+    if (target && Object.prototype.hasOwnProperty.call(target, key)) {
+      delete target[key];
+      saveCalendarDayColors(next);
+    }
+    setCalendarDayColorScope(nextScope);
+  };
+  const undoCalendarDayColor = () => {
+    const previous = calendarDayColorUndoStack.at(-1);
+    if (!previous) return;
+    setCalendarDayColorUndoStack((history) => history.slice(0, -1));
+    handleAddFieldSettingChange("calendarDayColors", previous);
   };
   const selectedTimedCalendarEntries = [
     ...selectedWeeklyMeetings.map((meeting) => ({
@@ -10110,21 +10149,21 @@ function App() {
                   />
               )}
 
-                  <section className="calendar-day-color-controls" aria-label="Day color">
-                    <strong>Day Color</strong>
-                    <input type="color" value={selectedDayColor} onChange={(event) => updateCalendarDayColor(event.target.value)} aria-label="Choose day color" />
-                    <select value={calendarDayColorScope === "cycle" && !selectedCycleDay ? "date" : calendarDayColorScope} onChange={(event) => setCalendarDayColorScope(event.target.value)} aria-label="Apply day color to">
-                      <option value="date">Only {selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</option>
-                      <option value="weekday">All {selectedDate.toLocaleDateString(undefined, { weekday: "long" })}s</option>
-                      {selectedCycleDay && <option value="cycle">All {selectedCycleDay}s</option>}
-                    </select>
-                    <button type="button" className="btn btn-secondary" onClick={() => updateCalendarDayColor("")}>Clear</button>
-                  </section>
-
                   <div className={`calendar-day-sections ${userSettings.calendarDaySectionOrder === "assignments-first" ? "assignments-first" : "events-first"}`}>
                   <div className="calendar-day-summary calendar-day-section calendar-events-section">
                     <div className="calendar-events-heading">
                       <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })}'s Events</strong>
+                      <div className="calendar-day-color-controls" aria-label="Day color">
+                        <input type="color" value={selectedDayColor} onChange={(event) => updateCalendarDayColor(event.target.value)} aria-label="Choose day color" title="Day color" />
+                        <select value={calendarDayColorScope === "cycle" && !selectedCycleDay ? "date" : calendarDayColorScope} onChange={(event) => changeCalendarDayColorScope(event.target.value)} aria-label="Apply day color to">
+                          <option value="date">Only this day</option>
+                          <option value="weekday">All {selectedDate.toLocaleDateString(undefined, { weekday: "long" })}s</option>
+                          {selectedCycleDay && <option value="cycle">All {selectedCycleDay}s</option>}
+                          {selectedColorEntryNames.map(([key, label]) => <option key={key} value={`entry:${key}`}>All “{label}” days</option>)}
+                        </select>
+                        <button type="button" className="calendar-color-action" onClick={() => updateCalendarDayColor("")} title="Clear this color rule">Clear</button>
+                        <button type="button" className="calendar-color-action" onClick={undoCalendarDayColor} disabled={calendarDayColorUndoStack.length === 0} title="Undo last day color change">Undo</button>
+                      </div>
                       <button type="button" className="btn btn-primary" onClick={openNewCalendarEvent}>
                         Add event
                       </button>
