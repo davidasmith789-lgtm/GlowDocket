@@ -6499,22 +6499,24 @@ html[data-theme="dark"] {
 
 @media (min-width: 1050px) {
   .settings-grid-personalization {
-    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
   }
 
   .settings-grid-personalization .personalization-top-section {
     display: flex;
+    grid-column: 1 / -1;
+    width: 100%;
     min-height: 0;
     flex-direction: column;
   }
 
   .settings-grid-personalization .personalization-tip-grid {
     min-height: 0;
-    flex: 1 1 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: 0 1 auto;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     align-content: start;
-    overflow-y: auto;
+    overflow-y: visible;
     padding-right: 4px;
   }
 
