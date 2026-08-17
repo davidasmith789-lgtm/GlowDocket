@@ -10166,9 +10166,18 @@ function App() {
             >
               <div className="panel-header calendar-view-header">
                 <h3>📅 Assignment Calendar</h3>
-                <div className="calendar-view-toggle" aria-label="Calendar view">
-                  <button type="button" className={userSettings.calendarViewMode !== "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "month")}>Month</button>
-                  <button type="button" className={userSettings.calendarViewMode === "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "week")}>Week</button>
+                <div className="calendar-header-controls">
+                  <label className="calendar-week-start-control">
+                    <span>Week order</span>
+                    <select value={userSettings.calendarWeekStartsOn || "sunday"} onChange={(event) => handleAddFieldSettingChange("calendarWeekStartsOn", event.target.value)}>
+                      <option value="monday">Monday to Sunday</option>
+                      <option value="sunday">Sunday to Saturday</option>
+                    </select>
+                  </label>
+                  <div className="calendar-view-toggle" aria-label="Calendar view">
+                    <button type="button" className={userSettings.calendarViewMode !== "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "month")}>Month</button>
+                    <button type="button" className={userSettings.calendarViewMode === "week" ? "active" : ""} onClick={() => handleAddFieldSettingChange("calendarViewMode", "week")}>Week</button>
+                  </div>
                 </div>
               </div>
 

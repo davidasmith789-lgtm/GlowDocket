@@ -6563,6 +6563,9 @@ html[data-theme="dark"] {
 }
 
 .calendar-view-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.calendar-header-controls { display: flex; align-items: center; gap: 10px; }
+.calendar-week-start-control { display: flex; align-items: center; gap: 7px; color: var(--muted-text); font-size: .82rem; font-weight: 800; }
+.calendar-week-start-control select { min-height: 38px; padding: 7px 30px 7px 10px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--card-bg); color: var(--text-color); font: inherit; cursor: pointer; }
 .calendar-view-toggle { display: inline-flex; padding: 4px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); }
 .calendar-view-toggle button { padding: 8px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-text); font-weight: 800; cursor: pointer; }
 .calendar-view-toggle button.active { background: var(--primary-color); color: var(--button-primary-color); box-shadow: var(--shadow-card); }
@@ -6583,6 +6586,8 @@ html[data-theme="dark"] {
 
 @media (max-width: 760px) {
   .calendar-view-header { align-items: stretch; flex-direction: column; }
+  .calendar-header-controls { align-items: stretch; flex-wrap: wrap; }
+  .calendar-week-start-control { flex-wrap: wrap; }
   .calendar-view-toggle { align-self: flex-start; }
   .workspace-calendar-only .react-calendar__month-view__days { gap: 5px; }
   .workspace-calendar-only .react-calendar__month-view__days > .react-calendar__tile {
@@ -6794,6 +6799,8 @@ html[data-theme] .react-calendar__tile.copy-cycle-muted:disabled {
 
   .calendar-panel { padding: 12px; }
   .calendar-view-toggle { width: 100%; }
+  .calendar-header-controls, .calendar-week-start-control { width: 100%; }
+  .calendar-week-start-control select { min-width: 0; flex: 1; }
   .calendar-view-toggle button { min-height: 44px; flex: 1; }
   .weekly-calendar-grid { min-width: 620px; grid-template-columns: repeat(7, minmax(78px, 1fr)); }
   .weekly-calendar-grid > button { min-height: 145px; padding: 10px 6px; }
