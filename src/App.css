@@ -6497,7 +6497,7 @@ html[data-theme="dark"] {
 .checklist-item-date-fields input { width: auto; min-width: 120px; padding: 6px; }
 .checklist-date-picker { position: relative; display: inline-grid; min-width: 0; }
 .checklist-date-picker.is-empty { width: 118px; }
-.checklist-date-picker.is-empty span { position: absolute; z-index: 1; left: 9px; top: 50%; color: var(--text-color); font-size: 0.78rem; font-weight: 700; pointer-events: none; transform: translateY(-50%); }
+.checklist-date-picker.is-empty span { position: absolute; z-index: 1; left: 0; top: 50%; width: 100%; color: var(--text-color); font-size: 0.78rem; font-weight: 700; text-align: center; pointer-events: none; transform: translateY(-50%); }
 .checklist-date-picker.is-empty input { width: 118px; min-width: 118px; color: transparent; }
 .checklist-date-picker.is-empty input::-webkit-datetime-edit { opacity: 0; }
 .checklist-date-clear { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-alt); color: var(--text-color); font-weight: 700; cursor: pointer; }
