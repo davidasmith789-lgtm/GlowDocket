@@ -1315,7 +1315,6 @@ const WORKSPACE_TABS = [
 
 const WORKSPACE_MOBILE_BREAKPOINT = 720;
 const WORKSPACE_DESKTOP_BREAKPOINT = 960;
-const WORKSPACE_DESIGN_WIDTH = 1680;
 // Base new/reset layouts on the browser's usable viewport. Using the monitor's
 // full width here made a snapped or restored window receive oversized default
 // geometry, which could make widgets appear to collide while fitting the app.
@@ -2366,8 +2365,11 @@ function App() {
   const mobileSettingsListScrollRef = useRef(null);
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
-  const [workspaceMode] = useState(() => getWorkspaceModeForWidth(Math.max(0, window.innerWidth - 48)));
   const [appViewportWidth, setAppViewportWidth] = useState(() => window.innerWidth);
+  // Keep the active workspace layout in step with the space the user actually
+  // has. Each size class still keeps its own saved arrangement, but resizing a
+  // browser window can now switch between those arrangements without a reload.
+  const workspaceMode = getWorkspaceModeForWidth(Math.max(0, appViewportWidth - 48));
   const [workspaceCanvasWidth, setWorkspaceCanvasWidth] = useState(0);
   const workspaceMainRef = useRef(null);
   const [detachedWidgets, setDetachedWidgets] = useState([]);
@@ -8749,11 +8751,14 @@ function App() {
 
   const getWorkspaceCanvasHeight = (items) => Math.max(420, ...items.map((item) => (Number(item.y) || 0) + (workspaceLayout.collapsed[item.type] ? Math.max(COLLAPSED_WIDGET_HEIGHT, Number(item.collapsedHeight) || COLLAPSED_WIDGET_HEIGHT) : Number(item.height) || 320) + 30));
   const savedWorkspaceRightEdge = Math.max(0, ...(workspaceLayout[workspaceMode]?.[currentTab] || []).filter((item) => !item.hidden).map((item) => (Number(item.x) || 0) + (Number(item.width) || 0)));
-  const appShellDesignWidth = workspaceMode === "desktop"
-    ? Math.max(WORKSPACE_DESIGN_WIDTH, savedWorkspaceRightEdge)
-    : workspaceMode === "chromebook"
-      ? Math.max(1160, savedWorkspaceRightEdge)
-      : workspaceCanvasWidth;
+  // The draggable canvas should fill the visible workspace, not stop at the
+  // old fixed 1,680 px design width. Retaining the saved right edge prevents a
+  // narrower window from clipping existing widgets; the shell scales them down
+  // until there is room again.
+  const availableWorkspaceWidth = Math.max(320, appViewportWidth - 48);
+  const appShellDesignWidth = workspaceMode === "mobile"
+    ? workspaceCanvasWidth
+    : Math.max(availableWorkspaceWidth, savedWorkspaceRightEdge);
   const appShellScale = !isMobileUi && appShellDesignWidth > 0
     ? Math.min(1, Math.max(0.35, (appViewportWidth - 32) / appShellDesignWidth))
     : 1;
