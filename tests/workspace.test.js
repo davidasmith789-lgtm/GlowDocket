@@ -443,6 +443,8 @@ test("resizing scales the full app shell without changing the chosen widget arra
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(app, /\(appViewportWidth - 32\) \/ appShellDesignWidth/);
+  assert.match(app, /marginLeft: "16px"/);
+  assert.doesNotMatch(app, /marginLeft: `\$\{16 \/ appShellScale\}px`/);
   assert.match(app, /transform: `scale\(\$\{appShellScale\}\)`/);
   assert.match(app, /transformOrigin: "top left"/);
   assert.doesNotMatch(app, /zoom: appShellScale/);

@@ -9270,7 +9270,7 @@ function App() {
         style={appShellScale < 1 ? {
           width: `${appShellDesignWidth}px`,
           maxWidth: "none",
-          marginLeft: `${16 / appShellScale}px`,
+          marginLeft: "16px",
           transform: `scale(${appShellScale})`,
           transformOrigin: "top left",
         } : undefined}
