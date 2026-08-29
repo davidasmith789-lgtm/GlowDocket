@@ -1317,10 +1317,15 @@ const WORKSPACE_TABS = [
 
 const WORKSPACE_MOBILE_BREAKPOINT = 720;
 const WORKSPACE_DESKTOP_BREAKPOINT = 960;
+const getVisibleViewportWidth = () => {
+  const windowWidth = Number(window.innerWidth) || 0;
+  const documentWidth = Number(document.documentElement?.clientWidth) || windowWidth;
+  return Math.min(windowWidth, documentWidth);
+};
 // Base new/reset layouts on the browser's usable viewport. Using the monitor's
 // full width here made a snapped or restored window receive oversized default
 // geometry, which could make widgets appear to collide while fitting the app.
-const getAvailableWorkspaceWidth = () => Math.max(960, window.innerWidth - 32);
+const getAvailableWorkspaceWidth = () => Math.max(960, getVisibleViewportWidth() - 32);
 const getWorkspaceModeForWidth = (width, userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent) => {
   if (/CrOS/i.test(userAgent)) return "chromebook";
   if (Number(width) < WORKSPACE_MOBILE_BREAKPOINT) return "mobile";
@@ -2372,7 +2377,7 @@ function App() {
   const mobileSettingsListScrollRef = useRef(null);
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
-  const [appViewportWidth, setAppViewportWidth] = useState(() => window.innerWidth);
+  const [appViewportWidth, setAppViewportWidth] = useState(getVisibleViewportWidth);
   // Keep the active workspace layout in step with the space the user actually
   // has. Each size class still keeps its own saved arrangement, but resizing a
   // browser window can now switch between those arrangements without a reload.
@@ -2996,9 +3001,14 @@ function App() {
   }, [currentStorageKey, currentUser, tasks]);
 
   useEffect(() => {
-    const handleResize = () => setAppViewportWidth(window.innerWidth);
+    const handleResize = () => setAppViewportWidth(getVisibleViewportWidth());
+    const viewportObserver = new ResizeObserver(handleResize);
+    viewportObserver.observe(document.documentElement);
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      viewportObserver.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   useLayoutEffect(() => {

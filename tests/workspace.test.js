@@ -442,6 +442,9 @@ test("new accounts see every registered widget on the dashboard", () => {
 test("resizing scales the full app shell without changing the chosen widget arrangement", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  assert.match(app, /const getVisibleViewportWidth = \(\) =>[\s\S]*?document\.documentElement\?\.clientWidth[\s\S]*?Math\.min\(windowWidth, documentWidth\)/);
+  assert.match(app, /const viewportObserver = new ResizeObserver\(handleResize\);/);
+  assert.match(app, /viewportObserver\.observe\(document\.documentElement\);/);
   assert.match(app, /\(appViewportWidth - 32\) \/ appShellDesignWidth/);
   assert.match(app, /marginLeft: "16px"/);
   assert.doesNotMatch(app, /marginLeft: `\$\{16 \/ appShellScale\}px`/);
@@ -516,7 +519,7 @@ test("new and reset desktop layouts choose balanced screen-size presets", () => 
 test("new and reset layouts size themselves from the browser viewport", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
 
-  assert.match(app, /getAvailableWorkspaceWidth = \(\) => Math\.max\(960, window\.innerWidth - 32\)/);
+  assert.match(app, /getAvailableWorkspaceWidth = \(\) => Math\.max\(960, getVisibleViewportWidth\(\) - 32\)/);
   assert.doesNotMatch(app, /getAvailableWorkspaceWidth[^;]*screen\?\.availWidth/);
 });
 
