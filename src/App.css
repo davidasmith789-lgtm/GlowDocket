@@ -98,8 +98,8 @@
   .mobile-app-ui .settings-select-row > span { min-width: 0; overflow-wrap: anywhere; }
   .mobile-app-ui .settings-select-row :is(select, input) { min-width: 0; max-width: 100%; }
 
-  .mobile-app-ui .school-cycle-settings .settings-select-row { grid-template-columns: minmax(0, 1fr); }
-  .mobile-app-ui .school-cycle-settings input[type="date"] { width: 100%; min-height: 48px; }
+  .mobile-app-ui .school-cycle-settings .settings-select-row { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .mobile-app-ui .school-cycle-settings input[type="date"] { box-sizing: border-box; width: min(100%, 20rem); min-height: 48px; justify-self: center; }
   .mobile-app-ui .course-cycle-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .mobile-app-ui .course-cycle-row > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
   .mobile-app-ui .course-cycle-row label { display: flex; min-height: 46px; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 12px; }
@@ -220,7 +220,7 @@
   }
   .mobile-checklist-heading-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, auto));
+    grid-template-columns: repeat(2, minmax(0, auto));
     justify-content: end;
     gap: 5px;
     min-width: 0;
@@ -341,7 +341,7 @@
 
 @media (max-width: 360px) {
   .mobile-dashboard-checklists .mobile-app-section-heading { grid-template-columns: 1fr; }
-  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-app-ui .portable-course-color-row { grid-template-columns: minmax(0, 1fr) 44px minmax(60px, auto); gap: 6px; }
   .mobile-app-ui .portable-course-color-row .course-color-selector { width: 44px; min-width: 44px; }
 }
@@ -350,7 +350,7 @@
 @media (max-width: 767px) {
   .mobile-dashboard-checklists { padding: 14px; overflow: visible; }
   .mobile-dashboard-checklists .mobile-app-section-heading { grid-template-columns: 1fr; gap: 12px; }
-  .mobile-checklist-heading-actions { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: stretch; }
+  .mobile-checklist-heading-actions { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
   .mobile-checklist-heading-actions button { min-height: 44px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); color: var(--text-color); font-weight: 800; }
   .mobile-dashboard-checklists .checklist-gallery-view { height: auto; }
   .mobile-dashboard-checklists .checklist-gallery { display: grid; width: 100%; height: auto; min-height: 0; grid-template-columns: 1fr; grid-auto-columns: auto; grid-auto-rows: auto; gap: 10px; overflow: visible; }
@@ -377,7 +377,10 @@
   .mobile-checklist-fullscreen .standalone-checklist-items { gap: 11px; margin-top: 8px; padding-bottom: 18px; }
   .mobile-checklist-fullscreen .standalone-checklist-items li { grid-template-columns: 28px minmax(0, 1fr) 44px; align-items: start; gap: 9px 10px; padding: 13px; border-radius: 16px; }
   .mobile-checklist-fullscreen .standalone-checklist-items > li > input[type="checkbox"] { grid-column: 1; grid-row: 1; margin-top: 10px; }
-  .mobile-checklist-fullscreen .checklist-item-text { grid-column: 2; grid-row: 1; min-height: 44px; padding: 8px 4px; font-size: 1rem; }
+  .mobile-checklist-fullscreen .checklist-item-copy { grid-column: 2; grid-row: 1; }
+  .mobile-checklist-fullscreen .checklist-item-text { width: 100%; min-height: 44px; padding: 8px 4px; font-size: 1rem; }
+  .mobile-checklist-fullscreen .checklist-item-details summary { min-height: 36px; padding: 8px 4px; }
+  .mobile-checklist-fullscreen .checklist-item-details textarea { min-height: 96px; font-size: 1rem; }
   .mobile-checklist-fullscreen .checklist-item-delete { grid-column: 3; grid-row: 1; width: 44px; height: 44px; }
   .mobile-checklist-fullscreen .checklist-item-date-fields { grid-column: 2 / 4; grid-row: 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-checklist-fullscreen .checklist-date-picker.is-empty { width: 118px; justify-self: start; }
@@ -1957,7 +1960,7 @@ button:disabled {
 
   .mobile-app-stat-strip {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 9px;
   }
 
@@ -2244,7 +2247,7 @@ button:disabled {
   .mobile-app-ui .edit-modal,
   .mobile-app-ui .copy-dates-modal { width: 100%; max-width: none; max-height: 92dvh; margin: 0; border-radius: 26px 26px 0 0; }
 
-  .mobile-empty-add-action { width: 100%; border: 0; color: var(--text-color); cursor: pointer; text-align: left; }
+  .mobile-empty-add-action { width: 100%; border: 0; color: var(--text-color); cursor: pointer; text-align: center; }
 
   .mobile-app-main.mobile-add-fullscreen {
     position: fixed;
@@ -5489,6 +5492,11 @@ a,
 @media (max-width: 650px) { .celebration-studio-preview-row { grid-template-columns: 1fr; } .celebration-color-preview { width: 100%; } }
 .reduce-motion .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); }
 @media (prefers-reduced-motion: reduce) { .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); } }
+@media (max-width: 767px) {
+  .mobile-app-ui .studio-celebration-pill { display: none; }
+  .mobile-app-ui .celebration-color-preview > div { contain: none; }
+  .mobile-app-ui .celebration-color-preview i { backface-visibility: hidden; }
+}
 .bulk-import-instructions p { margin: 0; color: var(--muted-text); font-size: 0.82rem; line-height: 1.45; }
 .bulk-import-instructions-heading {
   display: grid;
@@ -6502,8 +6510,13 @@ html[data-theme="dark"] {
   outline-offset: 2px;
 }
 .checklist-item-grip { width: 26px; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; cursor: grab; opacity: 0.65; touch-action: none; }
+.checklist-item-copy { display: grid; min-width: 0; gap: 5px; }
 .checklist-item-text { min-width: 0; border-color: transparent; background: transparent; color: inherit; }
-.standalone-checklist-items li.is-done .checklist-item-text { opacity: 0.65; text-decoration: line-through; }
+.checklist-item-details { min-width: 0; }
+.checklist-item-details summary { width: fit-content; color: var(--muted-text); cursor: pointer; font-size: .74rem; font-weight: 700; }
+.checklist-item-details textarea { box-sizing: border-box; width: 100%; min-height: 72px; margin-top: 7px; resize: vertical; border-color: var(--border-color); background: var(--input-bg); color: var(--text-color); line-height: 1.4; }
+.standalone-checklist-items li.is-done :is(.checklist-item-text, .checklist-item-details) { opacity: 0.65; }
+.standalone-checklist-items li.is-done .checklist-item-text { text-decoration: line-through; }
 .checklist-item-date-fields { display: flex; gap: 5px; }
 .checklist-item-date-fields input { width: auto; min-width: 120px; padding: 6px; }
 .checklist-date-picker { position: relative; display: inline-grid; min-width: 0; }
@@ -8637,7 +8650,7 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
   .mobile-dashboard-checklists .checklist-gallery-toolbar { display: none; }
   .mobile-dashboard-checklists .mobile-app-section-heading { display: grid; grid-template-columns: minmax(82px, 1fr) minmax(0, auto); align-items: center; }
-  .mobile-checklist-heading-actions { display: grid; grid-template-columns: repeat(3, minmax(0, auto)); justify-content: end; gap: 5px; min-width: 0; }
+  .mobile-checklist-heading-actions { display: grid; grid-template-columns: repeat(2, minmax(0, auto)); justify-content: end; gap: 5px; min-width: 0; }
   .mobile-checklist-heading-actions button { min-width: 0; min-height: 40px; padding: 6px 7px; white-space: normal; line-height: 1.1; }
   .mobile-dashboard-checklists .checklist-gallery { margin-top: 4px; }
   .mobile-dashboard-checklists .checklist-card-open strong { min-width: 0; overflow-wrap: anywhere; }
@@ -8707,7 +8720,7 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
 @media (max-width: 360px) {
   .mobile-dashboard-checklists .mobile-app-section-heading { grid-template-columns: 1fr; }
-  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mobile-checklist-heading-actions { justify-content: stretch; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mobile-app-ui .portable-course-color-row { grid-template-columns: minmax(0, 1fr) 44px minmax(60px, auto); gap: 6px; }
   .mobile-app-ui .portable-course-color-row .course-color-selector { width: 44px; min-width: 44px; }
 }

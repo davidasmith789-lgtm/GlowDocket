@@ -776,6 +776,18 @@ test("checklist checkboxes keep a visible fixed size and stable grid alignment",
   assert.match(css, /\.standalone-checklist-items > li > input\[type="checkbox"\]:checked,[\s\S]*?background-image:\s*url\(/s);
 });
 
+test("checklist steps support an optional persisted information body", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /text: trimmed, body: ""/);
+  assert.match(source, /className="checklist-item-details" defaultOpen=\{Boolean\(item\.body\)\}/);
+  assert.match(source, /handleUpdateChecklistItem\(selectedList\.id, item\.id, "body", event\.target\.value\)/);
+  assert.match(css, /\.checklist-item-details textarea \{[^}]*width: 100%;[^}]*resize: vertical;/);
+  assert.match(css, /mobile-checklist-fullscreen \.checklist-item-details textarea \{[^}]*min-height: 96px;/);
+});
+
 test("global text scaling reaches button labels and large text reflows dense widgets", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(css, /button,\s*\[role="button"\]\s*\{[^}]*font-family:\s*inherit;[^}]*font-size:\s*inherit;/s);

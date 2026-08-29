@@ -6529,7 +6529,7 @@ function App() {
   const handleAddChecklistItem = (listId, text) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    updateChecklist(listId, (list) => ({ ...list, items: [...(list.items || []), { id: crypto.randomUUID(), text: trimmed, isDone: false, dueDate: "", dueTime: "" }] }));
+    updateChecklist(listId, (list) => ({ ...list, items: [...(list.items || []), { id: crypto.randomUUID(), text: trimmed, body: "", isDone: false, dueDate: "", dueTime: "" }] }));
   };
 
   const handleUpdateChecklistItem = (listId, itemId, field, value) => {
@@ -8187,7 +8187,13 @@ function App() {
               >
                 {!isMobileUi && <button type="button" className="checklist-item-grip" title="Drag to reorder" onPointerDown={(event) => startChecklistTouchReorder(event, ".standalone-checklist-items li", item.id, (source, target) => handleReorderChecklistItem(selectedList.id, source, target))}>⠿</button>}
                 <input type="checkbox" checked={item.isDone} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "isDone", event.target.checked)} />
-                <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} />
+                <div className="checklist-item-copy">
+                  <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} aria-label="Checklist step title" />
+                  <details className="checklist-item-details" defaultOpen={Boolean(item.body)}>
+                    <summary>{item.body ? "More information" : "Add more information"}</summary>
+                    <textarea value={item.body || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "body", event.target.value)} placeholder="Add notes, instructions, links, or anything else about this step…" rows="3" aria-label={`More information for ${item.text || "checklist step"}`} />
+                  </details>
+                </div>
                 <div className="checklist-item-date-fields">
                   <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
                     {!item.dueDate && <span aria-hidden="true">Select date</span>}
@@ -9265,7 +9271,7 @@ function App() {
     if (sectionId === "summary") return <section key={sectionId} className="mobile-app-stat-strip" aria-label="Assignment summary"><button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button><button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button><button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button></section>;
     if (sectionId === "plan") return <section key={sectionId} className="mobile-app-card mobile-app-plan-card"><div className="mobile-app-section-heading"><div><h3>Best Next Steps</h3></div><button type="button" onClick={() => openMobileTab("todo")}>View tasks</button></div>{renderRecommendedWidget()}</section>;
     if (sectionId === "quick") return <section key={sectionId} className="mobile-app-card mobile-app-quick-card"><div className="mobile-app-section-heading"><div><h3>Find a quick task</h3></div></div>{renderQuickMatchCard()}</section>;
-    if (sectionId === "checklists") return <section key={sectionId} className="mobile-app-card mobile-dashboard-checklists"><div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button><button type="button" onClick={() => openMobileTab("mobile-tools")}>Arrange</button></div></div>{renderStandaloneChecklists()}</section>;
+    if (sectionId === "checklists") return <section key={sectionId} className="mobile-app-card mobile-dashboard-checklists"><div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button></div></div>{renderStandaloneChecklists()}</section>;
     if (sectionId === "reminders") return <section key={sectionId} className="mobile-app-card mobile-home-reminders"><div className="mobile-app-section-heading"><div><span>Plan ahead</span><h3>Reminders</h3></div></div>{renderRemindersWidget()}</section>;
     if (sectionId === "course-overview") return <section key={sectionId} className="mobile-app-card mobile-home-course-overview"><div className="mobile-app-section-heading"><div><span>By subject</span><h3>{schoolLevelCopy.courseLabel} overview</h3></div></div>{renderCourseOverviewWidget()}</section>;
     return null;

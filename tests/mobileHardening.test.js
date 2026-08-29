@@ -91,7 +91,21 @@ test("mobile dashboard checklist controls share one compact heading row", async 
   assert.match(app, /mobile-dashboard-checklists/);
   assert.match(app, /mobile-checklist-heading-actions/);
   assert.match(app, /!isMobileUi && <p>Quick lists that stay separate from assignments\.<\/p>/);
-  assert.match(styles, /mobile-checklist-heading-actions[\s\S]{0,220}grid-template-columns: repeat\(3/);
+  assert.doesNotMatch(app, /mobile-checklist-heading-actions[^\n]*>Arrange<\/button>/);
+  assert.match(styles, /mobile-checklist-heading-actions[\s\S]{0,220}grid-template-columns: repeat\(2/);
+});
+
+test("mobile settings keep cycle dates and celebration previews contained", async () => {
+  const [app, styles] = await Promise.all([read("../src/App.jsx"), read("../src/App.css")]);
+  assert.match(app, /className="school-cycle-settings"/);
+  assert.match(styles, /school-cycle-settings input\[type="date"\][^}]*box-sizing: border-box;[^}]*width: min\(100%, 20rem\);[^}]*justify-self: center;/);
+  assert.match(styles, /mobile-app-ui \.celebration-color-preview > div \{ contain: none; \}/);
+  assert.match(styles, /mobile-app-ui \.studio-celebration-pill \{ display: none; \}/);
+});
+
+test("mobile Best Next Steps prompt is centered", async () => {
+  const styles = await read("../src/App.css");
+  assert.match(styles, /\.mobile-empty-add-action \{[^}]*text-align: center;/);
 });
 
 test("mobile assignment actions finish with a stable two-column grid", async () => {
