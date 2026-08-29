@@ -1,7 +1,7 @@
 import { createReportMetadata } from "./buildMetadata.js";
 
 export const CLOUD_STATE_SCHEMA_VERSION = 1;
-const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnabled", "activeColorThemeId", "activeColorThemeMode", "customColors"]);
+const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnabled"]);
 // Workspace geometry is intentionally device-specific so a Chromebook layout
 // cannot replace the arrangement saved in a desktop browser (or vice versa).
 const ACCOUNT_FIELDS = ["tasks", "courses", "courseColors", "userSettings", "checklists", "displayName"];
@@ -154,7 +154,7 @@ export function removeCloudAccountLocalData(storage, userId) {
   const id = String(userId || "");
   if (!id) return;
   const exactKeys = [
-    `tasks_${id}`, `courses_${id}`, `courseColors_${id}`, `settings_${id}`,
+    `tasks_${id}`, `courses_${id}`, `courseColors_${id}`, `settings_${id}`, `mobileSettings_${id}`,
     `checklists_${id}`, `workspaceLayout_${id}`, `taskacadia_preferred_name_${id}`,
     `taskacadia_notified_${id}`, `taskacadia_checklist_notified_${id}`,
     `taskcabinet_accessibility_checklist_${id}`,
@@ -189,6 +189,35 @@ export async function createCloudSnapshot(client, userId, state) {
   const { data, error } = await client.from("taskcabinet_cloud_state").insert({ user_id: userId, state: validateCloudState(state), schema_version: CLOUD_STATE_SCHEMA_VERSION, revision: 1 }).select("revision,updated_at").single();
   if (error) throw error;
   return data;
+}
+
+export function refreshLocalSnapshotFromStorage(storage, profileKey, cachedState, defaults = {}) {
+  if (!profileKey) return cachedState;
+  const legacy = readLegacySnapshot(storage, profileKey, defaults);
+  const settingsKey = `settings_${profileKey}`;
+  const mobileSettingsKey = `mobileSettings_${profileKey}`;
+  const hasSettings = storage.getItem(settingsKey) !== null;
+  const hasMobileSettings = storage.getItem(mobileSettingsKey) !== null;
+  const isSettingsObject = (value) => value && typeof value === "object" && !Array.isArray(value);
+  const desktopSettings = readStoredSection(storage, settingsKey, {}, isSettingsObject);
+  const mobileSettings = readStoredSection(storage, mobileSettingsKey, {}, isSettingsObject);
+  const mergedSettings = { ...defaults, ...desktopSettings, ...mobileSettings };
+  if (hasMobileSettings) {
+    storage.setItem(settingsKey, JSON.stringify(mergedSettings));
+    storage.removeItem(mobileSettingsKey);
+  }
+  const cached = cachedState || legacy;
+  const stored = (prefix) => storage.getItem(`${prefix}_${profileKey}`) !== null;
+  return collectSyncableState({
+    ...cached,
+    tasks: stored("tasks") ? legacy.tasks : cached.tasks,
+    courses: stored("courses") ? legacy.courses : cached.courses,
+    courseColors: stored("courseColors") ? legacy.courseColors : cached.courseColors,
+    userSettings: hasSettings || hasMobileSettings ? mergedSettings : cached.userSettings,
+    checklists: stored("checklists") ? legacy.checklists : cached.checklists,
+    workspaceLayout: stored("workspaceLayout") ? legacy.workspaceLayout : cached.workspaceLayout,
+    displayName: storage.getItem(`taskacadia_preferred_name_${profileKey}`) !== null ? legacy.displayName : cached.displayName,
+  });
 }
 
 export async function ensureCloudSnapshot(client, userId, localState, operations = {}) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -9,15 +9,15 @@ function memoryStorage() {
 
 const state = (overrides = {}) => collectSyncableState({ tasks: [], courses: ["Other"], courseColors: {}, userSettings: {}, checklists: [], workspaceLayout: { desktop: {}, mobile: {}, collapsed: {} }, theme: "light", displayName: "Student", ...overrides });
 
-test("cloud snapshots exclude device-only reminder and theme settings", () => {
+test("cloud snapshots exclude notification toggles and retain account preferences", () => {
   const snapshot = state({ theme: "dark", userSettings: { textSize: "large", externalPushEnabled: true, notificationsEnabled: true, activeColorThemeId: "ocean-focus", activeColorThemeMode: "light", customColors: { page: "#ffffff" }, reminderMinutes: 60 } });
   assert.equal(snapshot.userSettings.textSize, "large");
   assert.equal(snapshot.userSettings.reminderMinutes, 60);
   assert.equal("externalPushEnabled" in snapshot.userSettings, false);
   assert.equal("notificationsEnabled" in snapshot.userSettings, false);
-  assert.equal("activeColorThemeId" in snapshot.userSettings, false);
-  assert.equal("activeColorThemeMode" in snapshot.userSettings, false);
-  assert.equal("customColors" in snapshot.userSettings, false);
+  assert.equal(snapshot.userSettings.activeColorThemeId, "ocean-focus");
+  assert.equal(snapshot.userSettings.activeColorThemeMode, "light");
+  assert.deepEqual(snapshot.userSettings.customColors, { page: "#ffffff" });
   assert.equal("theme" in snapshot, false);
 });
 
@@ -34,11 +34,40 @@ test("local cloud caches remain isolated by Supabase user id", () => {
   assert.equal(loadLocalSnapshot(storage, "user-b").tasks[0].id, "b");
 });
 
-test("applying cloud state preserves device reminder and theme settings", () => {
+test("applying cloud state preserves device notifications and applies account themes", () => {
   const storage = memoryStorage();
-  applyCloudStateToLocal(storage, "auth-user", state({ userSettings: { textSize: "small" } }), { externalPushEnabled: true, notificationsEnabled: false, activeColorThemeId: "forest-study", activeColorThemeMode: "light", customColors: { page: "#f2f8f1" } });
+  applyCloudStateToLocal(storage, "auth-user", state({ userSettings: { textSize: "small", activeColorThemeId: "ocean-focus", activeColorThemeMode: "dark", customColors: { page: "#101827" } } }), { externalPushEnabled: true, notificationsEnabled: false });
   const settings = JSON.parse(storage.getItem("settings_auth-user"));
-  assert.deepEqual(settings, { textSize: "small", externalPushEnabled: true, notificationsEnabled: false, activeColorThemeId: "forest-study", activeColorThemeMode: "light", customColors: { page: "#f2f8f1" } });
+  assert.deepEqual(settings, { textSize: "small", activeColorThemeId: "ocean-focus", activeColorThemeMode: "dark", customColors: { page: "#101827" }, externalPushEnabled: true, notificationsEnabled: false });
+});
+
+test("class schedules and badge progress survive a cloud round trip", () => {
+  const userSettings = {
+    cycleAnchorDate: "2026-08-24",
+    cycleDayNames: ["A Day", "B Day"],
+    courseCycleDays: { Biology: ["A Day"], Algebra: ["B Day"] },
+    schoolScheduleMode: "weekly",
+    weeklyCourseMeetings: { Biology: [1, 3, 5], Algebra: [2, 4] },
+    gamification: { totalXp: 2400, earnedAchievementIds: ["first-task", "master-planner"] },
+  };
+  const snapshot = validateCloudState(JSON.parse(JSON.stringify(state({ courses: ["Other", "Biology", "Algebra"], userSettings }))));
+  assert.deepEqual(snapshot.courses, ["Other", "Biology", "Algebra"]);
+  assert.deepEqual(snapshot.userSettings, userSettings);
+});
+
+test("legacy phone settings are merged into unified account data before hydration", () => {
+  const storage = memoryStorage();
+  const cached = state({ courses: ["Other"], userSettings: { textSize: "small" } });
+  storage.setItem("courses_student", JSON.stringify(["Other", "Biology"]));
+  storage.setItem("settings_student", JSON.stringify({ textSize: "large", schoolLevel: "high" }));
+  storage.setItem("mobileSettings_student", JSON.stringify({ cycleAnchorDate: "2026-08-24", courseCycleDays: { Biology: ["A Day"] }, gamification: { totalXp: 800, earnedAchievementIds: ["first-task"] } }));
+  const refreshed = refreshLocalSnapshotFromStorage(storage, "student", cached, {});
+  assert.deepEqual(refreshed.courses, ["Other", "Biology"]);
+  assert.equal(refreshed.userSettings.textSize, "large");
+  assert.equal(refreshed.userSettings.cycleAnchorDate, "2026-08-24");
+  assert.deepEqual(refreshed.userSettings.gamification.earnedAchievementIds, ["first-task"]);
+  assert.equal(storage.getItem("mobileSettings_student"), null);
+  assert.equal(JSON.parse(storage.getItem("settings_student")).cycleAnchorDate, "2026-08-24");
 });
 
 test("meaningful-state detection protects assignments and custom courses", () => {
@@ -72,10 +101,12 @@ test("deleting a cloud account clears only that account's browser data", () => {
   const storage = memoryStorage();
   saveLocalSnapshot(storage, "deleted-user", state({ tasks: [{ id: "gone" }] }), 2, false);
   storage.setItem("tasks_deleted-user", "[]");
+  storage.setItem("mobileSettings_deleted-user", "{}");
   storage.setItem("taskcabinet_cloud_backup_deleted-user_123", "{}");
   storage.setItem("tasks_other-user", "keep");
   removeCloudAccountLocalData(storage, "deleted-user");
   assert.equal(storage.getItem("tasks_deleted-user"), null);
+  assert.equal(storage.getItem("mobileSettings_deleted-user"), null);
   assert.equal(storage.getItem("taskcabinet_cloud_backup_deleted-user_123"), null);
   assert.equal(storage.getItem("tasks_other-user"), "keep");
 });

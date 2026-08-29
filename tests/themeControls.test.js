@@ -32,7 +32,7 @@ test("profile theme selection restores its saved mode after reload and sign-in",
   assert.match(app, /setTheme\(loadedThemeMode\)/);
   assert.match(app, /activeColorThemeMode: selectedTheme\.mode/);
   assert.match(app, /activeColorThemeMode: theme/);
-  assert.match(cloudSync, /"activeColorThemeMode"/);
+  assert.doesNotMatch(cloudSync, /DEVICE_SETTING_KEYS[^;]+activeColorThemeMode/);
 });
 
 test("background account updates merge persisted settings without erasing device themes", async () => {
@@ -43,9 +43,9 @@ test("background account updates merge persisted settings without erasing device
   assert.doesNotMatch(app, /setItem\(settingsStorageKey, JSON\.stringify\(updated\)\);[^}]*record this sign-in day/s);
 });
 
-test("calendar day colors cross the mobile cloud-sync boundary", async () => {
+test("calendar day colors cross the unified account sync boundary", async () => {
   const app = await read("../src/App.jsx");
 
-  assert.match(app, /calendarDayColors: selected\.userSettings\?\.calendarDayColors \|\| settings\.calendarDayColors/);
-  assert.match(app, /calendarDayColors: userSettings\.calendarDayColors/);
+  assert.match(app, /\.\.\.selected\.userSettings/);
+  assert.match(app, /userSettings,/);
 });

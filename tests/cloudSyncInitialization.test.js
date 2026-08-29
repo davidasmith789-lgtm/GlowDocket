@@ -65,7 +65,7 @@ test("invalid local preparation does not report that a cloud request was attempt
 test("Retry reruns hydration instead of exiting through the post-hydration save guard", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(app, /const retryCloudSync = \(\) => \{[\s\S]*?setSyncRetryNonce\(\(value\) => value \+ 1\);/);
-  assert.match(app, /\}, \[currentUser, accountMode, syncRetryNonce\]\);/);
+  assert.match(app, /\}, \[currentUser, accountMode, syncRetryNonce, settingsStorageKey\]\);/);
   assert.match(app, /syncStatus === "failed"[^\n]+onClick=\{retryCloudSync\}>Retry/);
 });
 

@@ -49,7 +49,7 @@ import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsFor
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
@@ -2054,10 +2054,8 @@ function App() {
   const courseColorsStorageKey = currentUser
     ? `courseColors_${currentUser}`
     : "courseColors_guest";
-  const settingsStorageKey = currentUser
-    ? `${isMobileDevice ? "mobileSettings" : "settings"}_${currentUser}`
-    : isMobileDevice ? "mobileSettings_guest" : "settings_guest";
-  const desktopSettingsStorageKey = currentUser ? `settings_${currentUser}` : "settings_guest";
+  const settingsStorageKey = currentUser ? `settings_${currentUser}` : "settings_guest";
+  const legacyMobileSettingsStorageKey = currentUser ? `mobileSettings_${currentUser}` : "mobileSettings_guest";
   const checklistStorageKey = currentUser
     ? `checklists_${currentUser}`
     : "checklists_guest";
@@ -2097,9 +2095,11 @@ function App() {
   const [userSettings, setUserSettings] = useState(() => {
     try {
       let storedSettings = localStorage.getItem(settingsStorageKey);
-      if (!storedSettings && isMobileDevice) {
-        storedSettings = localStorage.getItem(desktopSettingsStorageKey);
-        if (storedSettings) localStorage.setItem(settingsStorageKey, storedSettings);
+      const legacyMobileSettings = isMobileDevice ? localStorage.getItem(legacyMobileSettingsStorageKey) : null;
+      if (legacyMobileSettings) {
+        storedSettings = JSON.stringify({ ...(storedSettings ? JSON.parse(storedSettings) : {}), ...JSON.parse(legacyMobileSettings) });
+        localStorage.setItem(settingsStorageKey, storedSettings);
+        localStorage.removeItem(legacyMobileSettingsStorageKey);
       }
       if (storedSettings) return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(storedSettings) };
       const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
@@ -2580,8 +2580,10 @@ function App() {
       let cloudRequestAttempted = false;
       try {
         const client = await getSupabaseBrowserClient();
-        const local = loadLocalSnapshot(localStorage, currentUser) || readLegacySnapshot(localStorage, currentUser, DEFAULT_USER_SETTINGS);
+        const cachedLocal = loadLocalSnapshot(localStorage, currentUser);
+        const local = refreshLocalSnapshotFromStorage(localStorage, currentUser, cachedLocal, DEFAULT_USER_SETTINGS);
         const localMeta = loadLocalMeta(localStorage, currentUser);
+        const recoveredUnsyncedData = Boolean(cachedLocal && getCloudStateFingerprint(local) !== getCloudStateFingerprint(cachedLocal));
         const ensured = await ensureCloudSnapshot(client, currentUser, local, {
           onRequest: () => { cloudRequestAttempted = true; },
         });
@@ -2592,7 +2594,7 @@ function App() {
         let needsUpload = false;
         if (!ensured.created) {
           revision = cloud.revision;
-          const hydrationChoice = chooseHydrationState(local, localMeta, cloud);
+          const hydrationChoice = chooseHydrationState(local, { ...localMeta, pending: localMeta.pending || recoveredUnsyncedData }, cloud);
           if (hydrationChoice.conflict) {
             saveLocalBackup(localStorage, currentUser, local);
             setSyncConflict({ local, cloud: cloud.state, cloudRevision: cloud.revision });
@@ -2606,13 +2608,10 @@ function App() {
           };
           needsUpload = Boolean(hydrationChoice.needsUpload);
         }
-        const localDeviceSettings = JSON.parse(localStorage.getItem(desktopSettingsStorageKey) || "{}");
+        const localDeviceSettings = JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
         applyCloudStateToLocal(localStorage, currentUser, selected, {
           externalPushEnabled: Boolean(localDeviceSettings.externalPushEnabled),
           notificationsEnabled: Boolean(localDeviceSettings.notificationsEnabled),
-          activeColorThemeId: localDeviceSettings.activeColorThemeId || localStorage.getItem("theme") || getSystemPreference(),
-          activeColorThemeMode: getSavedThemeMode(localDeviceSettings, localStorage.getItem("theme")),
-          customColors: localDeviceSettings.customColors || {},
         });
         saveLocalSnapshot(localStorage, currentUser, selected, revision, needsUpload);
         cloudRevisionRef.current = revision;
@@ -2621,9 +2620,15 @@ function App() {
         setTasks(selected.tasks);
         setCourses(selected.courses);
         setCourseColors(selected.courseColors);
-        setUserSettings((settings) => isMobileDevice
-          ? { ...DEFAULT_USER_SETTINGS, ...settings, gamification: selected.userSettings?.gamification || settings.gamification, signInDays: selected.userSettings?.signInDays || settings.signInDays, calendarDayColors: selected.userSettings?.calendarDayColors || settings.calendarDayColors }
-          : { ...DEFAULT_USER_SETTINGS, ...selected.userSettings, externalPushEnabled: settings.externalPushEnabled, notificationsEnabled: settings.notificationsEnabled, activeColorThemeId: settings.activeColorThemeId, activeColorThemeMode: settings.activeColorThemeMode, customColors: settings.customColors });
+        setUserSettings((settings) => ({
+          ...DEFAULT_USER_SETTINGS,
+          ...selected.userSettings,
+          externalPushEnabled: settings.externalPushEnabled,
+          notificationsEnabled: settings.notificationsEnabled,
+        }));
+        if (["light", "dark"].includes(selected.userSettings?.activeColorThemeMode)) {
+          setTheme(selected.userSettings.activeColorThemeMode);
+        }
         setChecklists(selected.checklists);
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
         workspaceLayoutRef.current = repairedWorkspace;
@@ -2639,14 +2644,11 @@ function App() {
     };
     void hydrate();
     return () => { cancelled = true; };
-  }, [currentUser, accountMode, syncRetryNonce]);
+  }, [currentUser, accountMode, syncRetryNonce, settingsStorageKey]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
-    const desktopSettings = isMobileDevice
-      ? { ...DEFAULT_USER_SETTINGS, ...readStoredSection(localStorage, currentUser ? `settings_${currentUser}` : "settings_guest", {}, (value) => Boolean(value && typeof value === "object" && !Array.isArray(value))), gamification: userSettings.gamification, signInDays: userSettings.signInDays, calendarDayColors: userSettings.calendarDayColors }
-      : userSettings;
-    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings: desktopSettings, checklists, workspaceLayout, theme, displayName });
+    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
     if (getCloudStateFingerprint(snapshot) === cloudLastSavedFingerprintRef.current) {
       saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, false);
@@ -2695,7 +2697,7 @@ function App() {
     };
     cloudSaveTimerRef.current = window.setTimeout(flush, 750);
     return () => window.clearTimeout(cloudSaveTimerRef.current);
-  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce, isMobileDevice]);
+  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
@@ -3536,9 +3538,13 @@ function App() {
     const loadedCourses = readStoredSection(localStorage, courseStorageKey, ["Other"], (value) => Array.isArray(value) && value.every((course) => typeof course === "string"));
     const loadedCourseColors = readStoredSection(localStorage, courseColorsStorageKey, {}, isObject);
     let storedSettings = readStoredSection(localStorage, settingsStorageKey, {}, isObject);
-    if (isMobileDevice && Object.keys(storedSettings).length === 0) {
-      storedSettings = readStoredSection(localStorage, desktopSettingsStorageKey, {}, isObject);
-      if (Object.keys(storedSettings).length > 0) localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+    const legacyMobileSettings = isMobileDevice
+      ? readStoredSection(localStorage, legacyMobileSettingsStorageKey, {}, isObject)
+      : {};
+    if (Object.keys(legacyMobileSettings).length > 0) {
+      storedSettings = { ...storedSettings, ...legacyMobileSettings };
+      localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+      localStorage.removeItem(legacyMobileSettingsStorageKey);
     }
     const midnightNeon = DEFAULT_COLOR_THEME_PRESETS.find((colorTheme) => colorTheme.id === "midnight-neon");
     const loadedSettingsBase = Object.keys(storedSettings).length > 0
@@ -3578,7 +3584,7 @@ function App() {
     courseStorageKey,
     courseColorsStorageKey,
     settingsStorageKey,
-    desktopSettingsStorageKey,
+    legacyMobileSettingsStorageKey,
     checklistStorageKey,
     calendarEventsStorageKey,
     workspaceStorageKey,
