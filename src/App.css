@@ -854,6 +854,12 @@ body {
   background: var(--page-bg);
 }
 
+/* A scaled desktop shell keeps saved right-edge widgets visible, but its
+   larger pre-transform box must not create page-level horizontal overflow. */
+.App:not(.mobile-app-ui) {
+  overflow-x: clip;
+}
+
 .App.page-color-wash {
   background:
     radial-gradient(circle at 7% 11%, color-mix(in srgb, var(--page-color-wash) 20%, transparent), transparent min(34rem, 42vw)),
@@ -2151,7 +2157,7 @@ button:disabled {
   .mobile-app-menu-grid { display: grid; gap: 9px; }
   .mobile-app-menu-grid button { display: grid; min-height: 66px; padding: 13px 14px; gap: 3px; border: 1px solid var(--border-color); border-radius: 17px; color: var(--text-color); background: color-mix(in srgb, var(--card-bg) 82%, var(--page-bg)); text-align: left; }
   .mobile-app-menu-grid button strong { font-size: 0.94rem; }
-  .mobile-app-menu-grid button span { color: var(--muted-text); font-size: 0.76rem; }
+  .mobile-app-menu-grid button span { color: var(--muted-text); font-size: 0.76rem; text-align: center; }
 
   .mobile-app-account-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 14px 0 0; border-top: 1px solid var(--border-color); }
   .mobile-app-account-row > div { display: grid; min-width: 0; gap: 2px; }
@@ -5768,8 +5774,8 @@ html[data-theme="dark"] {
   position: absolute;
   z-index: 10001;
   pointer-events: none;
-  background: #ffd400;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #7a5b00 35%, transparent), 0 0 5px color-mix(in srgb, #ffd400 55%, transparent);
+  background: var(--widget-snap-color, #ffd400);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--widget-snap-color, #ffd400) 48%, black), 0 0 5px color-mix(in srgb, var(--widget-snap-color, #ffd400) 55%, transparent);
 }
 .workspace-alignment-guide.is-vertical {
   width: 2px;

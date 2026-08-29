@@ -449,6 +449,7 @@ test("resizing scales the full app shell without changing the chosen widget arra
   assert.match(app, /data-workspace-scale=\{scale\}/);
   assert.doesNotMatch(app, /setWorkspaceMode/);
   assert.match(styles, /\.app-shell\.is-viewport-scaled/);
+  assert.match(styles, /\.App:not\(\.mobile-app-ui\)\s*\{[^}]*overflow-x:\s*clip;/s);
 });
 
 test("rendered widgets use saved geometry without resize-time reflow", async () => {
@@ -712,6 +713,13 @@ test("widget labels can shrink to a compact header with proportionally smaller c
   assert.match(css, /font-size:\s*var\(--widget-header-title-size, 1rem\);/);
 });
 
+test("resizing a collapsed widget keeps content scaled from its expanded height", async () => {
+  const source = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(source, /const scaleHeight = collapsed \? Number\(instance\.height\) : nextHeight;/);
+  assert.match(source, /\(scaleHeight - labelHeight - widgetBodyPadding\) \/ contentReferenceHeight/);
+  assert.doesNotMatch(source, /\(nextHeight - labelHeight - widgetBodyPadding\) \/ contentReferenceHeight/);
+});
+
 test("workspace interaction exposes every resize edge and permits free widget overlap", async () => {
   const source = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   assert.match(source, /\["top", \{ top: true \}\].*\["bottom-left", \{ bottom: true, left: true \}\]/s);
@@ -721,7 +729,7 @@ test("workspace interaction exposes every resize edge and permits free widget ov
   assert.match(source, /nextRect = aligned;/);
 });
 
-test("widget dragging snaps matching edges and centers to yellow alignment guides", async () => {
+test("widget dragging snaps matching edges and centers to customizable alignment guides", async () => {
   const [source, css] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
@@ -732,7 +740,7 @@ test("widget dragging snaps matching edges and centers to yellow alignment guide
   assert.match(source, /desired\.y \+ desired\.height \/ 2/);
   assert.match(source, /moveEvent\.altKey\s*\? \{ \.\.\.desired, guides: \[\] \}/);
   assert.match(source, /renderWorkspaceAlignmentGuides\(canvas, aligned\.guides\)/);
-  assert.match(css, /\.workspace-alignment-guide\s*\{[^}]*background:\s*#ffd400;/s);
+  assert.match(css, /\.workspace-alignment-guide\s*\{[^}]*background:\s*var\(--widget-snap-color, #ffd400\);/s);
   assert.match(css, /\.workspace-alignment-guide\.is-vertical\s*\{[^}]*width:\s*2px;/s);
   assert.match(css, /\.workspace-alignment-guide\.is-horizontal\s*\{[^}]*height:\s*2px;/s);
 });

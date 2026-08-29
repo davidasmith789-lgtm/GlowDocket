@@ -42,6 +42,11 @@ test("mobile pages reserve bottom navigation space only once", async () => {
   assert.doesNotMatch(community, /community-page\.is-mobile[\s\S]{0,100}padding[^;]*mobile-nav-clearance/);
 });
 
+test("mobile More menu descriptions are centered beneath their option titles", async () => {
+  const styles = await read("../src/App.css");
+  assert.match(styles, /\.mobile-app-menu-grid button span \{[^}]*text-align: center;/);
+});
+
 test("mobile fieldset headings stay fully inside their boxes", async () => {
   const [styles, sharing, community] = await Promise.all([
     read("../src/App.css"),

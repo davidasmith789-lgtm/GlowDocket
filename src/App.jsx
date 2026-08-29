@@ -279,6 +279,7 @@ const COLOR_PERSONALIZATION_FIELDS = [
   { key: "muted", label: "Muted text", group: "Foundations" },
   { key: "border", label: "Borders", group: "Foundations" },
   { key: "focus", label: "Header outline", group: "Foundations" },
+  { key: "widgetSnap", label: "Widget snap outline", group: "Foundations" },
   { key: "input", label: "Inputs", group: "Foundations" },
   { key: "nav", label: "Navigation", group: "Foundations" },
   { key: "task", label: "Assignment cards", group: "Assignment Viewing" },
@@ -424,7 +425,7 @@ const ensureReadableText = (textColor, backgroundColor, minimumRatio = 4.5) => {
 const THEME_COLOR_DEFAULTS = {
   light: {
     page: "#f4f7fb", surface: "#ffffff", surfaceAlt: "#ebeff3",
-    text: "#111827", muted: "#6b7280", border: "#dbe3ef", focus: "#6366f1", input: "#ffffff",
+    text: "#111827", muted: "#6b7280", border: "#dbe3ef", focus: "#6366f1", widgetSnap: "#ffd400", input: "#ffffff",
     nav: "#ffffff", task: "#ffffff", dropdownHighlight: "#dbeafe", dropdownHighlightText: "#111827", modal: "#ffffff", backdrop: "#020617", primary: "#4f46e5",
     primaryText: "#ffffff", secondary: "#e5e7eb", secondaryText: "#111827",
     success: "#16a34a", warning: "#f59e0b", warningText: "#111827",
@@ -442,7 +443,7 @@ const THEME_COLOR_DEFAULTS = {
   },
   dark: {
     page: "#0b1020", surface: "#151b2e", surfaceAlt: "#1f2937",
-    text: "#f9fafb", muted: "#aab3c5", border: "#293247", focus: "#818cf8", input: "#111827",
+    text: "#f9fafb", muted: "#aab3c5", border: "#293247", focus: "#818cf8", widgetSnap: "#ffd400", input: "#111827",
     nav: "#151b2e", task: "#151b2e", dropdownHighlight: "#334155", dropdownHighlightText: "#ffffff", modal: "#151b2e", backdrop: "#020617", primary: "#60a5fa",
     primaryText: "#0b1020", secondary: "#334155", secondaryText: "#ffffff",
     success: "#22c55e", warning: "#facc15", warningText: "#111827",
@@ -617,6 +618,7 @@ const COLOR_CSS_VARIABLES = {
   muted: ["--muted-text", "--placeholder-color", "--text-muted"],
   border: ["--border-color"],
   focus: ["--focus-color"],
+  widgetSnap: ["--widget-snap-color"],
   input: ["--input-bg"],
   nav: ["--nav-bg"],
   task: ["--task-bg"],
@@ -1542,11 +1544,14 @@ function WorkspaceWidget({
         widget.style.top = `${aligned.y}px`;
         widget.style.width = `${nextWidth}px`;
         widget.style.height = `${nextHeight}px`;
-        const liveScale = Math.min(
-          1,
-          Math.max(0.35, (nextWidth - widgetBodyPadding) / contentReferenceWidth),
-          Math.max(0.35, (nextHeight - labelHeight - widgetBodyPadding) / contentReferenceHeight),
-        );
+        const scaleHeight = collapsed ? Number(instance.height) : nextHeight;
+        const liveScale = mobileResize || instance.type === "course-colors"
+          ? 1
+          : Math.min(
+              1,
+              Math.max(0.35, (nextWidth - widgetBodyPadding) / contentReferenceWidth),
+              Math.max(0.35, (scaleHeight - labelHeight - widgetBodyPadding) / contentReferenceHeight),
+            );
         widget.style.setProperty("--widget-content-scale", liveScale);
       }
     };
@@ -1591,11 +1596,13 @@ function WorkspaceWidget({
       widget.style.setProperty("--widget-header-control-size", `${Math.max(22, Math.min(32, nextLabelHeight - 8))}px`);
       widget.style.setProperty("--widget-header-title-size", `${Math.max(0.625, Math.min(1, nextLabelHeight * 0.019375))}rem`);
       if (collapsed) widget.style.height = `${nextLabelHeight}px`;
-      const liveScale = Math.min(
-        1,
-        Math.max(0.35, availableBodyWidth / contentReferenceWidth),
-        Math.max(0.35, (Number(instance.height) - nextLabelHeight - widgetBodyPadding) / contentReferenceHeight),
-      );
+      const liveScale = mobileResize || instance.type === "course-colors"
+        ? 1
+        : Math.min(
+            1,
+            Math.max(0.35, availableBodyWidth / contentReferenceWidth),
+            Math.max(0.35, (Number(instance.height) - nextLabelHeight - widgetBodyPadding) / contentReferenceHeight),
+          );
       widget.style.setProperty("--widget-content-scale", liveScale);
     };
 
