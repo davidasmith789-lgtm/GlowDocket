@@ -6995,8 +6995,7 @@ function App() {
     if (color) {
       target[key] = { color, updatedAt };
     } else {
-      const { target: dateTarget, key: dateKey } = getCalendarColorScopeTarget(next, "date");
-      dateTarget[dateKey] = { color: "", cleared: true, updatedAt };
+      target[key] = { color: "", cleared: true, updatedAt };
     }
     saveCalendarDayColors(next);
   };
