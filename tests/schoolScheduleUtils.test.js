@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate } from "../src/schoolScheduleUtils.js";
+import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate, isWeekdayDateValue } from "../src/schoolScheduleUtils.js";
+
+test("anchor dates identify weekdays from their selected calendar date", () => {
+  assert.equal(isWeekdayDateValue("2026-08-31"), true);
+  assert.equal(isWeekdayDateValue("2026-08-30"), false);
+  assert.equal(isWeekdayDateValue("2026-09-05"), false);
+  assert.equal(isWeekdayDateValue(""), null);
+  assert.equal(isWeekdayDateValue("2026-02-30"), null);
+});
 
 const settings = {
   schoolScheduleMode: "weekly",

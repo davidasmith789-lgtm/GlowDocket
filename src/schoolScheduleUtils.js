@@ -6,6 +6,22 @@ export const WEEKDAYS = [
   { value: 5, short: "Fri", label: "Friday" },
 ];
 
+export function isWeekdayDateValue(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  if (!match) return null;
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const date = new Date(year, month - 1, day, 12);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) return null;
+  return date.getDay() !== 0 && date.getDay() !== 6;
+}
+
 export function getWeeklyMeetingsForDate(date, settings) {
   if (settings?.schoolScheduleMode !== "weekly") return [];
   const weekday = date instanceof Date ? date.getDay() : -1;

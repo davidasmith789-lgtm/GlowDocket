@@ -45,7 +45,7 @@ import {
 } from "./onboardingUtils.js";
 import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
 import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
-import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate, WEEKDAYS } from "./schoolScheduleUtils.js";
+import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate, isWeekdayDateValue, WEEKDAYS } from "./schoolScheduleUtils.js";
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
@@ -11229,8 +11229,7 @@ function App() {
                       value={userSettings.cycleAnchorDate || ""}
                       onChange={(e) => {
                         const value = e.target.value;
-                        const date = value ? new Date(`${value}T00:00:00`) : null;
-                        if (date && (date.getDay() === 0 || date.getDay() === 6)) {
+                        if (isWeekdayDateValue(value) === false) {
                           alert("Choose a weekday as the first school-cycle day.");
                           return;
                         }
@@ -11508,8 +11507,7 @@ function App() {
                         value={userSettings.cycleAnchorDate || ""}
                         onChange={(e) => {
                           const value = e.target.value;
-                          const date = value ? new Date(`${value}T00:00:00`) : null;
-                          if (date && (date.getDay() === 0 || date.getDay() === 6)) {
+                          if (isWeekdayDateValue(value) === false) {
                             alert("Choose a weekday as the first school-cycle day.");
                             return;
                           }
