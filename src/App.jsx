@@ -46,6 +46,7 @@ import {
 import { buildDesiredReminders, EXTERNAL_PUSH_CLIENT_ENABLED, getPushDeviceStorageKey, shouldUseOpenAppFallback } from "./externalReminderUtils.js";
 import { cancelAllExternalReminders, cancelExternalReminder, reconcileExternalReminders, replaceExternalReminder, retryPendingExternalCleanup, scheduleExternalReminder, sendExternalReminderTest } from "./externalReminderClient.js";
 import { expandMeetingsToIndividualDays, formatMeetingTime, getWeeklyMeetingsForDate, isWeekdayDateValue, WEEKDAYS } from "./schoolScheduleUtils.js";
+import { getNextCalendarColorTimestamp, resolveLatestCalendarColor } from "./calendarDayColors.js";
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
@@ -6950,7 +6951,6 @@ function App() {
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
   const selectedCalendarActivities = selectedCalendarEvents.filter((entry) => entry.type === "day-note");
   const calendarDayColors = userSettings.calendarDayColors || { dates: {}, weekdays: {}, cycleDays: {}, entryNames: {} };
-  const normalizeCalendarColorRule = (rule) => typeof rule === "string" ? { color: rule, updatedAt: 0 } : rule;
   const getCalendarColorScopeTarget = (colors, scope, date = selectedDate) => {
     const cycleDay = getCycleDayForDate(date, userSettings);
     if (scope === "weekday") return { target: colors.weekdays, key: date.getDay() };
@@ -6970,8 +6970,8 @@ function App() {
       cycleDay && calendarDayColors.cycleDays?.[cycleDay],
       ...dayEntryNames.map((name) => calendarDayColors.entryNames?.[name]),
       calendarDayColors.dates?.[dateKey],
-    ].map(normalizeCalendarColorRule).filter((rule) => rule?.color);
-    return candidates.reduce((latest, rule) => Number(rule.updatedAt || 0) >= Number(latest?.updatedAt || 0) ? rule : latest, null)?.color || "";
+    ];
+    return resolveLatestCalendarColor(candidates);
   };
   const calendarBackgroundColor = normalizeHexColor(userSettings.customColors?.calendar)
     || THEME_COLOR_DEFAULTS[userSettings.activeColorThemeMode === "light" ? "light" : "dark"].calendar;
@@ -6991,8 +6991,13 @@ function App() {
     };
     const { target, key } = getCalendarColorScopeTarget(next, effectiveScope);
     if (!key && key !== 0) return;
-    if (color) target[key] = { color, updatedAt: Date.now() };
-    else delete target[key];
+    const updatedAt = getNextCalendarColorTimestamp(next);
+    if (color) {
+      target[key] = { color, updatedAt };
+    } else {
+      const { target: dateTarget, key: dateKey } = getCalendarColorScopeTarget(next, "date");
+      dateTarget[dateKey] = { color: "", cleared: true, updatedAt };
+    }
     saveCalendarDayColors(next);
   };
   const changeCalendarDayColorScope = (nextScope) => {
