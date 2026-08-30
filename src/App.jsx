@@ -2233,6 +2233,8 @@ function App() {
   const [calendarEventName, setCalendarEventName] = useState("");
   const [calendarEventTime, setCalendarEventTime] = useState("");
   const [calendarEventAmPm, setCalendarEventAmPm] = useState("");
+  const [calendarEventEndTime, setCalendarEventEndTime] = useState("");
+  const [calendarEventEndAmPm, setCalendarEventEndAmPm] = useState("");
   const [calendarEventNotes, setCalendarEventNotes] = useState("");
   const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
   const [calendarDayColorScope, setCalendarDayColorScope] = useState("date");
@@ -6139,6 +6141,8 @@ function App() {
     setCalendarEventName("");
     setCalendarEventTime("");
     setCalendarEventAmPm("");
+    setCalendarEventEndTime("");
+    setCalendarEventEndAmPm("");
     setCalendarEventNotes("");
     setCalendarEventTimeError("");
   };
@@ -6174,11 +6178,15 @@ function App() {
     const isActivity = entry.type === "day-note";
     const [rawHour = "0", minute = "00"] = String(entry.time || "00:00").split(":");
     const hour24 = Number(rawHour);
+    const [rawEndHour = "0", endMinute = "00"] = String(entry.endTime || "00:00").split(":");
+    const endHour24 = Number(rawEndHour);
     setCalendarEntryMode(isActivity ? "activity" : "event");
     setEditingCalendarEventId(entry.id);
     setCalendarEventName(entry.name || (isActivity ? "Day notes" : ""));
     setCalendarEventTime(isActivity ? "" : useMilitaryTime ? `${String(hour24).padStart(2, "0")}:${minute}` : `${hour24 % 12 || 12}${minute === "00" ? "" : `:${minute}`}`);
     setCalendarEventAmPm(isActivity ? "" : hour24 >= 12 ? "PM" : "AM");
+    setCalendarEventEndTime(isActivity || !entry.endTime ? "" : useMilitaryTime ? `${String(endHour24).padStart(2, "0")}:${endMinute}` : `${endHour24 % 12 || 12}${endMinute === "00" ? "" : `:${endMinute}`}`);
+    setCalendarEventEndAmPm(isActivity || !entry.endTime ? "" : endHour24 >= 12 ? "PM" : "AM");
     setCalendarEventNotes(entry.notes || "");
     setCalendarEventTimeError("");
     setCalendarEventFormOpen(true);
@@ -6189,8 +6197,14 @@ function App() {
     const name = calendarEventName.trim();
     if (!name) return;
     const normalizedTime = calendarEntryMode === "activity" ? "" : normalizeCalendarEventTime(calendarEventTime, calendarEventAmPm);
+    const hasEndTime = Boolean(calendarEventEndTime.trim() || calendarEventEndAmPm);
+    const normalizedEndTime = calendarEntryMode === "activity" || !hasEndTime ? "" : normalizeCalendarEventTime(calendarEventEndTime, calendarEventEndAmPm);
     if (calendarEntryMode !== "activity" && !normalizedTime) {
       setCalendarEventTimeError(useMilitaryTime ? "Enter a time from 00:00 to 23:59." : "Enter an hour from 1–12, optional minutes, and choose AM or PM.");
+      return;
+    }
+    if (calendarEntryMode !== "activity" && hasEndTime && !normalizedEndTime) {
+      setCalendarEventTimeError(useMilitaryTime ? "Enter an optional end time from 00:00 to 23:59." : "Enter a valid optional end time and choose AM or PM.");
       return;
     }
     if (editingCalendarEventId) {
@@ -6198,6 +6212,7 @@ function App() {
         ...entry,
         name,
         time: normalizedTime,
+        endTime: normalizedEndTime,
         type: calendarEntryMode === "activity" ? "day-note" : "event",
         notes: calendarEventNotes.trim(),
       } : entry));
@@ -6212,6 +6227,7 @@ function App() {
       type: calendarEntryMode === "activity" ? "day-note" : "event",
       name,
       time: normalizedTime,
+      endTime: normalizedEndTime,
       notes: calendarEventNotes.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -10426,7 +10442,7 @@ function App() {
                         <form className="calendar-event-form" role="dialog" aria-modal="true" aria-labelledby="calendar-event-form-title" onSubmit={handleAddCalendarEvent}>
                           <div className="calendar-event-form-heading"><h3 id="calendar-event-form-title">{editingCalendarEventId ? `Edit ${calendarEntryMode}` : `Add ${calendarEntryMode} for ${selectedDate.toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}</h3><button type="button" aria-label={`Close ${calendarEntryMode} editor`} onClick={() => setCalendarEventFormOpen(false)}>×</button></div>
                           <label className="calendar-event-name-field"><input autoFocus required aria-label={`${calendarEntryMode} name`} value={calendarEventName} onChange={(event) => setCalendarEventName(event.target.value)} placeholder={`${calendarEntryMode[0].toUpperCase()}${calendarEntryMode.slice(1)} name`} /></label>
-                          {calendarEntryMode === "event" && <fieldset className={`calendar-event-time-fields${useMilitaryTime ? " uses-military-time" : ""}`}><label className="calendar-event-time-input"><span>Time</span><input required inputMode="numeric" value={calendarEventTime} onChange={(event) => { setCalendarEventTime(event.target.value); setCalendarEventTimeError(""); }} placeholder={useMilitaryTime ? "13:00 or 13:11" : "1 or 1:11"} aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label>{!useMilitaryTime && <label><span>AM or PM</span><select required value={calendarEventAmPm} onChange={(event) => { setCalendarEventAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="" disabled>Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>}{calendarEventTimeError && <p id="calendar-event-time-error" role="alert">{calendarEventTimeError}</p>}</fieldset>}
+                          {calendarEntryMode === "event" && <fieldset className={`calendar-event-time-fields${useMilitaryTime ? " uses-military-time" : ""}`}><label className="calendar-event-time-input"><span>Starts</span><input required inputMode="numeric" value={calendarEventTime} onChange={(event) => { setCalendarEventTime(event.target.value); setCalendarEventTimeError(""); }} placeholder={useMilitaryTime ? "13:00 or 13:11" : "1 or 1:11"} aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label>{!useMilitaryTime && <label><span>AM or PM</span><select required value={calendarEventAmPm} onChange={(event) => { setCalendarEventAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="" disabled>Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>}<label className="calendar-event-time-input"><span>Ends (optional)</span><input inputMode="numeric" value={calendarEventEndTime} onChange={(event) => { setCalendarEventEndTime(event.target.value); setCalendarEventTimeError(""); }} placeholder={useMilitaryTime ? "14:00 or 14:11" : "2 or 2:11"} aria-describedby={calendarEventTimeError ? "calendar-event-time-error" : undefined} /></label>{!useMilitaryTime && <label><span>AM or PM</span><select value={calendarEventEndAmPm} onChange={(event) => { setCalendarEventEndAmPm(event.target.value); setCalendarEventTimeError(""); }}><option value="">Choose</option><option value="AM">AM</option><option value="PM">PM</option></select></label>}{calendarEventTimeError && <p id="calendar-event-time-error" role="alert">{calendarEventTimeError}</p>}</fieldset>}
                           <label className="calendar-event-notes-field"><span>Notes</span><textarea value={calendarEventNotes} onChange={(event) => setCalendarEventNotes(event.target.value)} rows="4" placeholder="Add notes now (optional)" /></label>
                           <div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setCalendarEventFormOpen(false)}>Cancel</button><button type="submit" className="btn btn-primary">{editingCalendarEventId ? "Save Changes" : `Add ${calendarEntryMode}`}</button></div>
                         </form>
@@ -10451,7 +10467,7 @@ function App() {
                           <div className={`calendar-event-entry${expandedCalendarEventId === entry.id ? " expanded" : ""}`} key={entry.id}>
                             <button type="button" className="calendar-event-row" onClick={() => setExpandedCalendarEventId((id) => id === entry.id ? null : entry.id)} aria-expanded={expandedCalendarEventId === entry.id}>
                               <span><strong>{entry.name}</strong></span>
-                              <time>{formatMeetingTime(entry.time, useMilitaryTime)}</time>
+                              <time>{formatMeetingTime(entry.time, useMilitaryTime)}{entry.endTime ? `–${formatMeetingTime(entry.endTime, useMilitaryTime)}` : ""}</time>
                             </button>
                             {expandedCalendarEventId === entry.id && (
                               <div className="calendar-event-notes">
