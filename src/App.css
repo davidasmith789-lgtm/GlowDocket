@@ -6302,6 +6302,14 @@ html[data-theme="dark"] {
   min-height: 100%;
   transform: none;
 }
+.workspace-widget.uses-fluid-course-colors .workspace-widget-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
 
 @container (max-width: 360px) {
   .portable-course-colors { gap: 6px; }
