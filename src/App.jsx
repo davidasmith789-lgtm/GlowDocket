@@ -140,6 +140,7 @@ const DEFAULT_USER_SETTINGS = {
   cycleDayNames: ["A Day", "B Day"],
   cycleAnchorDate: "",
   courseCycleDays: {},
+  cycleCourseMeetings: {},
   schoolScheduleMode: "ab",
   weeklyCourseMeetings: {},
   customColors: {},
@@ -3512,6 +3513,13 @@ function App() {
       ]),
     );
     handleAddFieldSettingChange("courseCycleDays", updatedMapping);
+    const updatedMeetings = Object.fromEntries(
+      Object.entries(userSettings.cycleCourseMeetings || {}).map(([course, meetings]) => [
+        course,
+        Object.fromEntries(Object.entries(meetings || {}).filter(([day]) => day !== dayName)),
+      ]),
+    );
+    handleAddFieldSettingChange("cycleCourseMeetings", updatedMeetings);
   };
 
   const handleCourseCycleDayToggle = (course, dayName, isChecked) => {
@@ -3525,6 +3533,29 @@ function App() {
     handleAddFieldSettingChange("courseCycleDays", {
       ...mapping,
       [course]: updatedDays,
+    });
+    const meetingMapping = userSettings.cycleCourseMeetings || {};
+    const courseMeetings = { ...(meetingMapping[course] || {}) };
+    if (isChecked && !courseMeetings[dayName]) {
+      courseMeetings[dayName] = { startTime: "09:00", endTime: "10:00" };
+    } else if (!isChecked) {
+      delete courseMeetings[dayName];
+    }
+    handleAddFieldSettingChange("cycleCourseMeetings", {
+      ...meetingMapping,
+      [course]: courseMeetings,
+    });
+  };
+
+  const handleCycleClassTimeChange = (course, dayName, field, value) => {
+    const meetingMapping = userSettings.cycleCourseMeetings || {};
+    const courseMeetings = meetingMapping[course] || {};
+    handleAddFieldSettingChange("cycleCourseMeetings", {
+      ...meetingMapping,
+      [course]: {
+        ...courseMeetings,
+        [dayName]: { ...(courseMeetings[dayName] || {}), [field]: value },
+      },
     });
   };
   // Whenever the active profile changes, load that profile's saved datasets.
@@ -6905,6 +6936,15 @@ function App() {
   );
   const selectedCycleDay = getCycleDayForDate(selectedDate, userSettings);
   const selectedWeeklyMeetings = getWeeklyMeetingsForDate(selectedDate, userSettings);
+  const selectedCycleMeetings = userSettings.schoolScheduleMode !== "weekly" && selectedCycleDay
+    ? courses.flatMap((course) => {
+        const assignedDays = userSettings.courseCycleDays?.[course];
+        if (Array.isArray(assignedDays) && !assignedDays.includes(selectedCycleDay)) return [];
+        const meeting = userSettings.cycleCourseMeetings?.[course]?.[selectedCycleDay];
+        if (!meeting?.startTime || !meeting?.endTime) return [];
+        return [{ ...meeting, id: `cycle-${course}-${selectedCycleDay}`, course }];
+      }).sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)) || a.course.localeCompare(b.course))
+    : [];
   const selectedCalendarEvents = calendarEvents
     .filter((entry) => entry?.date === selectedCalendarDateKey)
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
@@ -6972,7 +7012,7 @@ function App() {
     handleAddFieldSettingChange("calendarDayColors", previous);
   };
   const selectedTimedCalendarEntries = [
-    ...selectedWeeklyMeetings.map((meeting) => ({
+    ...[...selectedWeeklyMeetings, ...selectedCycleMeetings].map((meeting) => ({
       id: `scheduled-${meeting.id}-${meeting.course}`,
       name: meeting.course,
       time: meeting.startTime,
@@ -11490,11 +11530,15 @@ function App() {
                       {courses.map((course) => (
                         <div className="course-cycle-row" key={course}>
                           <strong>{course}</strong>
-                          <div>
+                          <div className="cycle-class-day-list">
                             {(userSettings.cycleDayNames || ["A Day", "B Day"]).map((dayName) => {
                               const assignedDays = userSettings.courseCycleDays?.[course];
                               const isChecked = !Array.isArray(assignedDays) || assignedDays.includes(dayName);
-                              return <label key={dayName}><input type="checkbox" checked={isChecked} onChange={(e) => handleCourseCycleDayToggle(course, dayName, e.target.checked)} />{dayName}</label>;
+                              const meeting = userSettings.cycleCourseMeetings?.[course]?.[dayName];
+                              return <div className={`cycle-class-day${isChecked ? " is-active" : ""}`} key={dayName}>
+                                <label className="cycle-class-day-toggle"><input type="checkbox" checked={isChecked} onChange={(e) => handleCourseCycleDayToggle(course, dayName, e.target.checked)} /><span>{dayName}</span></label>
+                                {isChecked && <div className="weekly-time-fields"><label><span>Starts</span><input type="time" value={meeting?.startTime || ""} onChange={(e) => handleCycleClassTimeChange(course, dayName, "startTime", e.target.value)} /></label><label><span>Ends</span><input type="time" value={meeting?.endTime || ""} min={meeting?.startTime || undefined} onChange={(e) => handleCycleClassTimeChange(course, dayName, "endTime", e.target.value)} /></label></div>}
+                              </div>;
                             })}
                           </div>
                         </div>

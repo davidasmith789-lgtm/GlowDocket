@@ -2590,6 +2590,11 @@ html[data-theme="dark"] .welcome-feature-card h2 { color: #ffffff; }
   .schedule-mode-picker { grid-template-columns: minmax(0, 1fr); }
 }
 .weekly-course-schedules { display: grid; gap: 14px; margin-top: 14px; }
+.cycle-class-day-list { display: grid !important; gap: 9px; }
+.cycle-class-day { display: grid; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--panel-bg); }
+.cycle-class-day.is-active { border-color: color-mix(in srgb, var(--primary-color) 55%, var(--border-color)); }
+.cycle-class-day-toggle { display: flex !important; align-items: center; gap: 8px; min-height: 0 !important; padding: 0 !important; border: 0 !important; cursor: pointer; }
+.cycle-class-day-toggle input { width: 20px; height: 20px; flex: 0 0 auto; }
 .weekly-course-card { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-alt); }
 .weekly-course-heading, .weekly-meeting-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .weekly-course-heading small { color: var(--muted-text); text-align: right; }
