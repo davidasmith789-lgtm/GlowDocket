@@ -6645,6 +6645,13 @@ html[data-theme="dark"] {
   border-color: var(--focus-color) !important;
 }
 
+.workspace-calendar-only .react-calendar__month-view__days > .react-calendar__tile--active {
+  outline: 3px solid var(--calendar-selected);
+  outline-offset: -3px;
+  background-color: var(--calendar-bg) !important;
+  color: var(--calendar-text) !important;
+}
+
 .calendar-view-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .calendar-header-controls { display: flex; align-items: center; gap: 10px; }
 .calendar-week-start-control { display: flex; align-items: center; gap: 7px; color: var(--muted-text); font-size: .82rem; font-weight: 800; }
