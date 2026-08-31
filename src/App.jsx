@@ -2383,10 +2383,13 @@ function App() {
   const [mobileSummaryCategory, setMobileSummaryCategory] = useState("");
   const [mobileReturnTab, setMobileReturnTab] = useState("dashboard");
   const [appViewportWidth, setAppViewportWidth] = useState(getVisibleViewportWidth);
-  // Keep the active workspace layout in step with the space the user actually
-  // has. Each size class still keeps its own saved arrangement, but resizing a
-  // browser window can now switch between those arrangements without a reload.
-  const workspaceMode = getWorkspaceModeForWidth(Math.max(0, appViewportWidth - 48));
+  // A phone session uses its dedicated mobile shell and workspace. A desktop
+  // session that is merely narrowed must stay in a desktop-compatible layout;
+  // mixing the desktop shell with the separately saved mobile widget set can
+  // render duplicate widgets during live window resizing.
+  const workspaceMode = isMobileUi
+    ? "mobile"
+    : getWorkspaceModeForWidth(Math.max(WORKSPACE_MOBILE_BREAKPOINT, appViewportWidth - 48));
   const [workspaceCanvasWidth, setWorkspaceCanvasWidth] = useState(0);
   const workspaceMainRef = useRef(null);
   const [detachedWidgets, setDetachedWidgets] = useState([]);

@@ -453,6 +453,7 @@ test("resizing scales the full app shell without changing the chosen widget arra
   assert.doesNotMatch(app, /zoom: appShellScale/);
   assert.match(app, /data-workspace-scale=\{scale\}/);
   assert.doesNotMatch(app, /setWorkspaceMode/);
+  assert.match(app, /const workspaceMode = isMobileUi[\s\S]{0,120}\? "mobile"[\s\S]{0,180}Math\.max\(WORKSPACE_MOBILE_BREAKPOINT, appViewportWidth - 48\)/);
   assert.match(styles, /\.app-shell\.is-viewport-scaled/);
   assert.match(styles, /\.App:not\(\.mobile-app-ui\)\s*\{[^}]*overflow-x:\s*clip;/s);
 });
