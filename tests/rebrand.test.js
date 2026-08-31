@@ -8,19 +8,19 @@ import { getPushDeviceStorageKey } from "../src/externalReminderUtils.js";
 const read = (relativePath) => readFile(new URL(relativePath, import.meta.url), "utf8");
 
 test("browser and installed-app metadata use GlowDocket", async () => {
-  const [html, manifestText, favicon] = await Promise.all([read("../index.html"), read("../public/manifest.webmanifest"), read("../public/favicon.svg")]);
+  const [html, manifestText, favicon] = await Promise.all([read("../index.html"), read("../public/manifest-midnight.webmanifest"), read("../public/glowdocket-icon-midnight.svg")]);
   const manifest = JSON.parse(manifestText);
   assert.match(html, /<title>GlowDocket<\/title>/);
   assert.match(html, /apple-mobile-web-app-title" content="GlowDocket"/);
   assert.equal(manifest.name, "GlowDocket");
   assert.equal(manifest.short_name, "GlowDocket");
   assert.deepEqual(manifest.icons.map(({ src, purpose }) => [src, purpose]), [
-    ["/glowdocket-icon-192.png?v=2", "any"],
-    ["/glowdocket-icon-512.png?v=2", "any"],
-    ["/glowdocket-maskable-512.png?v=2", "maskable"],
+    ["/glowdocket-icon-192-midnight.png?v=3", "any"],
+    ["/glowdocket-icon-512-midnight.png?v=3", "any"],
+    ["/glowdocket-maskable-512-midnight.png?v=3", "maskable"],
   ]);
-  assert.match(html, /apple-touch-icon[^>]+href="\/apple-touch-icon\.png\?v=2"/);
-  assert.match(favicon, /<title id="title">GlowDocket<\/title>/);
+  assert.match(html, /apple-touch-icon[^>]+href="\/apple-touch-icon-midnight\.png\?v=3"/);
+  assert.match(favicon, /<title id="title">GlowDocket Midnight<\/title>/);
   assert.match(favicon, /linearGradient id="brand"/);
 });
 
@@ -45,8 +45,8 @@ test("service-worker registration and rebranded cache update remain configured",
   const [main, updates, worker] = await Promise.all([read("../src/main.jsx"), read("../src/serviceWorkerUpdates.js"), read("../public/sw.js")]);
   assert.match(main, /registerServiceWorkerUpdates\(\)/);
   assert.match(updates, /serviceWorker\.register\("\/sw\.js"\)/);
-  assert.match(worker, /taskacadia-shell-v6/);
-  for (const asset of ["glowdocket-icon-192.png", "glowdocket-icon-512.png", "glowdocket-maskable-512.png", "apple-touch-icon.png"]) {
+  assert.match(worker, /taskacadia-shell-v7/);
+  for (const asset of ["glowdocket-icon-192-midnight.png", "glowdocket-icon-512-midnight.png", "glowdocket-maskable-512-midnight.png", "apple-touch-icon-midnight.png"]) {
     assert.match(worker, new RegExp(asset.replace(".", "\\.")));
   }
 });

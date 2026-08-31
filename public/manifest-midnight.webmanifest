@@ -7,8 +7,8 @@
   "background_color": "#151b2e",
   "theme_color": "#151b2e",
   "icons": [
-    { "src": "/glowdocket-icon-192-midnight.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/glowdocket-icon-512-midnight.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/glowdocket-maskable-512-midnight.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/glowdocket-icon-192-midnight.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/glowdocket-icon-512-midnight.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/glowdocket-maskable-512-midnight.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

@@ -8227,9 +8227,9 @@ html[data-theme="dark"] .sync-conflict-dialog {
 @media (max-width: 767px) { .badge-animation-toggle { display: none; } }
 
 /* Switch motion fully off for the page session when sustained frame drops are detected. */
-.adaptive-low-motion .App *:not(.cloud-sync-status),
-.adaptive-low-motion .App *:not(.cloud-sync-status)::before,
-.adaptive-low-motion .App *:not(.cloud-sync-status)::after {
+.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *),
+.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *)::before,
+.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *)::after {
   animation: none !important;
   scroll-behavior: auto !important;
   transition: none !important;

@@ -1,14 +1,14 @@
 // Network-first service worker for the small installable application shell.
 // Compatibility-sensitive cache names retain the historical taskacadia prefix.
-const CACHE_NAME = "taskacadia-shell-v6";
+const CACHE_NAME = "taskacadia-shell-v7";
 const APP_SHELL = [
   "/",
-  "/manifest.webmanifest",
-  "/favicon.svg?v=2",
-  "/glowdocket-icon-192.png?v=2",
-  "/glowdocket-icon-512.png?v=2",
-  "/glowdocket-maskable-512.png?v=2",
-  "/apple-touch-icon.png?v=2",
+  "/manifest-midnight.webmanifest?v=3",
+  "/glowdocket-icon-midnight.svg?v=3",
+  "/glowdocket-icon-192-midnight.png?v=3",
+  "/glowdocket-icon-512-midnight.png?v=3",
+  "/glowdocket-maskable-512-midnight.png?v=3",
+  "/apple-touch-icon-midnight.png?v=3",
 ];
 
 self.addEventListener("install", (event) => {
