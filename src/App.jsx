@@ -50,7 +50,7 @@ import { getNextCalendarColorTimestamp, resolveLatestCalendarColor } from "./cal
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
@@ -2634,6 +2634,7 @@ function App() {
           setTheme(selected.userSettings.activeColorThemeMode);
         }
         setChecklists(selected.checklists);
+        setCalendarEvents(selected.calendarEvents);
         const repairedWorkspace = repairLoadedWorkspace(selected.workspaceLayout);
         workspaceLayoutRef.current = repairedWorkspace;
         setWorkspaceLayout(repairedWorkspace);
@@ -2652,7 +2653,7 @@ function App() {
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser || cloudHydratedUserRef.current !== currentUser || syncConflict || cloudConflictResolutionRef.current) return undefined;
-    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
+    const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, calendarEvents, workspaceLayout, theme, displayName });
     latestCloudStateRef.current = snapshot;
     if (getCloudStateFingerprint(snapshot) === cloudLastSavedFingerprintRef.current) {
       saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, false);
@@ -2682,12 +2683,34 @@ function App() {
         savedSuccessfully = true;
       } catch (error) {
         if (error.code === "revision_conflict") {
-          cloudSaveQueuedRef.current = false;
-          const newest = await loadCloudSnapshot(await getSupabaseBrowserClient(), currentUser).catch(() => null);
-          saveLocalBackup(localStorage, currentUser, latestCloudStateRef.current);
-          setSyncConflict({ local: latestCloudStateRef.current, cloud: newest?.state, cloudRevision: newest?.revision || cloudRevisionRef.current });
-          setSyncConflictOpen(true);
-          setSyncStatus("conflict");
+          try {
+            const newest = await loadCloudSnapshot(await getSupabaseBrowserClient(), currentUser);
+            if (!newest) throw error;
+            const merged = mergeAccountStates(latestCloudStateRef.current, newest.state);
+            const mergedForDevice = { ...merged, workspaceLayout };
+            const result = await replaceCloudSnapshot(await getSupabaseBrowserClient(), currentUser, merged, newest.revision);
+            const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled };
+            applyCloudStateToLocal(localStorage, currentUser, mergedForDevice, deviceSettings);
+            saveLocalSnapshot(localStorage, currentUser, mergedForDevice, result.revision, false);
+            cloudRevisionRef.current = Number(result.revision);
+            cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(merged);
+            latestCloudStateRef.current = mergedForDevice;
+            setTasks(merged.tasks);
+            setCourses(merged.courses);
+            setCourseColors(merged.courseColors);
+            setUserSettings({ ...DEFAULT_USER_SETTINGS, ...merged.userSettings, ...deviceSettings });
+            setTheme(getSavedThemeMode(merged.userSettings, theme));
+            setChecklists(merged.checklists);
+            setCalendarEvents(merged.calendarEvents);
+            setSyncStatus("saved");
+            setSyncError("");
+            savedSuccessfully = true;
+          } catch (mergeError) {
+            cloudSaveQueuedRef.current = false;
+            console.error("Cloud merge failed:", mergeError);
+            setSyncError(friendlyCloudSaveError({ offline: !navigator.onLine }));
+            setSyncStatus(navigator.onLine ? "failed" : "offline");
+          }
         } else {
           cloudSaveQueuedRef.current = false;
           console.error("Cloud saving failed:", error);
@@ -2701,7 +2724,7 @@ function App() {
     };
     cloudSaveTimerRef.current = window.setTimeout(flush, 750);
     return () => window.clearTimeout(cloudSaveTimerRef.current);
-  }, [tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce]);
+  }, [tasks, courses, courseColors, userSettings, checklists, calendarEvents, workspaceLayout, theme, displayName, currentUser, accountMode, syncConflict, syncRetryNonce]);
 
   useEffect(() => {
     if (!CLOUD_SYNC_CONFIGURED) return undefined;
@@ -5567,7 +5590,7 @@ function App() {
   };
 
   const applyResolvedCloudState = (state, revision) => {
-    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, activeColorThemeMode: userSettings.activeColorThemeMode, customColors: userSettings.customColors };
+    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled };
     const deviceState = { ...state, workspaceLayout };
     applyCloudStateToLocal(localStorage, currentUser, deviceState, deviceSettings);
     saveLocalSnapshot(localStorage, currentUser, deviceState, revision, false);
@@ -5577,8 +5600,9 @@ function App() {
     setCourses(deviceState.courses);
     setCourseColors(deviceState.courseColors);
     setUserSettings({ ...DEFAULT_USER_SETTINGS, ...deviceState.userSettings, ...deviceSettings });
-    setTheme(getSavedThemeMode(deviceSettings, theme));
+    setTheme(getSavedThemeMode(deviceState.userSettings, theme));
     setChecklists(deviceState.checklists);
+    setCalendarEvents(deviceState.calendarEvents);
     setDisplayName(resolveProfileDisplayName(deviceState.displayName, currentUser, displayName));
   };
 
@@ -5744,7 +5768,7 @@ function App() {
     setAccountUpdateBusy("upgrade");
     setAccountUpdateStatus({ type: "", message: "" });
     try {
-      const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName: nextName });
+      const snapshot = collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, calendarEvents, workspaceLayout, theme, displayName: nextName });
       const { data, error } = await (await getSupabaseBrowserClient()).auth.signUp({ email, password: accountPasswordDraft, options: { data: { display_name: nextName } } });
       if (error) throw error;
       if (!data.user) throw new Error("Account creation did not finish.");
@@ -5932,7 +5956,7 @@ function App() {
     } finally { setAccountUpdateBusy(""); }
   };
 
-  const getCurrentPortableState = () => collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, workspaceLayout, theme, displayName });
+  const getCurrentPortableState = () => collectSyncableState({ tasks, courses, courseColors, userSettings, checklists, calendarEvents, workspaceLayout, theme, displayName });
   const downloadTextFile = (name, text, type) => {
     const url = URL.createObjectURL(new Blob([text], { type }));
     const anchor = document.createElement("a");
@@ -5954,15 +5978,16 @@ function App() {
   };
 
   const applyRecoveryState = (state) => {
-    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled, activeColorThemeId: userSettings.activeColorThemeId, activeColorThemeMode: userSettings.activeColorThemeMode, customColors: userSettings.customColors };
+    const deviceSettings = { externalPushEnabled: userSettings.externalPushEnabled, notificationsEnabled: userSettings.notificationsEnabled };
     saveLocalBackup(localStorage, currentUser, getCurrentPortableState());
     applyCloudStateToLocal(localStorage, currentUser, state, deviceSettings);
     setTasks(state.tasks);
     setCourses(state.courses);
     setCourseColors(state.courseColors);
     setUserSettings({ ...DEFAULT_USER_SETTINGS, ...state.userSettings, ...deviceSettings });
-    setTheme(getSavedThemeMode(deviceSettings, theme));
+    setTheme(getSavedThemeMode(state.userSettings, theme));
     setChecklists(state.checklists);
+    setCalendarEvents(state.calendarEvents);
     setWorkspaceLayout(repairLoadedWorkspace(state.workspaceLayout));
     setDisplayName(resolveProfileDisplayName(state.displayName, currentUser, displayName));
   };

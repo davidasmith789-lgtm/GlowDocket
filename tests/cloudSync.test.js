@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -53,6 +53,25 @@ test("class schedules and badge progress survive a cloud round trip", () => {
   const snapshot = validateCloudState(JSON.parse(JSON.stringify(state({ courses: ["Other", "Biology", "Algebra"], userSettings }))));
   assert.deepEqual(snapshot.courses, ["Other", "Biology", "Algebra"]);
   assert.deepEqual(snapshot.userSettings, userSettings);
+});
+
+test("calendar events and calendar appearance survive a cloud round trip", () => {
+  const calendarEvents = [{ id: "event-1", date: "2026-08-31", name: "Study group", time: "15:00", endTime: "16:00", type: "event" }];
+  const userSettings = { calendarDayColors: { dates: { "2026-08-31": { color: "#ff0000", updatedAt: 10 } }, weekdays: {}, cycleDays: {}, entryNames: {} }, activeColorThemeId: "ocean-focus", activeColorThemeMode: "dark" };
+  const snapshot = validateCloudState(JSON.parse(JSON.stringify(state({ calendarEvents, userSettings }))));
+  assert.deepEqual(snapshot.calendarEvents, calendarEvents);
+  assert.deepEqual(snapshot.userSettings, userSettings);
+});
+
+test("mismatched devices merge account data and deduplicate courses case-insensitively", () => {
+  const local = state({ tasks: [{ id: "local-task", course: "biology" }], courses: ["Other", "biology", "Chemistry"], calendarEvents: [{ id: "local-event", date: "2026-08-31", name: "Lab" }], userSettings: { calendarDayColors: { dates: { "2026-08-31": { color: "#ff0000", updatedAt: 20 } } }, customColorThemes: [{ id: "local-theme", name: "Local" }] } });
+  const cloud = state({ tasks: [{ id: "cloud-task", course: "Biology" }], courses: ["Other", "Biology", "Physics"], calendarEvents: [{ id: "cloud-event", date: "2026-09-01", name: "Review" }], userSettings: { calendarDayColors: { dates: { "2026-08-31": { color: "#0000ff", updatedAt: 10 } } }, customColorThemes: [{ id: "cloud-theme", name: "Cloud" }] } });
+  const merged = mergeAccountStates(local, cloud);
+  assert.deepEqual(merged.courses, ["Other", "Biology", "Physics", "Chemistry"]);
+  assert.deepEqual(merged.tasks.map((task) => task.course), ["Biology", "Biology"]);
+  assert.deepEqual(merged.calendarEvents.map((event) => event.id), ["local-event", "cloud-event"]);
+  assert.equal(merged.userSettings.calendarDayColors.dates["2026-08-31"].color, "#ff0000");
+  assert.deepEqual(merged.userSettings.customColorThemes.map((theme) => theme.id), ["local-theme", "cloud-theme"]);
 });
 
 test("legacy phone settings are merged into unified account data before hydration", () => {
@@ -116,7 +135,7 @@ test("portable exports round-trip validated planner data", () => {
   const exported = createPortableExport(original, "2026-07-13T12:00:00.000Z");
   assert.equal(exported.format, "taskcabinet-export");
   assert.equal(exported._metadata.createdAt, "2026-07-13T12:00:00.000Z");
-  assert.equal(exported._metadata.dataSchemaVersion, 1);
+  assert.equal(exported._metadata.dataSchemaVersion, 2);
   assert.equal(exported._metadata.exportFormatVersion, 1);
   assert.equal(typeof exported._metadata.commitSha, "string");
   assert.deepEqual(parsePortableExport(exported), original);
@@ -150,12 +169,13 @@ test("workspace layouts are device-specific and do not create cloud conflicts", 
   assert.strictEqual(choice.state, desktop);
 });
 
-test("hydration still prompts before replacing pending device changes", () => {
+test("hydration merges pending changes from devices with different revisions", () => {
   const local = state({ tasks: [{ id: "device-task", title: "Device draft" }] });
   const cloud = { state: state({ tasks: [{ id: "cloud-task", title: "Cloud draft" }] }), revision: 12 };
   const choice = chooseHydrationState(local, { revision: 11, pending: true }, cloud);
-  assert.equal(choice.conflict, true);
-  assert.strictEqual(choice.state, local);
+  assert.equal(choice.conflict, false);
+  assert.equal(choice.needsUpload, true);
+  assert.deepEqual(choice.state.tasks.map((task) => task.id), ["device-task", "cloud-task"]);
 });
 
 test("pending changes based on the current cloud revision sync without a popup", () => {

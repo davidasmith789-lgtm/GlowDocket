@@ -1,10 +1,10 @@
 import { createReportMetadata } from "./buildMetadata.js";
 
-export const CLOUD_STATE_SCHEMA_VERSION = 1;
+export const CLOUD_STATE_SCHEMA_VERSION = 2;
 const DEVICE_SETTING_KEYS = new Set(["externalPushEnabled", "notificationsEnabled"]);
 // Workspace geometry is intentionally device-specific so a Chromebook layout
 // cannot replace the arrangement saved in a desktop browser (or vice versa).
-const ACCOUNT_FIELDS = ["tasks", "courses", "courseColors", "userSettings", "checklists", "displayName"];
+const ACCOUNT_FIELDS = ["tasks", "courses", "courseColors", "userSettings", "checklists", "calendarEvents", "displayName"];
 
 const parse = (value, fallback) => { try { return value ? JSON.parse(value) : fallback; } catch { return fallback; } };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -40,15 +40,15 @@ export function sanitizeSettings(settings = {}) {
   return Object.fromEntries(Object.entries(settings).filter(([key]) => !DEVICE_SETTING_KEYS.has(key)));
 }
 
-export function collectSyncableState({ tasks = [], courses = ["Other"], courseColors = {}, userSettings = {}, checklists = [], workspaceLayout = {}, displayName = "" } = {}) {
-  return { schemaVersion: CLOUD_STATE_SCHEMA_VERSION, tasks, courses, courseColors, userSettings: sanitizeSettings(userSettings), checklists, workspaceLayout, displayName: String(displayName || "").slice(0, 80) };
+export function collectSyncableState({ tasks = [], courses = ["Other"], courseColors = {}, userSettings = {}, checklists = [], calendarEvents = [], workspaceLayout = {}, displayName = "" } = {}) {
+  return { schemaVersion: CLOUD_STATE_SCHEMA_VERSION, tasks, courses, courseColors, userSettings: sanitizeSettings(userSettings), checklists, calendarEvents, workspaceLayout, displayName: String(displayName || "").slice(0, 80) };
 }
 
 export function validateCloudState(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Cloud state is not an object.");
   const version = Number(value.schemaVersion || 1);
   if (version > CLOUD_STATE_SCHEMA_VERSION) throw new Error("Cloud state was created by a newer GlowDocket version.");
-  if (!Array.isArray(value.tasks) || !Array.isArray(value.courses) || !Array.isArray(value.checklists)) throw new Error("Cloud state contains invalid lists.");
+  if (!Array.isArray(value.tasks) || !Array.isArray(value.courses) || !Array.isArray(value.checklists) || (value.calendarEvents !== undefined && !Array.isArray(value.calendarEvents))) throw new Error("Cloud state contains invalid lists.");
   if (!value.courseColors || typeof value.courseColors !== "object" || !value.userSettings || typeof value.userSettings !== "object" || !value.workspaceLayout || typeof value.workspaceLayout !== "object") throw new Error("Cloud state contains invalid settings.");
   return collectSyncableState(value);
 }
@@ -69,9 +69,112 @@ export function hasMeaningfulState(state) {
   );
   return state.tasks?.length > 0
     || state.checklists?.length > 0
+    || state.calendarEvents?.length > 0
     || state.courses?.some((course) => course !== "Other")
     || Object.keys(state.courseColors || {}).length > 0
     || hasSavedWorkspace;
+}
+
+const isPlainObject = (value) => Boolean(value && typeof value === "object" && !Array.isArray(value));
+
+function mergeObjects(localValue, cloudValue) {
+  if (!isPlainObject(localValue) || !isPlainObject(cloudValue)) return cloudValue === undefined ? localValue : cloudValue;
+  const merged = { ...localValue };
+  Object.entries(cloudValue).forEach(([key, value]) => {
+    merged[key] = isPlainObject(value) && isPlainObject(localValue[key])
+      ? mergeObjects(localValue[key], value)
+      : value;
+  });
+  return merged;
+}
+
+function mergeUniqueById(localItems = [], cloudItems = []) {
+  const merged = [];
+  const positions = new Map();
+  [...localItems, ...cloudItems].forEach((item) => {
+    const id = String(item?.id || "");
+    if (id && positions.has(id)) merged[positions.get(id)] = item;
+    else {
+      if (id) positions.set(id, merged.length);
+      merged.push(item);
+    }
+  });
+  return merged;
+}
+
+function mergeCourses(localCourses = [], cloudCourses = []) {
+  const merged = [];
+  const seen = new Set();
+  [...cloudCourses, ...localCourses, "Other"].forEach((course) => {
+    const name = String(course || "").trim();
+    const key = name.toLocaleLowerCase();
+    if (!name || seen.has(key)) return;
+    seen.add(key);
+    merged.push(key === "other" ? "Other" : name);
+  });
+  const otherIndex = merged.indexOf("Other");
+  if (otherIndex > 0) merged.unshift(...merged.splice(otherIndex, 1));
+  return merged;
+}
+
+function mergeCalendarDayColors(localColors = {}, cloudColors = {}) {
+  const merged = {};
+  ["dates", "weekdays", "cycleDays", "entryNames"].forEach((scope) => {
+    merged[scope] = { ...(localColors?.[scope] || {}) };
+    Object.entries(cloudColors?.[scope] || {}).forEach(([key, cloudRule]) => {
+      const localRule = merged[scope][key];
+      const localTimestamp = typeof localRule === "string" ? 0 : Number(localRule?.updatedAt || 0);
+      const cloudTimestamp = typeof cloudRule === "string" ? 0 : Number(cloudRule?.updatedAt || 0);
+      if (localRule === undefined || cloudTimestamp >= localTimestamp) merged[scope][key] = cloudRule;
+    });
+  });
+  return merged;
+}
+
+function normalizeCourseReferences(courses, items, courseColors, userSettings) {
+  const canonical = new Map(courses.map((course) => [course.toLocaleLowerCase(), course]));
+  const courseName = (value) => canonical.get(String(value || "").trim().toLocaleLowerCase()) || value;
+  const remapObject = (value) => Object.fromEntries(Object.entries(isPlainObject(value) ? value : {}).map(([key, entry]) => [courseName(key), entry]));
+  return {
+    items: items.map((item) => item?.course ? { ...item, course: courseName(item.course) } : item),
+    courseColors: remapObject(courseColors),
+    userSettings: {
+      ...userSettings,
+      courseCycleDays: remapObject(userSettings.courseCycleDays),
+      cycleCourseMeetings: remapObject(userSettings.cycleCourseMeetings),
+      weeklyCourseMeetings: remapObject(userSettings.weeklyCourseMeetings),
+    },
+  };
+}
+
+export function mergeAccountStates(localState, cloudState) {
+  const local = validateCloudState(localState);
+  const cloud = validateCloudState(cloudState);
+  const courses = mergeCourses(local.courses, cloud.courses);
+  const userSettings = mergeObjects(local.userSettings, cloud.userSettings);
+  userSettings.calendarDayColors = mergeCalendarDayColors(local.userSettings.calendarDayColors, cloud.userSettings.calendarDayColors);
+  const customColorThemes = mergeUniqueById(local.userSettings.customColorThemes, cloud.userSettings.customColorThemes);
+  if (customColorThemes.length > 0) userSettings.customColorThemes = customColorThemes;
+  userSettings.deletedColorThemeIds = [...new Set([
+    ...(local.userSettings.deletedColorThemeIds || []),
+    ...(cloud.userSettings.deletedColorThemeIds || []),
+  ])];
+  const normalized = normalizeCourseReferences(
+    courses,
+    mergeUniqueById(local.tasks, cloud.tasks),
+    mergeObjects(local.courseColors, cloud.courseColors),
+    userSettings,
+  );
+  return collectSyncableState({
+    tasks: normalized.items,
+    courses,
+    courseColors: normalized.courseColors,
+    userSettings: normalized.userSettings,
+    checklists: mergeUniqueById(local.checklists, cloud.checklists),
+    calendarEvents: mergeUniqueById(local.calendarEvents, cloud.calendarEvents),
+    workspaceLayout: local.workspaceLayout,
+    displayName: cloud.displayName || local.displayName,
+  });
 }
 
 export function chooseHydrationState(local, localMeta, cloud) {
@@ -84,12 +187,7 @@ export function chooseHydrationState(local, localMeta, cloud) {
   if (localRevision === cloudRevision) {
     return { state: local, conflict: false, needsUpload: true };
   }
-  return {
-    state: local,
-    conflict: true,
-    cloudRevision,
-    localRevision,
-  };
+  return { state: mergeAccountStates(local, cloud.state), conflict: false, needsUpload: true, cloudRevision, localRevision };
 }
 
 export function loadLocalSnapshot(storage, userId) {
@@ -145,6 +243,7 @@ export function readLegacySnapshot(storage, profileKey, defaults) {
     courseColors: parse(storage.getItem(`courseColors_${profileKey}`), {}),
     userSettings: { ...defaults, ...parse(storage.getItem(`settings_${profileKey}`), {}) },
     checklists: parse(storage.getItem(`checklists_${profileKey}`), []),
+    calendarEvents: parse(storage.getItem(`calendarEvents_${profileKey}`), []),
     workspaceLayout: parse(storage.getItem(`workspaceLayout_${profileKey}`), {}),
     displayName: resolveProfileDisplayName(preferredName, profileKey, profileKey),
   });
@@ -155,7 +254,7 @@ export function removeCloudAccountLocalData(storage, userId) {
   if (!id) return;
   const exactKeys = [
     `tasks_${id}`, `courses_${id}`, `courseColors_${id}`, `settings_${id}`, `mobileSettings_${id}`,
-    `checklists_${id}`, `workspaceLayout_${id}`, `taskacadia_preferred_name_${id}`,
+    `checklists_${id}`, `calendarEvents_${id}`, `workspaceLayout_${id}`, `taskacadia_preferred_name_${id}`,
     `taskacadia_notified_${id}`, `taskacadia_checklist_notified_${id}`,
     `taskcabinet_accessibility_checklist_${id}`,
     getCloudCacheKey(id), getCloudMetaKey(id),
@@ -175,6 +274,7 @@ export function applyCloudStateToLocal(storage, userId, state, deviceSettings = 
   storage.setItem(`courseColors_${userId}`, JSON.stringify(valid.courseColors));
   storage.setItem(`settings_${userId}`, JSON.stringify({ ...valid.userSettings, ...deviceSettings }));
   storage.setItem(`checklists_${userId}`, JSON.stringify(valid.checklists));
+  storage.setItem(`calendarEvents_${userId}`, JSON.stringify(valid.calendarEvents));
   storage.setItem(`workspaceLayout_${userId}`, JSON.stringify(valid.workspaceLayout));
   return valid;
 }
@@ -215,6 +315,7 @@ export function refreshLocalSnapshotFromStorage(storage, profileKey, cachedState
     courseColors: stored("courseColors") ? legacy.courseColors : cached.courseColors,
     userSettings: hasSettings || hasMobileSettings ? mergedSettings : cached.userSettings,
     checklists: stored("checklists") ? legacy.checklists : cached.checklists,
+    calendarEvents: stored("calendarEvents") ? legacy.calendarEvents : cached.calendarEvents,
     workspaceLayout: stored("workspaceLayout") ? legacy.workspaceLayout : cached.workspaceLayout,
     displayName: storage.getItem(`taskacadia_preferred_name_${profileKey}`) !== null ? legacy.displayName : cached.displayName,
   });
