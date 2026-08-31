@@ -339,6 +339,25 @@ export async function ensureCloudSnapshot(client, userId, localState, operations
   };
 }
 
+export async function reconcileCloudAccountIdentities(client, localState, fetchImpl = fetch) {
+  const validLocal = validateCloudState(localState);
+  const { data, error } = await client.auth.getSession();
+  if (error || !data.session?.access_token) throw error || new Error("Sign in again to reconcile account data.");
+  const response = await fetchImpl("/api/account/delete", {
+    method: "POST",
+    headers: { authorization: `Bearer ${data.session.access_token}`, "content-type": "application/json" },
+    body: JSON.stringify({ action: "reconcile-sync", state: validLocal }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "GlowDocket could not reconcile account data.");
+  return {
+    state: validateCloudState(payload.state),
+    revision: Number(payload.revision) || 0,
+    updatedAt: payload.updatedAt || "",
+    identitiesMerged: Number(payload.identitiesMerged) || 1,
+  };
+}
+
 export async function replaceCloudSnapshot(client, userId, state, expectedRevision) {
   const { data, error } = await client.from("taskcabinet_cloud_state").update({ state: validateCloudState(state), schema_version: CLOUD_STATE_SCHEMA_VERSION, revision: expectedRevision + 1, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("revision", expectedRevision).select("revision,updated_at").maybeSingle();
   if (error) throw error;

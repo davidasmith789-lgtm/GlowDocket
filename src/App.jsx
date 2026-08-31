@@ -50,7 +50,7 @@ import { getNextCalendarColorTimestamp, resolveLatestCalendarColor } from "./cal
 import { summarizeDeadlineConfidence } from "./deadlineConfidenceUtils.js";
 import { canSendReminderTest, clearReminderFailure, createReminderActionGuard, deriveReminderUserStatus, formatReminderLeadTime, friendlyReminderError, getAssignmentReminderIndicator, getReminderStatusCopy, shouldShowReminderSuggestion, shouldShowRepairReminderSync } from "./reminderUxUtils.js";
 import { CLOUD_SYNC_CONFIGURED, getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalMeta, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
+import { applyCloudStateToLocal, collectSyncableState, createPortableExport, ensureCloudSnapshot, getCloudStateFingerprint, hasMeaningfulState, loadCloudHistory, loadCloudSnapshot, loadLatestLocalBackup, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, reconcileCloudAccountIdentities, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, replaceCloudSnapshot, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot } from "./cloudSync.js";
 import { getTrashDaysRemaining, isTrashExpired } from "./trashUtils.js";
 import { friendlyAccountError, friendlyCloudSaveError } from "./userMessageUtils.js";
 import { evaluateAttachmentSelection, formatStorageBytes, getStorageQuotaStatus, MAX_ATTACHMENTS_PER_ASSIGNMENT } from "./storageQuotaUtils.js";
@@ -2588,12 +2588,10 @@ function App() {
         const client = await getSupabaseBrowserClient();
         const cachedLocal = loadLocalSnapshot(localStorage, currentUser);
         const local = refreshLocalSnapshotFromStorage(localStorage, currentUser, cachedLocal, DEFAULT_USER_SETTINGS);
-        const localMeta = loadLocalMeta(localStorage, currentUser);
-        const recoveredUnsyncedData = Boolean(cachedLocal && getCloudStateFingerprint(local) !== getCloudStateFingerprint(cachedLocal));
-        const ensured = await ensureCloudSnapshot(client, currentUser, local, {
+        await ensureCloudSnapshot(client, currentUser, local, {
           onRequest: () => { cloudRequestAttempted = true; },
         });
-        const cloud = ensured.snapshot;
+        const cloud = await reconcileCloudAccountIdentities(client, local);
         if (cancelled) return;
         setCloudSyncDetails({
           revision: cloud.revision,
@@ -2603,25 +2601,9 @@ function App() {
           checklists: cloud.state.checklists.length,
           calendarEvents: cloud.state.calendarEvents.length,
         });
-        let selected = local;
-        let revision = cloud.revision;
-        let needsUpload = false;
-        if (!ensured.created) {
-          revision = cloud.revision;
-          const hydrationChoice = chooseHydrationState(local, { ...localMeta, pending: localMeta.pending || recoveredUnsyncedData }, cloud);
-          if (hydrationChoice.conflict) {
-            saveLocalBackup(localStorage, currentUser, local);
-            setSyncConflict({ local, cloud: cloud.state, cloudRevision: cloud.revision });
-            setSyncConflictOpen(false);
-            setSyncStatus("conflict");
-            return;
-          }
-          selected = {
-            ...hydrationChoice.state,
-            workspaceLayout: local?.workspaceLayout || {},
-          };
-          needsUpload = Boolean(hydrationChoice.needsUpload);
-        }
+        const selected = { ...cloud.state, workspaceLayout: local?.workspaceLayout || {} };
+        const revision = cloud.revision;
+        const needsUpload = false;
         const localDeviceSettings = JSON.parse(localStorage.getItem(settingsStorageKey) || "{}");
         applyCloudStateToLocal(localStorage, currentUser, selected, {
           externalPushEnabled: Boolean(localDeviceSettings.externalPushEnabled),

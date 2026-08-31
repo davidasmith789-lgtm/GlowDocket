@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
+import { applyCloudStateToLocal, chooseHydrationState, collectSyncableState, createPortableExport, getCloudStateFingerprint, hasMeaningfulState, loadLatestLocalBackup, loadLocalSnapshot, mergeAccountStates, parsePortableExport, readLegacySnapshot, readStoredSection, reconcileCloudAccountIdentities, refreshLocalSnapshotFromStorage, removeCloudAccountLocalData, resolveProfileDisplayName, saveLocalBackup, saveLocalSnapshot, validateCloudState } from "../src/cloudSync.js";
 
 function memoryStorage() {
   const values = new Map();
@@ -72,6 +72,20 @@ test("mismatched devices merge account data and deduplicate courses case-insensi
   assert.deepEqual(merged.calendarEvents.map((event) => event.id), ["local-event", "cloud-event"]);
   assert.equal(merged.userSettings.calendarDayColors.dates["2026-08-31"].color, "#ff0000");
   assert.deepEqual(merged.userSettings.customColorThemes.map((theme) => theme.id), ["local-theme", "cloud-theme"]);
+});
+
+test("duplicate authenticated identities reconcile through the protected account endpoint", async () => {
+  const local = state({ checklists: [{ id: "computer", title: "Computer" }] });
+  let request;
+  const result = await reconcileCloudAccountIdentities({ auth: { getSession: async () => ({ data: { session: { access_token: "private-token" } }, error: null }) } }, local, async (url, options) => {
+    request = { url, options };
+    return { ok: true, json: async () => ({ state: state({ checklists: [{ id: "computer" }, { id: "chromebook" }] }), revision: 1464, updatedAt: "2026-08-31T12:00:00Z", identitiesMerged: 2 }) };
+  });
+  assert.equal(request.url, "/api/account/delete");
+  assert.equal(request.options.headers.authorization, "Bearer private-token");
+  assert.equal(JSON.parse(request.options.body).action, "reconcile-sync");
+  assert.equal(result.identitiesMerged, 2);
+  assert.deepEqual(result.state.checklists.map((list) => list.id), ["computer", "chromebook"]);
 });
 
 test("legacy phone settings are merged into unified account data before hydration", () => {

@@ -91,9 +91,10 @@ test("email confirmation is not part of snapshot ownership or initialization", a
   assert.match(cloudSync, /user_id: userId/);
 });
 
-test("launch conflicts wait for the user instead of opening a recovery popup", async () => {
+test("launch reconciliation uses the protected account identity merge", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
-  assert.match(app, /if \(hydrationChoice\.conflict\)[\s\S]{0,300}setSyncConflictOpen\(false\)/);
+  assert.match(app, /await reconcileCloudAccountIdentities\(client, local\)/);
+  assert.match(app, /const selected = \{ \.\.\.cloud\.state, workspaceLayout: local\?\.workspaceLayout \|\| \{\} \}/);
   assert.match(app, /Use another device’s data/);
   assert.match(app, /Keep this device’s data/);
   assert.match(app, /Decide later/);
