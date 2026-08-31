@@ -2022,6 +2022,7 @@ function App() {
   const [syncRetryNonce, setSyncRetryNonce] = useState(0);
   const cloudRevisionRef = useRef(0);
   const cloudHydratedUserRef = useRef("");
+  const cloudLastRefreshAtRef = useRef(0);
   const cloudSaveTimerRef = useRef(null);
   const cloudSavingRef = useRef(false);
   const cloudSaveQueuedRef = useRef(false);
@@ -2620,6 +2621,7 @@ function App() {
         saveLocalSnapshot(localStorage, currentUser, selected, revision, needsUpload);
         cloudRevisionRef.current = revision;
         cloudHydratedUserRef.current = currentUser;
+        cloudLastRefreshAtRef.current = Date.now();
         cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(needsUpload ? cloud.state : selected);
         setTasks(selected.tasks);
         setCourses(selected.courses);
@@ -2734,6 +2736,27 @@ function App() {
     window.addEventListener("offline", handleOffline);
     return () => { window.removeEventListener("online", handleOnline); window.removeEventListener("offline", handleOffline); };
   }, [currentUser, accountMode, syncStatus]);
+
+  useEffect(() => {
+    if (!CLOUD_SYNC_CONFIGURED || accountMode !== "cloud" || !currentUser) return undefined;
+    const refreshFromAccount = () => {
+      if (!navigator.onLine || document.visibilityState === "hidden" || cloudSavingRef.current) return;
+      if (cloudHydratedUserRef.current !== currentUser || Date.now() - cloudLastRefreshAtRef.current < 3000) return;
+      cloudLastRefreshAtRef.current = Date.now();
+      setSyncRetryNonce((value) => value + 1);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshFromAccount();
+    };
+    const intervalId = window.setInterval(refreshFromAccount, 15000);
+    window.addEventListener("focus", refreshFromAccount);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshFromAccount);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [currentUser, accountMode]);
 
   const retryCloudSync = () => {
     setSyncError("");

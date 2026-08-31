@@ -69,6 +69,14 @@ test("Retry reruns hydration instead of exiting through the post-hydration save 
   assert.match(app, /syncStatus === "failed"[^\n]+onClick=\{retryCloudSync\}>Retry/);
 });
 
+test("signed-in devices refresh account data while open and when revisited", async () => {
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /setInterval\(refreshFromAccount, 15000\)/);
+  assert.match(app, /addEventListener\("focus", refreshFromAccount\)/);
+  assert.match(app, /addEventListener\("visibilitychange", handleVisibilityChange\)/);
+  assert.match(app, /setSyncRetryNonce\(\(value\) => value \+ 1\)/);
+});
+
 test("email confirmation is not part of snapshot ownership or initialization", async () => {
   const cloudSync = await readFile(new URL("../src/cloudSync.js", import.meta.url), "utf8");
   assert.doesNotMatch(cloudSync, /email_confirmed|emailConfirmed|confirmed_at/);
