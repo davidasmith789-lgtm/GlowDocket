@@ -77,6 +77,14 @@ test("signed-in devices refresh account data while open and when revisited", asy
   assert.match(app, /setSyncRetryNonce\(\(value\) => value \+ 1\)/);
 });
 
+test("account dashboard exposes server-verified sync identity and counts", async () => {
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /Cross-device sync identity/);
+  assert.match(app, /Sync ID: <code>\{currentUser\}<\/code>/);
+  assert.match(app, /Server revision \$\{cloudSyncDetails\.revision\}/);
+  assert.match(app, />Verify Sync Now<\/button>/);
+});
+
 test("email confirmation is not part of snapshot ownership or initialization", async () => {
   const cloudSync = await readFile(new URL("../src/cloudSync.js", import.meta.url), "utf8");
   assert.doesNotMatch(cloudSync, /email_confirmed|emailConfirmed|confirmed_at/);

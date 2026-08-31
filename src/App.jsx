@@ -2016,6 +2016,7 @@ function App() {
   const [authInitializing, setAuthInitializing] = useState(CLOUD_SYNC_CONFIGURED);
   const [syncStatus, setSyncStatus] = useState(CLOUD_SYNC_CONFIGURED ? "initializing" : "local-only");
   const [syncError, setSyncError] = useState("");
+  const [cloudSyncDetails, setCloudSyncDetails] = useState(null);
   const [assignmentSaveError, setAssignmentSaveError] = useState("");
   const [syncConflict, setSyncConflict] = useState(null);
   const [syncConflictOpen, setSyncConflictOpen] = useState(false);
@@ -2594,6 +2595,14 @@ function App() {
         });
         const cloud = ensured.snapshot;
         if (cancelled) return;
+        setCloudSyncDetails({
+          revision: cloud.revision,
+          updatedAt: cloud.updatedAt || "",
+          tasks: cloud.state.tasks.length,
+          courses: cloud.state.courses.length,
+          checklists: cloud.state.checklists.length,
+          calendarEvents: cloud.state.calendarEvents.length,
+        });
         let selected = local;
         let revision = cloud.revision;
         let needsUpload = false;
@@ -2682,6 +2691,7 @@ function App() {
         saveLocalSnapshot(localStorage, currentUser, stateToSave, result.revision, false);
         setSyncStatus("saved");
         setSyncError("");
+        setCloudSyncDetails({ revision: Number(result.revision), updatedAt: result.updated_at || "", tasks: stateToSave.tasks.length, courses: stateToSave.courses.length, checklists: stateToSave.checklists.length, calendarEvents: stateToSave.calendarEvents.length });
         savedSuccessfully = true;
       } catch (error) {
         if (error.code === "revision_conflict") {
@@ -2706,6 +2716,7 @@ function App() {
             setCalendarEvents(merged.calendarEvents);
             setSyncStatus("saved");
             setSyncError("");
+            setCloudSyncDetails({ revision: Number(result.revision), updatedAt: result.updated_at || "", tasks: merged.tasks.length, courses: merged.courses.length, checklists: merged.checklists.length, calendarEvents: merged.calendarEvents.length });
             savedSuccessfully = true;
           } catch (mergeError) {
             cloudSaveQueuedRef.current = false;
@@ -9328,6 +9339,13 @@ function App() {
             <em className={accountEmailVerified ? "is-verified" : "is-unverified"}>{accountUpdateBusy === "email" ? "Saving…" : accountEmailVerified ? "Verified" : "Needs verification"}</em>
           </form>}
           {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && !accountEmailVerified && <button type="button" className="btn btn-secondary account-resend-verification" disabled={Boolean(accountUpdateBusy) || !accountEmail} onClick={handleResendVerification}>{accountUpdateBusy === "verification" ? "Sending…" : "Resend Verification Email"}</button>}
+          {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" && <div className="account-verification-status is-verified">
+            <strong>Cross-device sync identity</strong>
+            <span>Sync ID: <code>{currentUser}</code></span>
+            <span>This device: {courses.length} courses · {checklists.length} checklists · {calendarEvents.length} calendar entries</span>
+            <span>{cloudSyncDetails ? `Server revision ${cloudSyncDetails.revision}: ${cloudSyncDetails.courses} courses · ${cloudSyncDetails.checklists} checklists · ${cloudSyncDetails.calendarEvents} calendar entries` : "Server details are loading."}</span>
+            <button type="button" className="btn btn-secondary" onClick={retryCloudSync} disabled={["cloud-loading", "saving", "reconnecting"].includes(syncStatus)}>Verify Sync Now</button>
+          </div>}
         </section>
 
         {CLOUD_SYNC_CONFIGURED && accountMode === "cloud" ? <>
