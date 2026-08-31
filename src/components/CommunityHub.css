@@ -467,6 +467,9 @@
   border: 2px solid var(--primary-color);
   border-radius: 18px;
 }
+.community-moderator h2 {
+  color: var(--community-text, var(--text-color));
+}
 .community-moderator article {
   margin-top: 12px;
 }
