@@ -74,6 +74,41 @@ test("mismatched devices merge account data and deduplicate courses case-insensi
   assert.deepEqual(merged.userSettings.customColorThemes.map((theme) => theme.id), ["local-theme", "cloud-theme"]);
 });
 
+test("newer synchronized deletions prevent stale devices from restoring removed data", () => {
+  const local = state({
+    tasks: [{ id: "keep", course: "Biology" }],
+    courses: ["Other"],
+    checklists: [],
+    calendarEvents: [],
+    userSettings: { syncDeletions: {
+      courses: { biology: { deleted: true, updatedAt: 20 } },
+      checklists: { list1: { deleted: true, updatedAt: 20 } },
+      checklistItems: { "list2:item1": { deleted: true, updatedAt: 20 } },
+      calendarEvents: { event1: { deleted: true, updatedAt: 20 } },
+      tasks: { task1: { deleted: true, updatedAt: 20 } },
+    } },
+  });
+  const stale = state({
+    tasks: [{ id: "keep", course: "Biology" }, { id: "task1", course: "Biology" }],
+    courses: ["Other", "Biology"],
+    checklists: [{ id: "list1", items: [] }, { id: "list2", items: [{ id: "item1" }, { id: "item2" }] }],
+    calendarEvents: [{ id: "event1" }],
+  });
+  const merged = mergeAccountStates(local, stale);
+  assert.deepEqual(merged.courses, ["Other"]);
+  assert.deepEqual(merged.tasks, [{ id: "keep", course: "Other" }]);
+  assert.deepEqual(merged.checklists.map((list) => [list.id, list.items.map((item) => item.id)]), [["list2", ["item2"]]]);
+  assert.deepEqual(merged.calendarEvents, []);
+});
+
+test("a newer assignment trash or restore action wins over a stale device copy", () => {
+  const deleted = state({ tasks: [{ id: "task", course: "Other", isDeleted: true, deletedAt: "2026-08-31T12:00:00.000Z", syncUpdatedAt: "2026-08-31T12:00:00.000Z" }] });
+  const staleActive = state({ tasks: [{ id: "task", course: "Other", isDeleted: false }] });
+  assert.equal(mergeAccountStates(deleted, staleActive).tasks[0].isDeleted, true);
+  const restored = state({ tasks: [{ id: "task", course: "Other", isDeleted: false, deletedAt: null, syncUpdatedAt: "2026-08-31T13:00:00.000Z" }] });
+  assert.equal(mergeAccountStates(restored, deleted).tasks[0].isDeleted, false);
+});
+
 test("duplicate authenticated identities reconcile through the protected account endpoint", async () => {
   const local = state({ checklists: [{ id: "computer", title: "Computer" }] });
   let request;

@@ -3440,6 +3440,8 @@ function App() {
     if (!themeToDelete) return;
     if (!window.confirm(`Delete "${themeToDelete.name}"?`)) return;
 
+    if (!themeToDelete.builtIn) updateSyncDeletionMarkers("customColorThemes", themeId);
+
     if (themeToDelete.builtIn) {
       deletedThemeIds.add(themeId);
     }
@@ -4211,6 +4213,21 @@ function App() {
     });
   };
 
+  const updateSyncDeletionMarkers = (scope, ids, deleted = true) => {
+    const normalizedIds = (Array.isArray(ids) ? ids : [ids]).map((id) => String(id || "").toLocaleLowerCase()).filter(Boolean);
+    if (normalizedIds.length === 0) return;
+    const updatedAt = Date.now();
+    setUserSettings((previous) => {
+      const previousDeletions = previous.syncDeletions || {};
+      const scoped = { ...(previousDeletions[scope] || {}) };
+      normalizedIds.forEach((id) => { scoped[id] = { deleted, updatedAt }; });
+      const updated = { ...previous, syncDeletions: { ...previousDeletions, [scope]: scoped } };
+      try { localStorage.setItem(settingsStorageKey, JSON.stringify(updated)); }
+      catch (error) { console.error("Failed to save synchronized deletion:", error); }
+      return updated;
+    });
+  };
+
   /**
    * Delete a course safely.
    * Existing tasks are not deleted; they are reassigned to "Other" instead.
@@ -4226,6 +4243,8 @@ function App() {
     );
 
     if (!confirmDelete) return;
+
+    updateSyncDeletionMarkers("courses", courseToDelete);
 
     const updatedCourses = courses.filter(
       (course) => course !== courseToDelete,
@@ -4301,6 +4320,7 @@ function App() {
     }
 
     const updatedCourses = [...courses, trimmedCourseName];
+    updateSyncDeletionMarkers("courses", trimmedCourseName, false);
     setCourses(updatedCourses);
     saveCoursesForCurrentUser(updatedCourses);
     if (color) handleCourseColorChange(trimmedCourseName, color);
@@ -5051,7 +5071,7 @@ function App() {
     setTasks((prev) => {
       const updated = prev.map((task) =>
         task.isArchived && !task.isDeleted
-          ? { ...task, isDeleted: true, deletedAt }
+          ? { ...task, isDeleted: true, deletedAt, syncUpdatedAt: deletedAt }
           : task,
       );
       saveTasksForCurrentUser(updated);
@@ -5075,7 +5095,7 @@ function App() {
 
     setTasks((prev) => {
       const updated = prev.map((task) =>
-        task.id === id ? { ...task, isDeleted: true, deletedAt } : task,
+        task.id === id ? { ...task, isDeleted: true, deletedAt, syncUpdatedAt: deletedAt } : task,
       );
 
       saveTasksForCurrentUser(updated);
@@ -5086,10 +5106,11 @@ function App() {
   };
 
   const handleRestoreDeleted = (id) => {
+    const syncUpdatedAt = new Date().toISOString();
     setTasks((prev) => {
       const updated = prev.map((task) =>
         task.id === id
-          ? { ...task, isDeleted: false, deletedAt: null }
+          ? { ...task, isDeleted: false, deletedAt: null, syncUpdatedAt }
           : task,
       );
 
@@ -5105,6 +5126,7 @@ function App() {
     );
 
     if (!confirmed) return;
+    updateSyncDeletionMarkers("tasks", id);
 
     const remainingTasks = tasks.filter((task) => task.id !== id);
     getSafeAttachments(taskToDelete).forEach((attachment) => {
@@ -5134,6 +5156,7 @@ function App() {
     );
 
     if (!confirmed) return;
+    updateSyncDeletionMarkers("tasks", tasks.filter((task) => task.isDeleted).map((task) => task.id));
 
     const remainingTasks = tasks.filter((task) => !task.isDeleted);
     tasks
@@ -6299,6 +6322,7 @@ function App() {
   };
 
   const handleDeleteCalendarEvent = (eventId) => {
+    updateSyncDeletionMarkers("calendarEvents", eventId);
     saveCalendarEvents(calendarEvents.filter((entry) => entry.id !== eventId));
     setExpandedCalendarEventId(null);
   };
@@ -6634,6 +6658,7 @@ function App() {
 
   const handleDeleteChecklistItem = (listId, itemId) => {
     if (!window.confirm("Delete this checklist item permanently?")) return;
+    updateSyncDeletionMarkers("checklistItems", `${listId}:${itemId}`);
     updateChecklist(listId, (list) => ({ ...list, items: (list.items || []).filter((item) => item.id !== itemId) }));
   };
 
@@ -8033,6 +8058,7 @@ function App() {
     if (selectedChecklistIds.length === 0) return;
     const label = selectedChecklistIds.length === 1 ? "this checklist" : `these ${selectedChecklistIds.length} checklists`;
     if (!window.confirm(`Delete ${label} permanently?`)) return;
+    updateSyncDeletionMarkers("checklists", selectedChecklistIds);
     saveChecklistData(checklists.filter((list) => !selectedChecklistIds.includes(list.id)));
     setSelectedChecklistIds([]);
     setChecklistSelectionMode(false);

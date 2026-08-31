@@ -93,7 +93,13 @@ function mergeUniqueById(localItems = [], cloudItems = []) {
   const positions = new Map();
   [...localItems, ...cloudItems].forEach((item) => {
     const id = String(item?.id || "");
-    if (id && positions.has(id)) merged[positions.get(id)] = item;
+    if (id && positions.has(id)) {
+      const position = positions.get(id);
+      const existing = merged[position];
+      const existingTimestamp = Date.parse(existing?.syncUpdatedAt || existing?.deletedAt || "") || 0;
+      const itemTimestamp = Date.parse(item?.syncUpdatedAt || item?.deletedAt || "") || 0;
+      if (itemTimestamp >= existingTimestamp) merged[position] = item;
+    }
     else {
       if (id) positions.set(id, merged.length);
       merged.push(item);
@@ -131,12 +137,28 @@ function mergeCalendarDayColors(localColors = {}, cloudColors = {}) {
   return merged;
 }
 
+function mergeSyncDeletions(localDeletions = {}, cloudDeletions = {}) {
+  const merged = {};
+  const scopes = new Set([...Object.keys(localDeletions || {}), ...Object.keys(cloudDeletions || {})]);
+  scopes.forEach((scope) => {
+    merged[scope] = { ...(localDeletions?.[scope] || {}) };
+    Object.entries(cloudDeletions?.[scope] || {}).forEach(([id, cloudMarker]) => {
+      const localMarker = merged[scope][id];
+      if (!localMarker || Number(cloudMarker?.updatedAt || 0) >= Number(localMarker?.updatedAt || 0)) merged[scope][id] = cloudMarker;
+    });
+  });
+  return merged;
+}
+
+const isSyncDeleted = (deletions, scope, id) => Boolean(deletions?.[scope]?.[String(id || "").toLocaleLowerCase()]?.deleted);
+
 function normalizeCourseReferences(courses, items, courseColors, userSettings) {
   const canonical = new Map(courses.map((course) => [course.toLocaleLowerCase(), course]));
   const courseName = (value) => canonical.get(String(value || "").trim().toLocaleLowerCase()) || value;
+  const activeItemCourse = (value) => canonical.get(String(value || "").trim().toLocaleLowerCase()) || "Other";
   const remapObject = (value) => Object.fromEntries(Object.entries(isPlainObject(value) ? value : {}).map(([key, entry]) => [courseName(key), entry]));
   return {
-    items: items.map((item) => item?.course ? { ...item, course: courseName(item.course) } : item),
+    items: items.map((item) => item?.course ? { ...item, course: activeItemCourse(item.course) } : item),
     courseColors: remapObject(courseColors),
     userSettings: {
       ...userSettings,
@@ -152,26 +174,30 @@ export function mergeAccountStates(localState, cloudState) {
   const cloud = validateCloudState(cloudState);
   const courses = mergeCourses(local.courses, cloud.courses);
   const userSettings = mergeObjects(local.userSettings, cloud.userSettings);
+  userSettings.syncDeletions = mergeSyncDeletions(local.userSettings.syncDeletions, cloud.userSettings.syncDeletions);
   userSettings.calendarDayColors = mergeCalendarDayColors(local.userSettings.calendarDayColors, cloud.userSettings.calendarDayColors);
   const customColorThemes = mergeUniqueById(local.userSettings.customColorThemes, cloud.userSettings.customColorThemes);
-  if (customColorThemes.length > 0) userSettings.customColorThemes = customColorThemes;
+  if (customColorThemes.length > 0) userSettings.customColorThemes = customColorThemes.filter((theme) => !isSyncDeleted(userSettings.syncDeletions, "customColorThemes", theme?.id));
   userSettings.deletedColorThemeIds = [...new Set([
     ...(local.userSettings.deletedColorThemeIds || []),
     ...(cloud.userSettings.deletedColorThemeIds || []),
   ])];
+  const activeCourses = courses.filter((course) => course === "Other" || !isSyncDeleted(userSettings.syncDeletions, "courses", course));
   const normalized = normalizeCourseReferences(
-    courses,
-    mergeUniqueById(local.tasks, cloud.tasks),
+    activeCourses,
+    mergeUniqueById(local.tasks, cloud.tasks).filter((task) => !isSyncDeleted(userSettings.syncDeletions, "tasks", task?.id)),
     mergeObjects(local.courseColors, cloud.courseColors),
     userSettings,
   );
   return collectSyncableState({
     tasks: normalized.items,
-    courses,
+    courses: activeCourses,
     courseColors: normalized.courseColors,
     userSettings: normalized.userSettings,
-    checklists: mergeUniqueById(local.checklists, cloud.checklists),
-    calendarEvents: mergeUniqueById(local.calendarEvents, cloud.calendarEvents),
+    checklists: mergeUniqueById(local.checklists, cloud.checklists)
+      .filter((list) => !isSyncDeleted(userSettings.syncDeletions, "checklists", list?.id))
+      .map((list) => ({ ...list, items: (list.items || []).filter((item) => !isSyncDeleted(userSettings.syncDeletions, "checklistItems", `${list.id}:${item?.id}`)) })),
+    calendarEvents: mergeUniqueById(local.calendarEvents, cloud.calendarEvents).filter((event) => !isSyncDeleted(userSettings.syncDeletions, "calendarEvents", event?.id)),
     workspaceLayout: local.workspaceLayout,
     displayName: cloud.displayName || local.displayName,
   });
