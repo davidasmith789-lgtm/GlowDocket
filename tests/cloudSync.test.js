@@ -178,13 +178,23 @@ test("hydration merges pending changes from devices with different revisions", (
   assert.deepEqual(choice.state.tasks.map((task) => task.id), ["device-task", "cloud-task"]);
 });
 
+test("hydration combines unique data even when both devices previously reported saved", () => {
+  const local = state({ courses: ["Other", "Biology"], checklists: [{ id: "computer-list", title: "Computer" }] });
+  const cloud = { state: state({ courses: ["Other", "APES"], checklists: [{ id: "chromebook-list", title: "APES" }] }), revision: 9 };
+  const choice = chooseHydrationState(local, { revision: 9, pending: false }, cloud);
+  assert.equal(choice.conflict, false);
+  assert.equal(choice.needsUpload, true);
+  assert.deepEqual(choice.state.courses, ["Other", "APES", "Biology"]);
+  assert.deepEqual(choice.state.checklists.map((list) => list.id), ["computer-list", "chromebook-list"]);
+});
+
 test("pending changes based on the current cloud revision sync without a popup", () => {
   const local = state({ tasks: [{ id: "device-task", title: "Safe local edit" }] });
   const cloud = { state: state({ tasks: [] }), revision: 12 };
   const choice = chooseHydrationState(local, { revision: 12, pending: true }, cloud);
   assert.equal(choice.conflict, false);
   assert.equal(choice.needsUpload, true);
-  assert.strictEqual(choice.state, local);
+  assert.deepEqual(choice.state.tasks, local.tasks);
 });
 
 test("new empty devices hydrate from meaningful cloud layouts without uploading defaults", () => {
