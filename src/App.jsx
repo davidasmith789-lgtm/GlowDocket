@@ -74,7 +74,8 @@ import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
 import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
 import { applyGoogleNativeUpdates, buildGoogleCalendarItems, googleEventTime, googleEventsForDate } from "./googleCalendarUtils.js";
-import { disconnectGoogleCalendar, getGoogleCalendarChoices, getGoogleCalendarStatus, restoreGoogleCalendarItem, saveGoogleCalendarSettings, startGoogleCalendarOAuth, syncGoogleCalendar, unlinkGoogleCalendarItem } from "./googleCalendarClient.js";
+import { actOnGoogleCalendarIssue, clearResolvedGoogleCalendarIssues, disconnectGoogleCalendar, getGoogleCalendarChoices, getGoogleCalendarStatus, restoreGoogleCalendarItem, saveGoogleCalendarSettings, startGoogleCalendarOAuth, syncGoogleCalendar, unlinkGoogleCalendarItem } from "./googleCalendarClient.js";
+import { normalizeGoogleSyncIssue, summarizeGoogleSyncIssues } from "./googleCalendarIssues.js";
 import { advanceBadgeMastery, applyFlashcardMasterySummary, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getCompletionStreak, getGamificationLevel, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum, XP_REWARDS } from "./gamificationUtils.js";
 
 /*
@@ -2228,7 +2229,7 @@ function App() {
   const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
   const [calendarDayColorScope, setCalendarDayColorScope] = useState("date");
   const [calendarDayColorUndoStack, setCalendarDayColorUndoStack] = useState([]);
-  const [googleCalendarState, setGoogleCalendarState] = useState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], mappings: [] });
+  const [googleCalendarState, setGoogleCalendarState] = useState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], resolvedIssues: [], activeIssueCount: 0, resolvedIssueCount: 0, mappings: [] });
   const [googleCalendarChoices, setGoogleCalendarChoices] = useState([]);
   const [googleCalendarBusy, setGoogleCalendarBusy] = useState("");
   const [googleCalendarNotice, setGoogleCalendarNotice] = useState("");
@@ -2336,7 +2337,7 @@ function App() {
   };
   const handleGoogleDisconnect = async () => {
     setGoogleCalendarBusy("disconnect");
-    try { const result = await disconnectGoogleCalendar(keepGoogleCalendar); setGoogleCalendarState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], mappings: [] }); setGoogleDisconnectOpen(false); setGoogleCalendarNotice(result.warnings?.join(" ") || "Google Calendar disconnected. Your GlowDocket data was kept."); }
+    try { const result = await disconnectGoogleCalendar(keepGoogleCalendar); setGoogleCalendarState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], resolvedIssues: [], activeIssueCount: 0, resolvedIssueCount: 0, mappings: [] }); setGoogleDisconnectOpen(false); setGoogleCalendarNotice(result.warnings?.join(" ") || "Google Calendar disconnected. Your GlowDocket data was kept."); }
     catch (error) { setGoogleCalendarNotice(error.message); }
     finally { setGoogleCalendarBusy(""); }
   };
@@ -7083,6 +7084,31 @@ function App() {
     if (mapping.glowdocket_type === "checklist") return checklists.flatMap((list) => list.items || []).find((item) => String(item.id) === mapping.glowdocket_id)?.text || "Checklist item";
     return mapping.glowdocket_id.startsWith("weekly:") ? "Recurring class" : "Class occurrence";
   };
+  const googleIssueItemLabel = (issue) => {
+    if (!issue?.itemType || !issue?.itemId) return issue?.itemTitle || "Google Calendar connection";
+    return googleManagedItemLabel({ glowdocket_type: issue.itemType, glowdocket_id: issue.itemId }) || issue.itemTitle;
+  };
+  const activeGoogleIssues = (googleCalendarState.issues || []).map((issue) => normalizeGoogleSyncIssue(issue, googleIssueItemLabel(issue)));
+  const resolvedGoogleIssues = (googleCalendarState.resolvedIssues || []).map((issue) => normalizeGoogleSyncIssue(issue, googleIssueItemLabel(issue)));
+  const googleIssueSummary = summarizeGoogleSyncIssues(activeGoogleIssues, resolvedGoogleIssues, { activeCount: googleCalendarState.activeIssueCount, resolvedCount: googleCalendarState.resolvedIssueCount });
+  const handleGoogleIssueAction = async (issue, issueAction) => {
+    if (issueAction === "resolve_conflict" && !window.confirm("Keep the current GlowDocket version and send it to Google Calendar?")) return;
+    setGoogleCalendarBusy(`issue:${issue.id}`);
+    try {
+      const result = await actOnGoogleCalendarIssue(issue.id, issueAction);
+      if (result.authorizationUrl) { window.location.assign(result.authorizationUrl); return; }
+      if (result.retry) await runGoogleCalendarSync();
+      else await refreshGoogleCalendarStatus();
+      setGoogleCalendarNotice(issueAction === "dismiss" ? "Resolved issue removed from history." : "Google Calendar issue action completed.");
+    } catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { setGoogleCalendarBusy(""); }
+  };
+  const handleClearResolvedGoogleIssues = async () => {
+    setGoogleCalendarBusy("clear-resolved");
+    try { const result = await clearResolvedGoogleCalendarIssues(); setGoogleCalendarState(result); setGoogleCalendarNotice("Resolved Google Calendar issue history cleared."); }
+    catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { setGoogleCalendarBusy(""); }
+  };
   const handleGoogleManagedItemAction = async (mapping) => {
     setGoogleCalendarBusy("managed-item");
     try {
@@ -11655,7 +11681,31 @@ function App() {
                       <label className="settings-toggle settings-toggle-copy"><span><strong>Include GlowDocket notes in Google events</strong><small>Off by default because the destination calendar may be shared.</small></span><input type="checkbox" checked={Boolean(googleCalendarState.preferences?.include_notes)} onChange={(event) => handleGoogleSetting({ include_notes: event.target.checked })} /></label>
                       <div className="google-calendar-actions"><button type="button" className="btn btn-primary" onClick={() => runGoogleCalendarSync()} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "sync" ? "Syncing…" : "Sync now"}</button><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(true)} disabled={Boolean(googleCalendarBusy)}>Disconnect Google</button></div>
                       <p className="hint-text">Last sync: {googleCalendarState.connection?.last_sync_at ? new Date(googleCalendarState.connection.last_sync_at).toLocaleString() : "Not yet"}</p>
-                      {googleCalendarState.issues?.length > 0 && <p className="google-calendar-warning">{googleCalendarState.issues.length} recoverable synchronization issue{googleCalendarState.issues.length === 1 ? "" : "s"} need attention. Your GlowDocket data remains saved.</p>}
+                      {(googleIssueSummary.activeCount > 0 || googleIssueSummary.resolvedCount > 0) && <section className="google-sync-issues" aria-label="Google Calendar synchronization issues">
+                        <div className="google-sync-issue-summary">
+                          {googleIssueSummary.activeCount > 0 && <strong>{googleIssueSummary.needsAttentionLabel}</strong>}
+                          {googleIssueSummary.activeCount === 0 && <strong>No issues need attention</strong>}
+                          {googleIssueSummary.resolvedCount > 0 && <span>{googleIssueSummary.resolvedLabel}</span>}
+                        </div>
+                        {activeGoogleIssues.length > 0 && <div className="google-sync-issue-list">{activeGoogleIssues.map((issue) => <article className="google-sync-issue-card is-active" key={issue.id}>
+                          <header><strong>{googleIssueItemLabel(issue)}</strong><code>{issue.diagnosticRef}</code></header>
+                          <div className="google-sync-issue-tags"><span>{issue.categoryLabel}</span><span>{issue.directionLabel}</span></div>
+                          <p>{issue.explanation}</p>
+                          <p className="google-sync-item-safe"><strong>Your GlowDocket item is still safe.</strong></p>
+                          <p><strong>Next step:</strong> {issue.recommendedAction}</p>
+                          <small>Last occurred {issue.lastOccurredAt ? new Date(issue.lastOccurredAt).toLocaleString() : "recently"} · {issue.attemptCount} attempt{issue.attemptCount === 1 ? "" : "s"}</small>
+                          <div className="google-sync-issue-actions">{issue.actions.map((issueAction) => <button type="button" className="btn btn-secondary" key={issueAction.id} disabled={Boolean(googleCalendarBusy)} onClick={() => handleGoogleIssueAction(issue, issueAction.id)}>{issueAction.label}</button>)}</div>
+                        </article>)}</div>}
+                        {resolvedGoogleIssues.length > 0 && <details className="google-sync-resolved"><summary>{googleIssueSummary.resolvedLabel}</summary>
+                          <div className="google-sync-resolved-toolbar"><span>These no longer need attention.</span><button type="button" className="btn btn-secondary" disabled={Boolean(googleCalendarBusy)} onClick={handleClearResolvedGoogleIssues}>Clear resolved</button></div>
+                          <div className="google-sync-issue-list">{resolvedGoogleIssues.map((issue) => <article className="google-sync-issue-card is-resolved" key={issue.id}>
+                            <header><strong>{googleIssueItemLabel(issue)}</strong><code>{issue.diagnosticRef}</code></header>
+                            <div className="google-sync-issue-tags"><span>{issue.categoryLabel}</span><span>{issue.directionLabel}</span></div>
+                            <p>{issue.explanation}</p><small>Resolved {issue.resolvedAt ? new Date(issue.resolvedAt).toLocaleString() : "after a later successful sync"} · Last occurred {issue.lastOccurredAt ? new Date(issue.lastOccurredAt).toLocaleString() : "previously"}</small>
+                            <div className="google-sync-issue-actions"><button type="button" className="btn btn-secondary" disabled={Boolean(googleCalendarBusy)} onClick={() => handleGoogleIssueAction(issue, "dismiss")}>Dismiss resolved issue</button></div>
+                          </article>)}</div>
+                        </details>}
+                      </section>}
                       {googleCalendarState.mappings?.length > 0 && <details className="google-managed-items"><summary>Synced GlowDocket items</summary><div>{googleCalendarState.mappings.slice(0, 100).map((mapping) => <div key={`${mapping.glowdocket_type}:${mapping.glowdocket_id}`}><span><strong>{googleManagedItemLabel(mapping)}</strong><small>{mapping.glowdocket_type} · {mapping.state === "active" ? "In Google Calendar" : "Not in Google Calendar"}</small></span><button type="button" className="btn btn-secondary" onClick={() => handleGoogleManagedItemAction(mapping)} disabled={Boolean(googleCalendarBusy)}>{mapping.state === "active" ? "Remove from Google Calendar" : "Add back to Google Calendar"}</button></div>)}</div></details>}
                     </>}
                     {googleCalendarNotice && <p className="hint-text" role="status">{googleCalendarNotice}</p>}

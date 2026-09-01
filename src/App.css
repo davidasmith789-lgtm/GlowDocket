@@ -8820,6 +8820,22 @@ html[data-theme="dark"] .sync-conflict-dialog {
 .google-calendar-compact-option span { display: inline-flex; align-items: center; gap: 0.3rem; }
 .google-calendar-compact-option small { border: 1px solid currentColor; border-radius: 999px; padding: 0.05rem 0.3rem; font-size: 0.64rem; opacity: 0.72; }
 .google-calendar-warning { border-left: 3px solid #d97706; padding-left: 0.7rem; }
+.google-sync-issues { display: grid; gap: 0.75rem; margin-top: 0.9rem; }
+.google-sync-issue-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem 0.8rem; padding: 0.7rem 0.8rem; border: 1px solid color-mix(in srgb, currentColor 16%, transparent); border-radius: 0.75rem; background: color-mix(in srgb, var(--surface-alt, transparent) 75%, transparent); }
+.google-sync-issue-summary span { color: var(--muted-text); font-size: 0.86rem; }
+.google-sync-issue-list { display: grid; gap: 0.65rem; margin-top: 0.65rem; }
+.google-sync-issue-card { display: grid; gap: 0.48rem; padding: 0.8rem; border: 1px solid color-mix(in srgb, currentColor 15%, transparent); border-radius: 0.75rem; background: var(--card-bg, var(--panel-bg, transparent)); }
+.google-sync-issue-card.is-active { border-left: 4px solid #d97706; }
+.google-sync-issue-card.is-resolved { border-left: 4px solid #16a34a; opacity: 0.88; }
+.google-sync-issue-card header, .google-sync-resolved-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.google-sync-issue-card header code { padding: 0.16rem 0.38rem; border-radius: 0.35rem; background: color-mix(in srgb, currentColor 9%, transparent); color: inherit; font-size: 0.74rem; }
+.google-sync-issue-card p, .google-sync-issue-card small { margin: 0; }
+.google-sync-issue-card small { color: var(--muted-text); }
+.google-sync-issue-tags, .google-sync-issue-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.google-sync-issue-tags span { padding: 0.13rem 0.4rem; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 999px; font-size: 0.72rem; font-weight: 750; }
+.google-sync-item-safe { color: #15803d; }
+.google-sync-resolved { padding: 0.25rem 0; }
+.google-sync-resolved-toolbar { margin-top: 0.65rem; }
 .google-managed-items { margin-top: 1rem; }
 .google-managed-items > div { display: grid; gap: 0.55rem; margin-top: 0.75rem; }
 .google-managed-items > div > div { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.65rem; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 0.7rem; }

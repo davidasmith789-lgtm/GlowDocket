@@ -24,4 +24,6 @@ export async function syncGoogleCalendar(items) {
 }
 export const unlinkGoogleCalendarItem = (type, id, deleteGoogle = true) => request("unlink", { type, id, deleteGoogle });
 export const restoreGoogleCalendarItem = (type, id) => request("restore", { type, id });
+export const actOnGoogleCalendarIssue = (issueId, issueAction) => request("issue-action", { issueId, issueAction });
+export const clearResolvedGoogleCalendarIssues = () => request("clear-resolved-issues");
 export const disconnectGoogleCalendar = (keepCalendar = true) => request("disconnect", { keepCalendar });

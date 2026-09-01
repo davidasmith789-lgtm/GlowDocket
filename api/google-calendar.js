@@ -14,6 +14,9 @@ import {
   ensureWebhookChannel,
   finishOAuth,
   listCalendarChoices,
+  providerIssueCategory,
+  recordSyncIssue,
+  resolveSyncIssues,
   restoreManagedItem,
   statusFor,
   syncImportedCalendar,
@@ -87,6 +90,23 @@ async function routeAction(req, admin, user) {
   const body = jsonBody(req); const action = String(body.action || req.query.action || "status");
   if (action === "oauth-start") return { authorizationUrl: await beginOAuth({ admin, userId: user.id, kind: body.kind === "existing_calendar_write" ? body.kind : "initial", returnTo: body.returnTo || "/?tab=settings&settings=calendar" }) };
   if (action === "status") return statusFor({ admin, userId: user.id });
+  if (action === "issue-action") {
+    const issueId = String(body.issueId || ""); const issueAction = String(body.issueAction || "");
+    const { data: issue } = await admin.from("google_sync_issues").select("id,category,glowdocket_type,glowdocket_id,resolved_at").eq("user_id", user.id).eq("id", issueId).maybeSingle();
+    if (!issue) throw new GoogleCalendarError("issue_not_found", "That synchronization issue is no longer available.", 404);
+    if (issueAction === "dismiss" && issue.resolved_at) { await admin.from("google_sync_issues").delete().eq("user_id", user.id).eq("id", issue.id); return { dismissed: true }; }
+    if (issueAction === "add_back" && issue.glowdocket_type && issue.glowdocket_id) { await restoreManagedItem({ admin, userId: user.id, type: issue.glowdocket_type, id: issue.glowdocket_id }); return { retry: true }; }
+    if (issueAction === "resolve_conflict" && issue.category === "conflict") {
+      const { data: mapping } = await admin.from("google_event_mappings").select("id,pending_google_snapshot,pending_google_hash,pending_google_etag,pending_google_updated_at").eq("user_id", user.id).eq("glowdocket_type", issue.glowdocket_type).eq("glowdocket_id", issue.glowdocket_id).maybeSingle();
+      if (!mapping?.pending_google_snapshot) throw new GoogleCalendarError("conflict_refresh_needed", "Retry synchronization before resolving this conflict.", 409);
+      await admin.from("google_event_mappings").update({ last_google_snapshot: mapping.pending_google_snapshot, last_google_hash: mapping.pending_google_hash, google_etag: mapping.pending_google_etag, google_updated_at: mapping.pending_google_updated_at, updated_at: new Date().toISOString() }).eq("id", mapping.id);
+      return { retry: true, resolution: "keep_glowdocket" };
+    }
+    if (issueAction === "reconnect") return { authorizationUrl: await beginOAuth({ admin, userId: user.id, kind: "initial", returnTo: "/?tab=settings&settings=calendar" }) };
+    if (issueAction === "retry") return { retry: true };
+    throw new GoogleCalendarError("invalid_issue_action", "That action is not available for this issue.", 400);
+  }
+  if (action === "clear-resolved-issues") { await admin.from("google_sync_issues").delete().eq("user_id", user.id).not("resolved_at", "is", null); return statusFor({ admin, userId: user.id }); }
   const auth = await authorizedCalendar({ admin, userId: user.id });
   if (action === "calendars") return { calendars: await listCalendarChoices(auth) };
   if (action === "settings") {
@@ -136,6 +156,7 @@ async function routeAction(req, admin, user) {
     for (const selection of selections || []) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: selection.calendar_id });
     if (destination && !(selections || []).some((selection) => selection.calendar_id === destination)) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: destination });
     await admin.from("google_calendar_connections").update({ last_sync_at: new Date().toISOString(), last_error: null, status: "connected", updated_at: new Date().toISOString() }).eq("user_id", user.id);
+    await resolveSyncIssues({ admin, userId: user.id, categories: ["permission_problem", "temporary_provider_failure"], reason: "successful_sync" });
     await finishSyncJob(admin, user.id, job.jobId);
     console.info("[google-calendar-sync] complete", { importedProcessed, nativeItems: Array.isArray(body.items) ? body.items.length : 0, googleWrites: nativeResult.googleWrites, noops: nativeResult.noops, durationMs: Date.now() - syncStartedAt });
     return { ...(await statusFor({ admin, userId: user.id })), syncState: "complete", nativeUpdates: nativeResult.nativeUpdates };
@@ -149,14 +170,17 @@ async function routeAction(req, admin, user) {
 export default async function handler(req, res) {
   res.setHeader("cache-control", "no-store"); res.setHeader("x-content-type-options", "nosniff");
   const admin = createAdmin();
+  let authenticatedUser = null;
   try {
     if (req.method === "GET" && req.query.action === "callback") return await callback(req, res, admin);
     if (req.method === "POST" && req.query.action === "webhook") return await webhook(req, res, admin);
     if (!["GET", "POST"].includes(req.method)) return res.status(405).json({ error: "Method not allowed." });
-    const user = await authenticateRequest(req, admin); const result = await routeAction(req, admin, user);
+    const user = await authenticateRequest(req, admin); authenticatedUser = user; const result = await routeAction(req, admin, user);
     return res.status(200).json({ ok: true, ...result });
   } catch (rawError) {
     const error = safeError(rawError);
+    const requestBody = (() => { try { return jsonBody(req); } catch { return {}; } })();
+    if (authenticatedUser && requestBody.action === "sync" && !["sync_in_progress", "sync_expired"].includes(error.code)) await recordSyncIssue({ admin, userId: authenticatedUser.id, category: providerIssueCategory(rawError), direction: "glowdocket_to_google", title: "Google Calendar connection", details: { phase: "sync_request" } }).catch(() => {});
     if (error.status >= 500) console.error("[google-calendar] request failed", { code: error.code, message: rawError?.message });
     return res.status(error.status).json({ error: error.message, code: error.code });
   }

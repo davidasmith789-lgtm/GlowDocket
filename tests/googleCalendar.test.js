@@ -79,8 +79,9 @@ test("a large unchanged managed dedicated calendar terminates without provider r
     const snapshot = eventSnapshot(googleEvent); const mapping = { id: `mapping-${index}`, user_id: "user", glowdocket_type: type, glowdocket_id: id, google_calendar_id: "dedicated", google_event_id: `google-${index}`, state: "active", last_google_snapshot: snapshot, last_google_hash: snapshotHash(snapshot), last_glowdocket_snapshot: snapshot, last_glowdocket_hash: snapshotHash(snapshot), sync_version: 1 };
     mappings.push(mapping); items.push({ id, type, googleEvent }); managedEvents.push({ mapping, event: { id: mapping.google_event_id, ...googleEvent, etag: `etag-${index}` } });
   }
-  const query = { select() { return this; }, eq() { return this; }, in() { return this; }, then(resolve) { resolve({ data: mappings, error: null }); } };
-  const admin = { from(table) { assert.equal(table, "google_event_mappings"); return query; } };
+  const mappingQuery = { select() { return this; }, eq() { return this; }, in() { return this; }, then(resolve) { resolve({ data: mappings, error: null }); } };
+  const issueQuery = { update() { return this; }, eq() { return this; }, is() { return this; }, in() { return this; }, then(resolve) { resolve({ data: null, error: null }); } };
+  const admin = { from(table) { if (table === "google_event_mappings") return mappingQuery; if (table === "google_sync_issues") return issueQuery; assert.fail(`unexpected table ${table}`); } };
   const providerCalls = { get: 0, update: 0, insert: 0, delete: 0 };
   const calendar = { events: Object.fromEntries(Object.keys(providerCalls).map((method) => [method, async () => { providerCalls[method] += 1; throw new Error(`unexpected ${method}`); }])) };
   const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "dedicated", items, enabledTypes: ["class", "activity"], managedEvents, maxItems: 1000 });

@@ -158,7 +158,7 @@ The former Recommendations navigation surface is now **Feedback & Support**. His
 
 ## Google Calendar Release 1 deployment
 
-Run `supabase/migrations/202608310001_create_google_calendar_integration.sql` and `supabase/migrations/202609010001_bound_google_calendar_sync.sql`, then configure a Google OAuth web client with the exact callback URL used by `GOOGLE_CALENDAR_REDIRECT_URI` (the production value is `https://glowdocket.com/api/google-calendar?action=callback`). The second migration adds resumable pagination, bounded native cursors, per-account synchronization locks, and temporary provider snapshots; it must be applied before deploying the corresponding API code. The Google Calendar API must be enabled and the OAuth consent screen should remain limited to approved test users until verification is complete.
+Run `supabase/migrations/202608310001_create_google_calendar_integration.sql`, `supabase/migrations/202609010001_bound_google_calendar_sync.sql`, and `supabase/migrations/202609010002_google_sync_issue_lifecycle.sql`, then configure a Google OAuth web client with the exact callback URL used by `GOOGLE_CALENDAR_REDIRECT_URI` (the production value is `https://glowdocket.com/api/google-calendar?action=callback`). The later migrations add resumable pagination, bounded native cursors, per-account synchronization locks, temporary provider snapshots, and the recoverable-issue lifecycle; apply them before deploying the corresponding API code. The issue migration preserves existing issue records and does not mark them resolved merely to reduce the visible count. The Google Calendar API must be enabled and the OAuth consent screen should remain limited to approved test users until verification is complete.
 
 Required server environment variables:
 
