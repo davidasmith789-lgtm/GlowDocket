@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, isManagedEvent, managedProjectionDecision, mergeSnapshots, snapshotHash } from "../server/services/googleCalendarService.js";
+import { canCreateEvents, changedFields, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, snapshotHash, synchronizeNativeItems } from "../server/services/googleCalendarService.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -18,7 +18,7 @@ test("notes remain private by default and category defaults are respected", () =
 
 test("weekly classes use recurrence and cycle classes are deterministic future occurrences", () => {
   const weekly = classGoogleEvents(["Math"], { schoolScheduleMode: "weekly", weeklyCourseMeetings: { Math: [{ id: "m", weekdays: [1, 3], startTime: "09:00", endTime: "10:00" }] } }, { today: new Date("2026-08-31T12:00:00"), timeZone: "UTC" });
-  assert.match(weekly[0].googleEvent.recurrence[0], /BYDAY=MO,WE/);
+  assert.equal(weekly.length, 1, "a weekly class remains one recurring master rather than 12 months of occurrences"); assert.match(weekly[0].googleEvent.recurrence[0], /BYDAY=MO,WE/);
   const cycle = classGoogleEvents(["Math"], { schoolScheduleMode: "ab", cycleAnchorDate: "2026-08-31", cycleDayNames: ["A", "B"], courseCycleDays: { Math: ["A"] }, cycleCourseMeetings: { Math: { A: { startTime: "09:00", endTime: "10:00" } } } }, { today: new Date("2026-08-31T12:00:00"), timeZone: "UTC" });
   assert.ok(cycle.length > 100); assert.ok(cycle.every((item) => item.id.includes("cycle:Math:")));
 });
@@ -65,4 +65,27 @@ test("the active dedicated export calendar is automatically imported and watched
   assert.match(router, /syncImportedCalendar[\s\S]*ensureWebhookChannel/);
   assert.match(service, /ensureDedicatedImportSelection[\s\S]*selected_for_import: true/);
   assert.match(app, /isAutomatic[\s\S]*disabled=\{isAutomatic\}[\s\S]*Automatic/);
+  const migration = await readFile(new URL("../supabase/migrations/202609010001_bound_google_calendar_sync.sql", import.meta.url), "utf8");
+  assert.match(migration, /pending_page_token/); assert.match(migration, /sync_job_id/); assert.match(migration, /sync_lock_until/);
+});
+
+test("a large unchanged managed dedicated calendar terminates without provider reads or writes", async () => {
+  const mappings = []; const items = []; const managedEvents = [];
+  for (let index = 0; index < 600; index += 1) {
+    const type = index < 400 ? "class" : "activity"; const id = `${type}-${index}`;
+    const googleEvent = type === "class"
+      ? { summary: `Class ${index}`, description: "Managed", start: { dateTime: "2026-09-01T09:00:00", timeZone: "UTC" }, end: { dateTime: "2026-09-01T10:00:00", timeZone: "UTC" }, recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"] }
+      : { summary: `Event ${index}`, description: "", start: { dateTime: "2026-09-01T12:00:00", timeZone: "UTC" }, end: { dateTime: "2026-09-01T12:30:00", timeZone: "UTC" } };
+    const snapshot = eventSnapshot(googleEvent); const mapping = { id: `mapping-${index}`, user_id: "user", glowdocket_type: type, glowdocket_id: id, google_calendar_id: "dedicated", google_event_id: `google-${index}`, state: "active", last_google_snapshot: snapshot, last_google_hash: snapshotHash(snapshot), last_glowdocket_snapshot: snapshot, last_glowdocket_hash: snapshotHash(snapshot), sync_version: 1 };
+    mappings.push(mapping); items.push({ id, type, googleEvent }); managedEvents.push({ mapping, event: { id: mapping.google_event_id, ...googleEvent, etag: `etag-${index}` } });
+  }
+  const query = { select() { return this; }, eq() { return this; }, in() { return this; }, then(resolve) { resolve({ data: mappings, error: null }); } };
+  const admin = { from(table) { assert.equal(table, "google_event_mappings"); return query; } };
+  const providerCalls = { get: 0, update: 0, insert: 0, delete: 0 };
+  const calendar = { events: Object.fromEntries(Object.keys(providerCalls).map((method) => [method, async () => { providerCalls[method] += 1; throw new Error(`unexpected ${method}`); }])) };
+  const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "dedicated", items, enabledTypes: ["class", "activity"], managedEvents, maxItems: 1000 });
+  assert.equal(result.complete, true); assert.equal(result.noops, 600); assert.equal(result.googleWrites, 0); assert.deepEqual(providerCalls, { get: 0, update: 0, insert: 0, delete: 0 });
+  const manual = { id: "manual", summary: "Family dinner", start: { dateTime: "2026-09-01T18:00:00" } };
+  const importable = [...managedEvents.map(({ event }) => event), manual].filter((event) => managedProjectionDecision(event, mappings.find((mapping) => mapping.google_event_id === event.id)) === "import");
+  assert.deepEqual(importable.map((event) => event.id), ["manual"], "the manual event is imported once beside managed no-ops");
 });

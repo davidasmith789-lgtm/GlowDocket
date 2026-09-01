@@ -11,7 +11,17 @@ export const getGoogleCalendarStatus = () => request("status", {}, "GET");
 export const getGoogleCalendarChoices = () => request("calendars");
 export const startGoogleCalendarOAuth = (kind = "initial") => request("oauth-start", { kind });
 export const saveGoogleCalendarSettings = (settings) => request("settings", settings);
-export const syncGoogleCalendar = (items) => request("sync", { items });
+export async function syncGoogleCalendar(items) {
+  let continuationToken = null; let nativeUpdates = [];
+  for (let requestCount = 0; requestCount < 100; requestCount += 1) {
+    const result = await request("sync", { items, continuationToken });
+    nativeUpdates = [...nativeUpdates, ...(result.nativeUpdates || [])];
+    if (result.syncState !== "in_progress") return { ...result, nativeUpdates };
+    continuationToken = result.continuationToken;
+  }
+  const error = new Error("Google Calendar is still synchronizing a very large calendar. Press Sync now to continue safely.");
+  error.code = "sync_continuation_limit"; throw error;
+}
 export const unlinkGoogleCalendarItem = (type, id, deleteGoogle = true) => request("unlink", { type, id, deleteGoogle });
 export const restoreGoogleCalendarItem = (type, id) => request("restore", { type, id });
 export const disconnectGoogleCalendar = (keepCalendar = true) => request("disconnect", { keepCalendar });

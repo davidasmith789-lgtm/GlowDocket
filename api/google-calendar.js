@@ -1,4 +1,5 @@
 import process from "node:process";
+import crypto from "node:crypto";
 import {
   GoogleCalendarError,
   WRITE_SCOPE,
@@ -23,6 +24,28 @@ import {
 const jsonBody = (req) => typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
 const appOrigin = () => String(process.env.GOOGLE_CALENDAR_APP_ORIGIN || process.env.PUSH_ALLOWED_ORIGIN || "").replace(/\/$/, "");
 const safeError = (error) => error instanceof GoogleCalendarError ? error : new GoogleCalendarError("google_calendar_failure", "Google Calendar could not finish that request. Your GlowDocket data was not changed.", 500);
+const SYNC_BUDGET_MS = 20_000;
+
+async function claimSyncJob(admin, userId, requestedJobId) {
+  const now = new Date(); const lockUntil = new Date(now.getTime() + 45_000).toISOString();
+  if (requestedJobId) {
+    const { data } = await admin.from("google_calendar_connections").update({ sync_lock_until: lockUntil }).eq("user_id", userId).eq("sync_job_id", requestedJobId).select("sync_job_id,sync_cursor").maybeSingle();
+    if (!data) throw new GoogleCalendarError("sync_expired", "That synchronization pass expired. Start Sync now again.", 409);
+    return { jobId: data.sync_job_id, cursor: Number(data.sync_cursor || 0) };
+  }
+  const jobId = crypto.randomUUID();
+  const { data } = await admin.from("google_calendar_connections").update({ sync_job_id: jobId, sync_cursor: 0, sync_lock_until: lockUntil, sync_started_at: now.toISOString() }).eq("user_id", userId).or(`sync_lock_until.is.null,sync_lock_until.lt.${now.toISOString()}`).select("sync_job_id,sync_cursor").maybeSingle();
+  if (!data) throw new GoogleCalendarError("sync_in_progress", "A Google Calendar synchronization is already running for this account.", 409);
+  return { jobId, cursor: 0 };
+}
+
+async function continueSyncJob(admin, userId, jobId, cursor) {
+  await admin.from("google_calendar_connections").update({ sync_cursor: cursor, sync_lock_until: new Date(Date.now() + 45_000).toISOString() }).eq("user_id", userId).eq("sync_job_id", jobId);
+}
+
+async function finishSyncJob(admin, userId, jobId) {
+  await admin.from("google_calendar_connections").update({ sync_job_id: null, sync_cursor: 0, sync_lock_until: null, sync_started_at: null }).eq("user_id", userId).eq("sync_job_id", jobId);
+}
 
 async function callback(req, res, admin) {
   const result = await finishOAuth({ admin, code: String(req.query.code || ""), state: String(req.query.state || "") });
@@ -86,16 +109,36 @@ async function routeAction(req, admin, user) {
     return statusFor({ admin, userId: user.id });
   }
   if (action === "sync") {
+    const syncStartedAt = Date.now(); const deadline = syncStartedAt + SYNC_BUDGET_MS;
+    const job = await claimSyncJob(admin, user.id, body.continuationToken ? String(body.continuationToken) : null);
     const { data: prefs } = await admin.from("google_calendar_preferences").select("*").eq("user_id", user.id).single();
     let destination = prefs.destination_calendar_id;
     if (prefs.destination_kind === "dedicated") destination = await ensureDedicatedCalendar({ admin, userId: user.id, calendar: auth.calendar });
     const { data: selections } = await admin.from("google_selected_calendars").select("*").eq("user_id", user.id).eq("selected_for_import", true);
-    for (const selection of selections || []) { await syncImportedCalendar({ admin, userId: user.id, calendar: auth.calendar, selection }); await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: selection.calendar_id }); }
+    let importsComplete = true; const managedEvents = []; let importedProcessed = 0;
+    for (const selection of selections || []) {
+      if (Date.now() >= deadline) { importsComplete = false; break; }
+      const result = await syncImportedCalendar({ admin, userId: user.id, calendar: auth.calendar, selection, jobId: job.jobId });
+      managedEvents.push(...result.managedEvents); importedProcessed += result.processed; if (!result.complete) importsComplete = false;
+    }
+    if (!importsComplete) {
+      await continueSyncJob(admin, user.id, job.jobId, job.cursor);
+      console.info("[google-calendar-sync] continuation", { phase: "imports", importedProcessed, durationMs: Date.now() - syncStartedAt });
+      return { syncState: "in_progress", continuationToken: job.jobId, phase: "imports", processed: importedProcessed };
+    }
     const enabledTypes = [["assignment", prefs.sync_assignments], ["activity", prefs.sync_activities], ["class", prefs.sync_classes], ["checklist", prefs.sync_checklists]].filter(([, enabled]) => enabled).map(([type]) => type);
-    const nativeResult = destination ? await synchronizeNativeItems({ admin, userId: user.id, calendar: auth.calendar, destinationCalendarId: destination, items: Array.isArray(body.items) ? body.items : [], enabledTypes }) : { nativeUpdates: [] };
-    if (destination) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: destination });
+    const nativeResult = destination ? await synchronizeNativeItems({ admin, userId: user.id, calendar: auth.calendar, destinationCalendarId: destination, items: Array.isArray(body.items) ? body.items : [], enabledTypes, startIndex: job.cursor, managedEvents, deadline }) : { nativeUpdates: [], complete: true, nextCursor: 0 };
+    if (!nativeResult.complete) {
+      await continueSyncJob(admin, user.id, job.jobId, nativeResult.nextCursor);
+      console.info("[google-calendar-sync] continuation", { phase: "native", cursor: nativeResult.nextCursor, total: Array.isArray(body.items) ? body.items.length : 0, googleWrites: nativeResult.googleWrites, noops: nativeResult.noops, durationMs: Date.now() - syncStartedAt });
+      return { syncState: "in_progress", continuationToken: job.jobId, phase: "native", cursor: nativeResult.nextCursor, nativeUpdates: nativeResult.nativeUpdates };
+    }
+    for (const selection of selections || []) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: selection.calendar_id });
+    if (destination && !(selections || []).some((selection) => selection.calendar_id === destination)) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: destination });
     await admin.from("google_calendar_connections").update({ last_sync_at: new Date().toISOString(), last_error: null, status: "connected", updated_at: new Date().toISOString() }).eq("user_id", user.id);
-    return { ...(await statusFor({ admin, userId: user.id })), nativeUpdates: nativeResult.nativeUpdates };
+    await finishSyncJob(admin, user.id, job.jobId);
+    console.info("[google-calendar-sync] complete", { importedProcessed, nativeItems: Array.isArray(body.items) ? body.items.length : 0, googleWrites: nativeResult.googleWrites, noops: nativeResult.noops, durationMs: Date.now() - syncStartedAt });
+    return { ...(await statusFor({ admin, userId: user.id })), syncState: "complete", nativeUpdates: nativeResult.nativeUpdates };
   }
   if (action === "unlink") return { unlinked: await unlinkManagedItem({ admin, userId: user.id, calendar: auth.calendar, type: String(body.type || ""), id: String(body.id || ""), deleteGoogle: body.deleteGoogle !== false }) };
   if (action === "restore") { await restoreManagedItem({ admin, userId: user.id, type: String(body.type || ""), id: String(body.id || "") }); return { restored: true }; }
