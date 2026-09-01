@@ -9,6 +9,7 @@ import {
   channelTokenHash,
   createAdmin,
   ensureDedicatedCalendar,
+  ensureDedicatedImportSelection,
   ensureWebhookChannel,
   finishOAuth,
   listCalendarChoices,
@@ -80,12 +81,14 @@ async function routeAction(req, admin, user) {
       const choices = await listCalendarChoices(auth); const selected = new Set(body.import_calendar_ids.map(String));
       for (const choice of choices) await admin.from("google_selected_calendars").upsert({ user_id: user.id, calendar_id: choice.id, summary: choice.summary, access_role: choice.accessRole, selected_for_import: selected.has(choice.id), full_sync_required: true, updated_at: new Date().toISOString() });
     }
+    const { data: savedPreferences } = await admin.from("google_calendar_preferences").select("destination_kind,dedicated_calendar_id").eq("user_id", user.id).single();
+    if (savedPreferences.destination_kind === "dedicated" && savedPreferences.dedicated_calendar_id) await ensureDedicatedImportSelection({ admin, userId: user.id, calendarId: savedPreferences.dedicated_calendar_id });
     return statusFor({ admin, userId: user.id });
   }
   if (action === "sync") {
     const { data: prefs } = await admin.from("google_calendar_preferences").select("*").eq("user_id", user.id).single();
     let destination = prefs.destination_calendar_id;
-    if (!destination && prefs.destination_kind === "dedicated") destination = await ensureDedicatedCalendar({ admin, userId: user.id, calendar: auth.calendar });
+    if (prefs.destination_kind === "dedicated") destination = await ensureDedicatedCalendar({ admin, userId: user.id, calendar: auth.calendar });
     const { data: selections } = await admin.from("google_selected_calendars").select("*").eq("user_id", user.id).eq("selected_for_import", true);
     for (const selection of selections || []) { await syncImportedCalendar({ admin, userId: user.id, calendar: auth.calendar, selection }); await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: selection.calendar_id }); }
     const enabledTypes = [["assignment", prefs.sync_assignments], ["activity", prefs.sync_activities], ["class", prefs.sync_classes], ["checklist", prefs.sync_checklists]].filter(([, enabled]) => enabled).map(([type]) => type);

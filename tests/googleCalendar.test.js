@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, isManagedEvent, mergeSnapshots, snapshotHash } from "../server/services/googleCalendarService.js";
+import { canCreateEvents, changedFields, isManagedEvent, managedProjectionDecision, mergeSnapshots, snapshotHash } from "../server/services/googleCalendarService.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -42,4 +43,26 @@ test("recurring imports materialize in the selected view and exceptions replace 
   const exception = { id: "exception", recurringEventId: "series", originalStartTime: { dateTime: "2026-09-02T09:00:00" }, start: { dateTime: "2026-09-02T10:00:00" }, status: "confirmed" };
   assert.deepEqual(googleEventsForDate([master, exception], "2026-09-02"), [exception]);
   assert.deepEqual(googleEventsForDate([master, { ...exception, status: "cancelled" }], "2026-09-02"), []);
+});
+
+test("a dedicated calendar keeps managed events native while importing manual Google events once", () => {
+  const managed = { id: "managed", extendedProperties: { private: { glowdocketManaged: "1", glowdocketItemId: "assignment-1" } } };
+  const mapped = { id: "mapped-without-metadata" };
+  const manual = { id: "manual", summary: "Mom's appointment", start: { date: "2026-09-03" }, end: { date: "2026-09-04" } };
+  const events = [managed, mapped, manual];
+  const mappingIds = new Set(["mapped-without-metadata"]);
+  const projections = events.filter((event) => managedProjectionDecision(event, mappingIds.has(event.id) ? { id: "mapping" } : null) === "import");
+  assert.deepEqual(projections.map((event) => event.id), ["manual"]);
+  assert.deepEqual(googleEventsForDate(projections, "2026-09-03").map((event) => event.id), ["manual"]);
+  assert.deepEqual(googleEventsForDate([], "2026-09-03"), [], "a deleted manual event has no remaining projection");
+});
+
+test("the active dedicated export calendar is automatically imported and watched", async () => {
+  const router = await readFile(new URL("../api/google-calendar.js", import.meta.url), "utf8");
+  const service = await readFile(new URL("../server/services/googleCalendarService.js", import.meta.url), "utf8");
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(router, /prefs\.destination_kind === "dedicated"[\s\S]*ensureDedicatedCalendar/);
+  assert.match(router, /syncImportedCalendar[\s\S]*ensureWebhookChannel/);
+  assert.match(service, /ensureDedicatedImportSelection[\s\S]*selected_for_import: true/);
+  assert.match(app, /isAutomatic[\s\S]*disabled=\{isAutomatic\}[\s\S]*Automatic/);
 });

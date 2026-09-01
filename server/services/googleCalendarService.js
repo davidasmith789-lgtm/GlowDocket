@@ -26,6 +26,10 @@ const stable = (value) => JSON.stringify(canonical(value));
 export const snapshotHash = (value) => sha256(stable(value));
 export const canCreateEvents = (role) => WRITABLE_ACCESS_ROLES.has(String(role || ""));
 export const isManagedEvent = (event) => event?.extendedProperties?.private?.[MANAGED] === "1";
+export function managedProjectionDecision(event, mapping = null) {
+  if (mapping) return "managed";
+  return isManagedEvent(event) ? "recovery_required" : "import";
+}
 
 function encryptionKey(env = process.env) {
   const source = String(env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY || "");
@@ -139,8 +143,9 @@ export async function conditionalUpdate({ calendar, calendarId, eventId, desired
 async function recoverOrClassifyManaged({ admin, userId, calendarId, event }) {
   const meta = event.extendedProperties?.private || {};
   let { data: mapping } = await admin.from("google_event_mappings").select("*").eq("user_id", userId).eq("google_calendar_id", calendarId).eq("google_event_id", event.id).maybeSingle();
-  if (mapping) return { managed: true, mapping };
-  if (!isManagedEvent(event)) return { managed: false };
+  const decision = managedProjectionDecision(event, mapping);
+  if (decision === "managed") return { managed: true, mapping };
+  if (decision === "import") return { managed: false };
   if (meta.glowdocketItemId && meta.glowdocketItemType) {
     const { data: candidate } = await admin.from("google_event_mappings").select("*").eq("user_id", userId).eq("glowdocket_type", meta.glowdocketItemType).eq("glowdocket_id", meta.glowdocketItemId).maybeSingle();
     if (candidate) {
@@ -211,10 +216,18 @@ export async function listCalendarChoices({ calendar }) {
 
 export async function ensureDedicatedCalendar({ admin, userId, calendar }) {
   const { data: prefs } = await admin.from("google_calendar_preferences").select("*").eq("user_id", userId).single();
-  if (prefs?.dedicated_calendar_id) return prefs.dedicated_calendar_id;
+  if (prefs?.dedicated_calendar_id) { await ensureDedicatedImportSelection({ admin, userId, calendarId: prefs.dedicated_calendar_id }); return prefs.dedicated_calendar_id; }
   const created = await calendar.calendars.insert({ requestBody: { summary: "GlowDocket", description: "School planning events managed by GlowDocket.", timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" } });
   await admin.from("google_calendar_preferences").update({ dedicated_calendar_id: created.data.id, destination_calendar_id: created.data.id, destination_kind: "dedicated", updated_at: new Date().toISOString() }).eq("user_id", userId);
+  await ensureDedicatedImportSelection({ admin, userId, calendarId: created.data.id });
   return created.data.id;
+}
+
+export async function ensureDedicatedImportSelection({ admin, userId, calendarId }) {
+  const { data: existing } = await admin.from("google_selected_calendars").select("calendar_id").eq("user_id", userId).eq("calendar_id", calendarId).maybeSingle();
+  if (existing) await admin.from("google_selected_calendars").update({ summary: "GlowDocket", access_role: "owner", selected_for_import: true, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("calendar_id", calendarId);
+  else await admin.from("google_selected_calendars").insert({ user_id: userId, calendar_id: calendarId, summary: "GlowDocket", access_role: "owner", selected_for_import: true, full_sync_required: true, updated_at: new Date().toISOString() }).throwOnError();
+  return calendarId;
 }
 
 export async function synchronizeNativeItems({ admin, userId, calendar, destinationCalendarId, items = [], enabledTypes = [] }) {
