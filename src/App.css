@@ -8847,6 +8847,22 @@ html[data-theme="dark"] .sync-conflict-dialog {
 
 /* Google Calendar settings stay in the normal page flow at every text size. */
 .google-calendar-settings { container-type: inline-size; }
+.google-calendar-settings-locked {
+  display: grid;
+  gap: 5px;
+  min-height: 0;
+  padding: 12px 14px;
+  border-color: color-mix(in srgb, var(--border-color) 72%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 72%, var(--surface-alt));
+  color: var(--muted-text);
+  opacity: 0.72;
+  cursor: not-allowed;
+  user-select: none;
+}
+.google-calendar-locked-heading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; }
+.google-calendar-locked-heading h4 { margin: 0; color: inherit; }
+.google-calendar-locked-heading span { flex: 0 0 auto; padding: 3px 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.7rem; font-weight: 800; }
+.google-calendar-settings-locked p { margin: 0; font-size: 0.8rem; }
 .google-calendar-settings .settings-collapsible-content {
   display: grid;
   width: 100%;

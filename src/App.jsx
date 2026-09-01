@@ -1980,6 +1980,7 @@ function App() {
   const [signInName, setSignInName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
+  const googleCalendarPreviewEnabled = accountEmail.trim().toLowerCase() === "purplxr@gmail.com";
   const [accountEmailVerified, setAccountEmailVerified] = useState(false);
   const [accountDisplayNameDraft, setAccountDisplayNameDraft] = useState("");
   const [accountEmailDraft, setAccountEmailDraft] = useState("");
@@ -2275,7 +2276,7 @@ function App() {
   });
 
   const refreshGoogleCalendarStatus = useCallback(async () => {
-    if (accountMode !== "cloud") return;
+    if (accountMode !== "cloud" || !googleCalendarPreviewEnabled) return;
     try {
       const result = await getGoogleCalendarStatus();
       setGoogleCalendarState(result);
@@ -2287,10 +2288,10 @@ function App() {
     } catch (error) {
       if (!/not connected/i.test(error.message)) setGoogleCalendarNotice(error.message);
     }
-  }, [accountMode]);
+  }, [accountMode, googleCalendarPreviewEnabled]);
 
   const runGoogleCalendarSync = useCallback(async ({ quiet = false } = {}) => {
-    if (!googleCalendarState.connected || googleCalendarSyncingRef.current) return;
+    if (!googleCalendarPreviewEnabled || !googleCalendarState.connected || googleCalendarSyncingRef.current) return;
     googleCalendarSyncingRef.current = true;
     if (!quiet) setGoogleCalendarBusy("sync");
     try {
@@ -2309,17 +2310,17 @@ function App() {
   // The save helpers are intentionally read at execution time; adding the large App-local
   // callbacks as dependencies would retrigger synchronization on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarEvents, checklistStorageKey, checklists, courses, googleCalendarState.connected, googleCalendarState.preferences, tasks, userSettings]);
+  }, [calendarEvents, checklistStorageKey, checklists, courses, googleCalendarPreviewEnabled, googleCalendarState.connected, googleCalendarState.preferences, tasks, userSettings]);
 
   useEffect(() => { refreshGoogleCalendarStatus(); }, [refreshGoogleCalendarStatus, currentUser]);
   useEffect(() => {
-    if (!googleCalendarState.connected) return undefined;
+    if (!googleCalendarPreviewEnabled || !googleCalendarState.connected) return undefined;
     const sync = () => { if (Date.now() - googleCalendarLastAutoSyncRef.current >= 15_000) runGoogleCalendarSync({ quiet: true }); };
     const focus = () => { if (document.visibilityState === "visible") sync(); };
     window.addEventListener("focus", sync); window.addEventListener("online", sync); document.addEventListener("visibilitychange", focus);
     const timer = window.setTimeout(sync, 1200);
     return () => { window.clearTimeout(timer); window.removeEventListener("focus", sync); window.removeEventListener("online", sync); document.removeEventListener("visibilitychange", focus); };
-  }, [googleCalendarState.connected, runGoogleCalendarSync]);
+  }, [googleCalendarPreviewEnabled, googleCalendarState.connected, runGoogleCalendarSync]);
 
   const handleGoogleConnect = async () => {
     setGoogleCalendarBusy("connect"); setGoogleCalendarNotice("");
@@ -11668,7 +11669,7 @@ function App() {
                     <label className="settings-toggle settings-toggle-copy"><span><strong>School-cycle labels</strong><small>Display A Day, B Day, and custom cycle labels on dates.</small></span><input type="checkbox" checked={userSettings.showCalendarCycleLabels !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarCycleLabels", e.target.checked)} /></label>
                     <label className="settings-toggle settings-toggle-copy"><span><strong>Assignment indicators</strong><small>Show a course-colored dot on dates with assignments.</small></span><input type="checkbox" checked={userSettings.showCalendarTaskDots !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarTaskDots", e.target.checked)} /></label>
                   </SettingsCard>
-                  <SettingsCard title="Google Calendar" description="See selected Google calendars here and keep GlowDocket school items synchronized." className="settings-section-wide google-calendar-settings" collapsible={false}>
+                  {googleCalendarPreviewEnabled ? <SettingsCard title="Google Calendar" description="See selected Google calendars here and keep GlowDocket school items synchronized." className="settings-section-wide google-calendar-settings" collapsible={false}>
                     {!googleCalendarState.connected ? <>
                       <p>Connect Google Calendar to import events as read-only items and send selected GlowDocket categories to a private GlowDocket calendar.</p>
                       <button type="button" className="btn btn-primary" onClick={handleGoogleConnect} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "connect" ? "Opening Google…" : "Connect Google Calendar"}</button>
@@ -11709,7 +11710,10 @@ function App() {
                       {googleCalendarState.mappings?.length > 0 && <details className="google-managed-items"><summary>Synced GlowDocket items</summary><div>{googleCalendarState.mappings.slice(0, 100).map((mapping) => <div key={`${mapping.glowdocket_type}:${mapping.glowdocket_id}`}><span><strong>{googleManagedItemLabel(mapping)}</strong><small>{mapping.glowdocket_type} · {mapping.state === "active" ? "In Google Calendar" : "Not in Google Calendar"}</small></span><button type="button" className="btn btn-secondary" onClick={() => handleGoogleManagedItemAction(mapping)} disabled={Boolean(googleCalendarBusy)}>{mapping.state === "active" ? "Remove from Google Calendar" : "Add back to Google Calendar"}</button></div>)}</div></details>}
                     </>}
                     {googleCalendarNotice && <p className="hint-text" role="status">{googleCalendarNotice}</p>}
-                  </SettingsCard>
+                  </SettingsCard> : <section className="settings-section settings-section-wide google-calendar-settings-locked" aria-disabled="true">
+                    <div className="google-calendar-locked-heading"><h4>Google Calendar</h4><span>In development</span></div>
+                    <p>Google Calendar integration is temporarily unavailable while it is being improved.</p>
+                  </section>}
                 </>)}
 
                 {settingsSection === "cycle" && (
