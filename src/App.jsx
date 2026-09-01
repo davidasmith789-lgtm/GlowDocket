@@ -73,6 +73,8 @@ import AssignmentFlashcards from "./components/AssignmentFlashcards.jsx";
 import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
 import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
+import { applyGoogleNativeUpdates, buildGoogleCalendarItems, googleEventTime, googleEventsForDate } from "./googleCalendarUtils.js";
+import { disconnectGoogleCalendar, getGoogleCalendarChoices, getGoogleCalendarStatus, restoreGoogleCalendarItem, saveGoogleCalendarSettings, startGoogleCalendarOAuth, syncGoogleCalendar, unlinkGoogleCalendarItem } from "./googleCalendarClient.js";
 import { advanceBadgeMastery, applyFlashcardMasterySummary, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getCompletionStreak, getGamificationLevel, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum, XP_REWARDS } from "./gamificationUtils.js";
 
 /*
@@ -1011,20 +1013,6 @@ function recoveryRequestedOnLoad() {
  */
 
 
-
-/**
- * Read the operating system's preferred color scheme.
- * This is only used when the user has not already saved a theme choice.
- */
-function getSystemPreference() {
-  if (
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
-    return "dark";
-  }
-  return "light";
-}
 
 /**
  * Accept 12-hour times such as "3", "11", "3:05", or "11:45" and return a
@@ -2240,6 +2228,16 @@ function App() {
   const [calendarEventTimeError, setCalendarEventTimeError] = useState("");
   const [calendarDayColorScope, setCalendarDayColorScope] = useState("date");
   const [calendarDayColorUndoStack, setCalendarDayColorUndoStack] = useState([]);
+  const [googleCalendarState, setGoogleCalendarState] = useState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], mappings: [] });
+  const [googleCalendarChoices, setGoogleCalendarChoices] = useState([]);
+  const [googleCalendarBusy, setGoogleCalendarBusy] = useState("");
+  const [googleCalendarNotice, setGoogleCalendarNotice] = useState("");
+  const [googleDisconnectOpen, setGoogleDisconnectOpen] = useState(false);
+  const [keepGoogleCalendar, setKeepGoogleCalendar] = useState(true);
+  const [pendingGoogleAssignmentDelete, setPendingGoogleAssignmentDelete] = useState(null);
+  const [removeDeletedAssignmentFromGoogle, setRemoveDeletedAssignmentFromGoogle] = useState(true);
+  const googleCalendarSyncingRef = useRef(false);
+  const googleCalendarLastAutoSyncRef = useRef(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -2274,6 +2272,74 @@ function App() {
       return [];
     }
   });
+
+  const refreshGoogleCalendarStatus = useCallback(async () => {
+    if (accountMode !== "cloud") return;
+    try {
+      const result = await getGoogleCalendarStatus();
+      setGoogleCalendarState(result);
+      googleCalendarLastAutoSyncRef.current = Date.now();
+      if (result.connected) {
+        const choices = await getGoogleCalendarChoices();
+        setGoogleCalendarChoices(choices.calendars || []);
+      }
+    } catch (error) {
+      if (!/not connected/i.test(error.message)) setGoogleCalendarNotice(error.message);
+    }
+  }, [accountMode]);
+
+  const runGoogleCalendarSync = useCallback(async ({ quiet = false } = {}) => {
+    if (!googleCalendarState.connected || googleCalendarSyncingRef.current) return;
+    googleCalendarSyncingRef.current = true;
+    if (!quiet) setGoogleCalendarBusy("sync");
+    try {
+      const items = buildGoogleCalendarItems({ tasks, calendarEvents, checklists, courses, settings: userSettings, preferences: googleCalendarState.preferences || {} });
+      const result = await syncGoogleCalendar(items);
+      if (result.nativeUpdates?.length) {
+        const updated = applyGoogleNativeUpdates({ tasks, calendarEvents, checklists }, result.nativeUpdates);
+        setTasks(updated.tasks); saveTasksForCurrentUser(updated.tasks);
+        saveCalendarEvents(updated.calendarEvents);
+        setChecklists(updated.checklists); localStorage.setItem(checklistStorageKey, JSON.stringify(updated.checklists));
+      }
+      setGoogleCalendarState(result);
+      setGoogleCalendarNotice("Google Calendar is up to date.");
+    } catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { googleCalendarSyncingRef.current = false; if (!quiet) setGoogleCalendarBusy(""); }
+  // The save helpers are intentionally read at execution time; adding the large App-local
+  // callbacks as dependencies would retrigger synchronization on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendarEvents, checklistStorageKey, checklists, courses, googleCalendarState.connected, googleCalendarState.preferences, tasks, userSettings]);
+
+  useEffect(() => { refreshGoogleCalendarStatus(); }, [refreshGoogleCalendarStatus, currentUser]);
+  useEffect(() => {
+    if (!googleCalendarState.connected) return undefined;
+    const sync = () => { if (Date.now() - googleCalendarLastAutoSyncRef.current >= 15_000) runGoogleCalendarSync({ quiet: true }); };
+    const focus = () => { if (document.visibilityState === "visible") sync(); };
+    window.addEventListener("focus", sync); window.addEventListener("online", sync); document.addEventListener("visibilitychange", focus);
+    const timer = window.setTimeout(sync, 1200);
+    return () => { window.clearTimeout(timer); window.removeEventListener("focus", sync); window.removeEventListener("online", sync); document.removeEventListener("visibilitychange", focus); };
+  }, [googleCalendarState.connected, runGoogleCalendarSync]);
+
+  const handleGoogleConnect = async () => {
+    setGoogleCalendarBusy("connect"); setGoogleCalendarNotice("");
+    try { const result = await startGoogleCalendarOAuth(); window.location.assign(result.authorizationUrl); }
+    catch (error) { setGoogleCalendarNotice(error.message); setGoogleCalendarBusy(""); }
+  };
+  const handleGoogleSetting = async (changes) => {
+    setGoogleCalendarBusy("settings");
+    try {
+      const result = await saveGoogleCalendarSettings(changes);
+      if (result.incrementalAuthorizationRequired) { window.location.assign(result.authorizationUrl); return; }
+      setGoogleCalendarState(result); setGoogleCalendarNotice("Google Calendar settings saved.");
+    } catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { setGoogleCalendarBusy(""); }
+  };
+  const handleGoogleDisconnect = async () => {
+    setGoogleCalendarBusy("disconnect");
+    try { const result = await disconnectGoogleCalendar(keepGoogleCalendar); setGoogleCalendarState({ connected: false, connection: null, preferences: null, selectedCalendars: [], importedEvents: [], issues: [], mappings: [] }); setGoogleDisconnectOpen(false); setGoogleCalendarNotice(result.warnings?.join(" ") || "Google Calendar disconnected. Your GlowDocket data was kept."); }
+    catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { setGoogleCalendarBusy(""); }
+  };
   const [workspaceLayout, setWorkspaceLayout] = useState(() => {
   try {
     const savedWorkspace = JSON.parse(localStorage.getItem(workspaceStorageKey) || "null");
@@ -2667,7 +2733,6 @@ function App() {
         saveLocalSnapshot(localStorage, currentUser, stateToSave, result.revision, false);
         setSyncStatus("saved");
         setSyncError("");
-        setCloudSyncDetails({ revision: Number(result.revision), updatedAt: result.updated_at || "", tasks: stateToSave.tasks.length, courses: stateToSave.courses.length, checklists: stateToSave.checklists.length, calendarEvents: stateToSave.calendarEvents.length });
         savedSuccessfully = true;
       } catch (error) {
         if (error.code === "revision_conflict") {
@@ -2692,7 +2757,6 @@ function App() {
             setCalendarEvents(merged.calendarEvents);
             setSyncStatus("saved");
             setSyncError("");
-            setCloudSyncDetails({ revision: Number(result.revision), updatedAt: result.updated_at || "", tasks: merged.tasks.length, courses: merged.courses.length, checklists: merged.checklists.length, calendarEvents: merged.calendarEvents.length });
             savedSuccessfully = true;
           } catch (mergeError) {
             cloudSaveQueuedRef.current = false;
@@ -5082,30 +5146,30 @@ function App() {
     });
   };
 
-  // Deleting moves an assignment to recoverable Trash instead of erasing it.
-  const handleDelete = (id) => {
+  const finishAssignmentDelete = (id, removeFromGoogle = true) => {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
-    if (userSettings.confirmBeforeTrash !== false) {
-      const taskToDelete = tasks.find((task) => task.id === id);
-      const confirmed = window.confirm(
-        `Move "${taskToDelete?.title || "this assignment"}" to Trash?`,
-      );
-      if (!confirmed) return;
-    }
-
     const deletedAt = new Date().toISOString();
     setDeletedAssignmentUndo({ id, title: taskBeingDeleted?.title || "Assignment" });
-
     setTasks((prev) => {
-      const updated = prev.map((task) =>
-        task.id === id ? { ...task, isDeleted: true, deletedAt, syncUpdatedAt: deletedAt } : task,
-      );
-
-      saveTasksForCurrentUser(updated);
-      return updated;
+      const updated = prev.map((task) => task.id === id ? { ...task, isDeleted: true, deletedAt, syncUpdatedAt: deletedAt } : task);
+      saveTasksForCurrentUser(updated); return updated;
     });
     if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) runImmediateReminderMutation(taskBeingDeleted.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
     if (accountMode === "cloud") getSupabaseBrowserClient().then((client) => client.rpc("unlink_assignment_flashcards", { assignment_id: id })).catch(() => {});
+    if (googleCalendarState.connected) unlinkGoogleCalendarItem("assignment", id, removeFromGoogle).catch((error) => setGoogleCalendarNotice(error.message));
+  };
+
+  // Deleting moves an assignment to recoverable Trash instead of erasing it.
+  const handleDelete = (id) => {
+    const taskBeingDeleted = tasks.find((task) => task.id === id);
+    if (googleCalendarState.connected) { setPendingGoogleAssignmentDelete(taskBeingDeleted || { id, title: "Assignment" }); setRemoveDeletedAssignmentFromGoogle(true); return; }
+    if (userSettings.confirmBeforeTrash !== false) {
+      const confirmed = window.confirm(
+        `Move "${taskBeingDeleted?.title || "this assignment"}" to Trash?`,
+      );
+      if (!confirmed) return;
+    }
+    finishAssignmentDelete(id);
   };
 
   const handleRestoreDeleted = (id) => {
@@ -6325,6 +6389,7 @@ function App() {
   };
 
   const handleDeleteCalendarEvent = (eventId) => {
+    if (googleCalendarState.connected) unlinkGoogleCalendarItem("activity", eventId, true).catch((error) => setGoogleCalendarNotice(error.message));
     updateSyncDeletionMarkers("calendarEvents", eventId);
     saveCalendarEvents(calendarEvents.filter((entry) => entry.id !== eventId));
     setExpandedCalendarEventId(null);
@@ -6494,22 +6559,6 @@ function App() {
     saveChecklistData(checklists.map((list) => list.id === listId ? updater(list) : list));
   };
 
-  const reorderChecklistCollection = (items, sourceId, targetId, position = "before") => {
-    if (!sourceId || sourceId === targetId) return items;
-    const next = [...items];
-    const sourceIndex = next.findIndex((list) => list.id === sourceId);
-    if (sourceIndex < 0) return items;
-    const [moved] = next.splice(sourceIndex, 1);
-    const targetIndex = next.findIndex((list) => list.id === targetId);
-    if (targetIndex < 0) return items;
-    next.splice(targetIndex + (position === "after" ? 1 : 0), 0, moved);
-    return next;
-  };
-
-  const handleReorderChecklist = (sourceId, targetId, position = "before") => {
-    saveChecklistData(reorderChecklistCollection(checklists, sourceId, targetId, position));
-  };
-
   const getChecklistGalleryPosition = (list, index) => ({
     column: Math.max(1, Number(list.galleryColumn) || index + 1),
     row: Math.max(1, Number(list.galleryRow) || 1),
@@ -6663,6 +6712,7 @@ function App() {
     if (!window.confirm("Delete this checklist item permanently?")) return;
     updateSyncDeletionMarkers("checklistItems", `${listId}:${itemId}`);
     updateChecklist(listId, (list) => ({ ...list, items: (list.items || []).filter((item) => item.id !== itemId) }));
+    if (googleCalendarState.connected) unlinkGoogleCalendarItem("checklist", itemId, true).catch((error) => setGoogleCalendarNotice(error.message));
   };
 
   const handleReorderChecklistItem = (listId, sourceId, targetId) => {
@@ -7025,6 +7075,23 @@ function App() {
   const selectedCalendarEvents = calendarEvents
     .filter((entry) => entry?.date === selectedCalendarDateKey)
     .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")) || String(a.name || "").localeCompare(String(b.name || "")));
+  const selectedGoogleCalendarEvents = googleEventsForDate(googleCalendarState.importedEvents || [], selectedCalendarDateKey)
+    .sort((a, b) => googleEventTime(a).localeCompare(googleEventTime(b)) || String(a.title || "").localeCompare(String(b.title || "")));
+  const googleManagedItemLabel = (mapping) => {
+    if (mapping.glowdocket_type === "assignment") return tasks.find((item) => String(item.id) === mapping.glowdocket_id)?.title || "Assignment";
+    if (mapping.glowdocket_type === "activity") return calendarEvents.find((item) => String(item.id) === mapping.glowdocket_id)?.name || "Activity";
+    if (mapping.glowdocket_type === "checklist") return checklists.flatMap((list) => list.items || []).find((item) => String(item.id) === mapping.glowdocket_id)?.text || "Checklist item";
+    return mapping.glowdocket_id.startsWith("weekly:") ? "Recurring class" : "Class occurrence";
+  };
+  const handleGoogleManagedItemAction = async (mapping) => {
+    setGoogleCalendarBusy("managed-item");
+    try {
+      if (mapping.state === "active") await unlinkGoogleCalendarItem(mapping.glowdocket_type, mapping.glowdocket_id, true);
+      else await restoreGoogleCalendarItem(mapping.glowdocket_type, mapping.glowdocket_id);
+      await refreshGoogleCalendarStatus(); setGoogleCalendarNotice(mapping.state === "active" ? "Removed from Google Calendar. The GlowDocket item was kept." : "The item will be added back on the next sync.");
+    } catch (error) { setGoogleCalendarNotice(error.message); }
+    finally { setGoogleCalendarBusy(""); }
+  };
   const selectedCalendarActivities = selectedCalendarEvents.filter((entry) => entry.type === "day-note");
   const calendarDayColors = userSettings.calendarDayColors || { dates: {}, weekdays: {}, cycleDays: {}, entryNames: {} };
   const getCalendarColorScopeTarget = (colors, scope, date = selectedDate) => {
@@ -10541,6 +10608,7 @@ function App() {
                         ))}
                       </div>
                     ) : <p>No events or classes are scheduled for this day.</p>}
+                    {selectedGoogleCalendarEvents.length > 0 && <div className="calendar-class-meetings calendar-event-list google-imported-event-list" aria-label="Imported Google events">{selectedGoogleCalendarEvents.map((entry) => <div className="calendar-event-entry google-imported-event" key={`${entry.calendarId}:${entry.id}`}><div className="calendar-event-row"><span><strong>{entry.title}</strong><small><span className="google-calendar-badge">Google</span> Read-only{entry.location ? ` · ${entry.location}` : ""}</small></span><time>{entry.allDay ? "All day" : formatMeetingTime(googleEventTime(entry), useMilitaryTime)}</time></div>{(entry.description || entry.meetingLink || entry.htmlLink) && <div className="calendar-event-notes">{entry.description && <p>{entry.description}</p>}{entry.meetingLink && <a href={entry.meetingLink} target="_blank" rel="noreferrer">Join meeting</a>}{entry.htmlLink && <a href={entry.htmlLink} target="_blank" rel="noreferrer">Open in Google Calendar</a>}</div>}</div>)}</div>}
                     <div className="calendar-activities-section">
                       <div className="calendar-events-heading">
                         <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long" })} Activities</strong>
@@ -11544,7 +11612,7 @@ function App() {
                   </>
                 )}
 
-                {settingsSection === "calendar" && (
+                {settingsSection === "calendar" && (<>
                   <SettingsCard title="Calendar Display" description="Choose how dates and school information appear in both calendar tools." className="settings-section-wide" collapsible={false}>
                     <div className="settings-option-grid">
                       <label className="settings-select-row settings-option-card">
@@ -11573,7 +11641,25 @@ function App() {
                     <label className="settings-toggle settings-toggle-copy"><span><strong>School-cycle labels</strong><small>Display A Day, B Day, and custom cycle labels on dates.</small></span><input type="checkbox" checked={userSettings.showCalendarCycleLabels !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarCycleLabels", e.target.checked)} /></label>
                     <label className="settings-toggle settings-toggle-copy"><span><strong>Assignment indicators</strong><small>Show a course-colored dot on dates with assignments.</small></span><input type="checkbox" checked={userSettings.showCalendarTaskDots !== false} onChange={(e) => handleAddFieldSettingChange("showCalendarTaskDots", e.target.checked)} /></label>
                   </SettingsCard>
-                )}
+                  <SettingsCard title="Google Calendar" description="See selected Google calendars here and keep GlowDocket school items synchronized." className="settings-section-wide google-calendar-settings" collapsible={false}>
+                    {!googleCalendarState.connected ? <>
+                      <p>Connect Google Calendar to import events as read-only items and send selected GlowDocket categories to a private GlowDocket calendar.</p>
+                      <button type="button" className="btn btn-primary" onClick={handleGoogleConnect} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "connect" ? "Opening Google…" : "Connect Google Calendar"}</button>
+                    </> : <>
+                      <div className="google-calendar-connection"><span className="google-calendar-badge">Google</span><span><strong>Connected as {googleCalendarState.connection?.google_email}</strong><small>{googleCalendarState.connection?.status === "connected" ? "Connected" : "Needs attention"}</small></span></div>
+                      <fieldset className="google-calendar-options"><legend>Import from</legend>{googleCalendarChoices.map((calendar) => <label key={calendar.id}><input type="checkbox" checked={googleCalendarState.selectedCalendars?.some((item) => item.calendar_id === calendar.id && item.selected_for_import)} onChange={(event) => { const selected = new Set((googleCalendarState.selectedCalendars || []).filter((item) => item.selected_for_import).map((item) => item.calendar_id)); if (event.target.checked) selected.add(calendar.id); else selected.delete(calendar.id); handleGoogleSetting({ import_calendar_ids: [...selected] }); }} /><span>{calendar.summary}</span></label>)}</fieldset>
+                      <label className="settings-select-row"><span>Send GlowDocket events to</span><select value={googleCalendarState.preferences?.destination_kind || "dedicated"} onChange={(event) => handleGoogleSetting(event.target.value === "dedicated" ? { destination_kind: "dedicated" } : { destination_kind: "existing", destination_calendar_id: googleCalendarChoices.find((item) => item.writable)?.id || "" })}><option value="dedicated">GlowDocket (private, recommended)</option><option value="existing">An existing writable calendar</option></select></label>
+                      {googleCalendarState.preferences?.destination_kind === "existing" && <label className="settings-select-row"><span>Existing calendar</span><select value={googleCalendarState.preferences?.destination_calendar_id || ""} onChange={(event) => handleGoogleSetting({ destination_kind: "existing", destination_calendar_id: event.target.value })}>{googleCalendarChoices.filter((calendar) => calendar.writable).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.summary}</option>)}</select></label>}
+                      <div className="google-calendar-category-grid">{[["sync_assignments","Assignments"],["sync_activities","Activities/events"],["sync_classes","Classes"],["sync_checklists","Dated checklist items"]].map(([key,label]) => <label className="settings-toggle settings-toggle-copy" key={key}><span><strong>{label}</strong></span><input type="checkbox" checked={Boolean(googleCalendarState.preferences?.[key])} onChange={(event) => handleGoogleSetting({ [key]: event.target.checked })} /></label>)}</div>
+                      <label className="settings-toggle settings-toggle-copy"><span><strong>Include GlowDocket notes in Google events</strong><small>Off by default because the destination calendar may be shared.</small></span><input type="checkbox" checked={Boolean(googleCalendarState.preferences?.include_notes)} onChange={(event) => handleGoogleSetting({ include_notes: event.target.checked })} /></label>
+                      <div className="google-calendar-actions"><button type="button" className="btn btn-primary" onClick={() => runGoogleCalendarSync()} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "sync" ? "Syncing…" : "Sync now"}</button><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(true)} disabled={Boolean(googleCalendarBusy)}>Disconnect Google</button></div>
+                      <p className="hint-text">Last sync: {googleCalendarState.connection?.last_sync_at ? new Date(googleCalendarState.connection.last_sync_at).toLocaleString() : "Not yet"}</p>
+                      {googleCalendarState.issues?.length > 0 && <p className="google-calendar-warning">{googleCalendarState.issues.length} recoverable synchronization issue{googleCalendarState.issues.length === 1 ? "" : "s"} need attention. Your GlowDocket data remains saved.</p>}
+                      {googleCalendarState.mappings?.length > 0 && <details className="google-managed-items"><summary>Synced GlowDocket items</summary><div>{googleCalendarState.mappings.slice(0, 100).map((mapping) => <div key={`${mapping.glowdocket_type}:${mapping.glowdocket_id}`}><span><strong>{googleManagedItemLabel(mapping)}</strong><small>{mapping.glowdocket_type} · {mapping.state === "active" ? "In Google Calendar" : "Not in Google Calendar"}</small></span><button type="button" className="btn btn-secondary" onClick={() => handleGoogleManagedItemAction(mapping)} disabled={Boolean(googleCalendarBusy)}>{mapping.state === "active" ? "Remove from Google Calendar" : "Add back to Google Calendar"}</button></div>)}</div></details>}
+                    </>}
+                    {googleCalendarNotice && <p className="hint-text" role="status">{googleCalendarNotice}</p>}
+                  </SettingsCard>
+                </>)}
 
                 {settingsSection === "cycle" && (
                   <SettingsCard title="Class Repeats" description="Choose how your classes repeat. Use A/B days for an alternating schedule, or choose the exact weekdays and times when each college class happens." className="school-cycle-settings" collapsible={false}>
@@ -12601,6 +12687,8 @@ function App() {
           </div>
         </div>
       )}
+      {googleDisconnectOpen && <div className="calendar-event-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGoogleDisconnectOpen(false); }}><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-disconnect-title"><h2 id="google-disconnect-title">Disconnect Google Calendar?</h2><p>Your GlowDocket data will not be deleted.</p><label><input type="checkbox" checked={keepGoogleCalendar} onChange={(event) => setKeepGoogleCalendar(event.target.checked)} /> Keep my GlowDocket calendar in Google</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(false)}>Cancel</button><button type="button" className="btn btn-danger" onClick={handleGoogleDisconnect} disabled={googleCalendarBusy === "disconnect"}>{googleCalendarBusy === "disconnect" ? "Disconnecting…" : "Disconnect Google"}</button></div></section></div>}
+      {pendingGoogleAssignmentDelete && <div className="calendar-event-modal" role="presentation"><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-assignment-delete-title"><h2 id="google-assignment-delete-title">Delete assignment?</h2><p>{pendingGoogleAssignmentDelete.title || "This assignment"} will move to Trash.</p><label><input type="checkbox" checked={removeDeletedAssignmentFromGoogle} onChange={(event) => setRemoveDeletedAssignmentFromGoogle(event.target.checked)} /> Remove from Google Calendar</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setPendingGoogleAssignmentDelete(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingGoogleAssignmentDelete.id, removeDeletedAssignmentFromGoogle); setPendingGoogleAssignmentDelete(null); }}>Delete assignment</button></div></section></div>}
       {tutorialOpen && (
         <div className="tutorial-backdrop" role="presentation">
           <section ref={tutorialRef} className="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy" tabIndex="-1">

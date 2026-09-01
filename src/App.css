@@ -8786,3 +8786,40 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .mobile-home-available > div > button { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--card-bg); color: var(--text-color); font-weight: 800; }
   .mobile-home-available > div > button span { color: var(--primary-color); font-size: 1.2rem; }
 }
+.google-calendar-settings .google-calendar-connection,
+.google-calendar-connection,
+.google-calendar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.google-calendar-connection > span:last-child { display: grid; gap: 0.15rem; }
+.google-calendar-connection small { color: var(--muted-text, #718096); }
+.google-calendar-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.12rem 0.42rem;
+  color: var(--accent, #4285f4);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.google-calendar-options { display: grid; gap: 0.55rem; margin: 1rem 0; border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 0.8rem; padding: 0.85rem; }
+.google-calendar-options label { display: flex; align-items: center; gap: 0.55rem; }
+.google-calendar-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-block: 1rem; }
+.google-calendar-warning { border-left: 3px solid #d97706; padding-left: 0.7rem; }
+.google-managed-items { margin-top: 1rem; }
+.google-managed-items > div { display: grid; gap: 0.55rem; margin-top: 0.75rem; }
+.google-managed-items > div > div { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.65rem; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); border-radius: 0.7rem; }
+.google-managed-items span { display: grid; gap: 0.15rem; }
+.google-imported-event .calendar-event-row { cursor: default; }
+.google-imported-event .calendar-event-notes { display: grid; gap: 0.5rem; }
+.google-disconnect-dialog { width: min(92vw, 31rem); border-radius: 1rem; padding: 1.25rem; background: var(--panel-bg, #fff); color: inherit; box-shadow: 0 24px 70px #0006; }
+.google-disconnect-dialog > label { display: flex; gap: 0.55rem; align-items: center; margin: 1rem 0; }
+
+@media (max-width: 620px) { .google-calendar-category-grid { grid-template-columns: 1fr; } }

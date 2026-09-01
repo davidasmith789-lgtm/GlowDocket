@@ -154,7 +154,22 @@ Reminder endpoints also enforce exact origin checks, signed installation ownersh
 
 ## Feedback & Support
 
-The former Recommendations navigation surface is now **Feedback & Support**. Its legacy `/api/recommendations` Google Docs endpoint remains in the repository so historical Recommendation data and rollback options are not destroyed. New submissions use `/api/feedback`, `public.feedback_submissions`, and the private `feedback-screenshots` Supabase Storage bucket.
+The former Recommendations navigation surface is now **Feedback & Support**. Historical submissions remain in their original Google Doc, while the retired `/api/recommendations` endpoint was removed to reserve Vercel's limited serverless-function capacity for Google Calendar. New submissions use `/api/feedback`, `public.feedback_submissions`, and the private `feedback-screenshots` Supabase Storage bucket.
+
+## Google Calendar Release 1 deployment
+
+Run `supabase/migrations/202608310001_create_google_calendar_integration.sql`, then configure a Google OAuth web client with the exact callback URL used by `GOOGLE_CALENDAR_REDIRECT_URI` (the production value is `https://glowdocket.com/api/google-calendar?action=callback`). The Google Calendar API must be enabled and the OAuth consent screen should remain limited to approved test users until verification is complete.
+
+Required server environment variables:
+
+- `GOOGLE_CALENDAR_CLIENT_ID`
+- `GOOGLE_CALENDAR_CLIENT_SECRET`
+- `GOOGLE_CALENDAR_REDIRECT_URI`
+- `GOOGLE_CALENDAR_APP_ORIGIN` (for example, `https://glowdocket.com`)
+- `GOOGLE_CALENDAR_WEBHOOK_URL` (for example, `https://glowdocket.com/api/google-calendar?action=webhook`)
+- `GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY` (a private random value of at least 32 characters)
+
+The existing `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `CRON_SECRET` variables are also required. Tokens remain encrypted and server-only. The existing daily reminder maintenance function also renews expiring Google notification channels.
 
 ### Supabase setup
 
