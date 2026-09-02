@@ -8225,10 +8225,11 @@ html[data-theme="dark"] .sync-conflict-dialog {
 }
 @media (max-width: 767px) { .badge-animation-toggle { display: none; } }
 
-/* Switch motion fully off for the page session when sustained frame drops are detected. */
-.adaptive-low-motion .App *:not(.cloud-sync-status),
-.adaptive-low-motion .App *:not(.cloud-sync-status)::before,
-.adaptive-low-motion .App *:not(.cloud-sync-status)::after {
+/* Reduce decorative page motion after a severe stall, but never erase earned
+   profile motion or the celebration the user explicitly triggered. */
+.adaptive-low-motion .App *:not(.cloud-sync-status, .completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *),
+.adaptive-low-motion .App *:not(.cloud-sync-status, .completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::before,
+.adaptive-low-motion .App *:not(.cloud-sync-status, .completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::after {
   animation: none !important;
   scroll-behavior: auto !important;
   transition: none !important;

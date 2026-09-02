@@ -38,6 +38,8 @@ test("assignment completion uses dependency-free confetti with an emergency perf
   assert.match(adaptiveMotion, /classList\.add\(LOW_MOTION_CLASS\)/);
   assert.doesNotMatch(adaptiveMotion, /classList\.remove\(LOW_MOTION_CLASS\)[\s\S]*requestAnimationFrame\(sample\)/);
   assert.match(css, /\.adaptive-low-motion \.App/);
+  assert.match(css, /\.adaptive-low-motion \.App \*:not\(\.cloud-sync-status, \.completion-celebration, \.completion-celebration \*/);
+  assert.doesNotMatch(css, /\.adaptive-low-motion \.App \*:not\(\.cloud-sync-status\),/);
   assert.doesNotMatch(app, /completion-gold-ripple-ring/);
   assert.match(app, /Array\.from\(\{ length: 12 \}/);
   assert.match(css, /@keyframes completion-confetti-fall/);
