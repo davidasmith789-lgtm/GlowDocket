@@ -1253,7 +1253,6 @@ button,
   0%, 100% { box-shadow: 0 0 16px color-mix(in srgb, var(--hero-text) 16%, transparent), 0 0 36px color-mix(in srgb, var(--hero-text) 7%, transparent); }
   50% { box-shadow: 0 0 24px color-mix(in srgb, var(--hero-text) 28%, transparent), 0 0 52px color-mix(in srgb, var(--hero-text) 13%, transparent); }
 }
-@media (prefers-reduced-motion: reduce) { .account-header-button { animation: none; } }
 .account-header-badge { position: relative; display: grid; width: 58px; height: 58px; place-items: center; justify-self: center; overflow: visible; transform: translate(-23px, -23px); }
 .account-header-badge-center { position: absolute; inset: 0; display: grid; place-items: center; }
 .account-header-badge-center .achievement-medallion { transform: scale(.5); transform-origin: 50% 50%; }
@@ -3513,9 +3512,9 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 .App.density-spacious .task-card,
 .App.density-spacious .settings-section { padding: 22px; }
 .App.density-spacious .app-shell { gap: 24px; }
-.App.reduce-motion *,
-.App.reduce-motion *::before,
-.App.reduce-motion *::after {
+.App.reduce-motion *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *),
+.App.reduce-motion *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::before,
+.App.reduce-motion *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::after {
   scroll-behavior: auto !important;
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
@@ -5495,8 +5494,6 @@ a,
 @keyframes celebration-preview-firework { 0% { opacity: 0; transform: translate3d(0,142px,0) scale(.3); } 18% { opacity: 1; } 42% { transform: translate3d(0,48px,0) scale(.55); } 52% { transform: translate3d(0,38px,0) scale(1.6); } 70% { opacity: 1; transform: translate3d(var(--preview-drift),68px,0) scale(1); } 100% { opacity: 0; transform: translate3d(calc(var(--preview-drift) * 1.8),112px,0) scale(.2); } }
 @keyframes celebration-preview-gold-ripple { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.15); } 10% { opacity: .55; } 24% { opacity: .9; transform: translate(-50%,-50%) scale(1.1); } 42% { opacity: .78; transform: translate(-50%,-50%) scale(2.4); } 62% { opacity: .52; transform: translate(-50%,-50%) scale(4); } 82% { opacity: .22; transform: translate(-50%,-50%) scale(5.7); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(7.2); } }
 @media (max-width: 650px) { .celebration-studio-preview-row { grid-template-columns: 1fr; } .celebration-color-preview { width: 100%; } }
-.reduce-motion .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); }
-@media (prefers-reduced-motion: reduce) { .celebration-color-preview i { animation: none; opacity: .85; transform: translateY(38px); } }
 @media (max-width: 767px) {
   .mobile-app-ui .studio-celebration-pill { display: none; }
   .mobile-app-ui .celebration-color-preview > div { contain: none; }
@@ -7832,7 +7829,9 @@ html[data-theme="dark"] .tutorial-demo-link {
 
 @media (prefers-reduced-motion: reduce) {
   html:focus-within { scroll-behavior: auto; }
-  *, *::before, *::after {
+  *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *),
+  *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::before,
+  *:not(.completion-celebration, .completion-celebration *, .celebration-color-preview, .celebration-color-preview *, .account-header-button, .is-mastery-animated, .is-mastery-animated *)::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -8227,35 +8226,12 @@ html[data-theme="dark"] .sync-conflict-dialog {
 @media (max-width: 767px) { .badge-animation-toggle { display: none; } }
 
 /* Switch motion fully off for the page session when sustained frame drops are detected. */
-.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *),
-.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *)::before,
-.adaptive-low-motion .App *:not(.cloud-sync-status):not(.is-mastery-animated):not(.is-mastery-animated *)::after {
+.adaptive-low-motion .App *:not(.cloud-sync-status),
+.adaptive-low-motion .App *:not(.cloud-sync-status)::before,
+.adaptive-low-motion .App *:not(.cloud-sync-status)::after {
   animation: none !important;
   scroll-behavior: auto !important;
   transition: none !important;
-}
-
-.App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
-.App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::before,
-.App.reduce-motion .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after,
-.App.reduce-motion .momentum-badge-stage.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
-.App.reduce-motion .momentum-badge-stage.is-mastery-animated .achievement-medallion::before,
-.App.reduce-motion .momentum-badge-stage.is-mastery-animated .achievement-medallion::after,
-.App.reduce-motion .mobile-momentum-badge.is-mastery-animated .achievement-emblem {
-  animation-duration: .01ms !important;
-  animation-iteration-count: 1 !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .gamification-dialog .achievement-card.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
-  .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::before,
-  .gamification-dialog .achievement-card.is-mastery-animated .achievement-medallion::after,
-  .momentum-badge-stage.is-mastery-animated :is(.achievement-medallion, .achievement-rays, .achievement-core, .achievement-icon, .achievement-ornament),
-  .momentum-badge-stage.is-mastery-animated .achievement-medallion::before,
-  .momentum-badge-stage.is-mastery-animated .achievement-medallion::after,
-  .mobile-momentum-badge.is-mastery-animated .achievement-emblem {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-  }
 }
 
 @keyframes completion-gold-ripple-flash {
@@ -8449,18 +8425,6 @@ html[data-theme="dark"] .sync-conflict-dialog {
   85% { transform: translate3d(-7vw, 84vh, 0) rotate(-820deg) scale(.55); }
   94% { opacity: 1; }
   100% { opacity: 0; transform: translate3d(0, 100vh, 0) rotate(-980deg) scale(.2); }
-}
-
-.reduce-motion :is(.completion-confetti, .completion-fireworks) { display: none; }
-.reduce-motion .completion-gold-ripple { display: none; }
-.reduce-motion .completion-celebration-toast { opacity: 1; transform: none; animation: none !important; }
-.reduce-motion .badge-twenty-five-completions .achievement-rays { animation: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  :is(.completion-confetti, .completion-fireworks) { display: none; }
-  .completion-gold-ripple { display: none; }
-  .completion-celebration-toast { opacity: 1; transform: none; animation: none !important; }
-  .badge-twenty-five-completions .achievement-rays { animation: none; }
 }
 
 /* Final mobile panel and task-navigation contract. */

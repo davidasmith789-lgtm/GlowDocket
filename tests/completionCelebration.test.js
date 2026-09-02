@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("assignment completion uses accessible dependency-free confetti with reduced-motion fallbacks", async () => {
+test("assignment completion uses dependency-free confetti with an emergency performance fallback", async () => {
   const [app, css, rippleCanvas, adaptiveMotion, packageJson] = await Promise.all([
     readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
@@ -63,7 +63,9 @@ test("assignment completion uses accessible dependency-free confetti with reduce
   assert.match(css, /will-change: transform/);
   assert.match(css, /94% \{ opacity: 1; \}/);
   assert.match(css, /\.completion-celebration-toast/);
-  assert.match(css, /\.reduce-motion :is\(\.completion-confetti, \.completion-fireworks\) \{ display: none; \}/);
+  assert.match(css, /\.App\.reduce-motion \*:not\(\.completion-celebration, \.completion-celebration \*/);
+  assert.doesNotMatch(css, /\.reduce-motion :is\(\.completion-confetti, \.completion-fireworks\) \{ display: none; \}/);
+  assert.doesNotMatch(css, /prefers-reduced-motion: reduce\)[^{]*\{[^}]*:is\(\.completion-confetti, \.completion-fireworks\) \{ display: none;/s);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.doesNotMatch(packageJson, /confetti|canvas-confetti/);
 });

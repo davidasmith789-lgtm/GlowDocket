@@ -140,7 +140,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.match(app, /selectedBadge: achievement\.id/);
   assert.match(css, /\.achievement-card\.is-selected/);
   assert.match(css, /content-visibility: auto/);
-  assert.match(css, /\.adaptive-low-motion \.App \*:not\(\.cloud-sync-status\):not\(\.is-mastery-animated\):not\(\.is-mastery-animated \*\)[\s\S]*animation: none !important/);
+  assert.match(css, /\.adaptive-low-motion \.App \*:not\(\.cloud-sync-status\)[\s\S]*animation: none !important/);
+  assert.doesNotMatch(css, /\.adaptive-low-motion \.App \*:not\(\.cloud-sync-status\):not\(\.is-mastery-animated\)/);
   assert.doesNotMatch(css, /\.adaptive-low-motion \.gamification-dialog \.badge-first-completion\.is-mastery-animated/);
   assert.doesNotMatch(css, /\.adaptive-low-motion \.badge-flash-first-deck\.is-mastery-animated/);
   assert.match(css, /\.mobile-momentum-badge\.badge-flash-first-deck\.is-mastery-animated/);
@@ -160,7 +161,8 @@ test("completion paths timestamp work, undo clears it, and celebration covers th
   assert.doesNotMatch(app, /handleGamificationScroll/);
   assert.doesNotMatch(css, /\.gamification-dialog\.is-scrolling/);
   assert.doesNotMatch(css, /\.gamification-backdrop[^}]*backdrop-filter/);
-  assert.match(css, /\.reduce-motion :is\(\.completion-confetti, \.completion-fireworks\)/);
+  assert.match(css, /\.App\.reduce-motion \*:not\(\.completion-celebration, \.completion-celebration \*/);
+  assert.doesNotMatch(css, /\.reduce-motion :is\(\.completion-confetti, \.completion-fireworks\)/);
   assert.match(app, /Celebration Color Studio/);
   assert.match(app, /celebrationStudioProgress\.unlocked/);
   assert.match(app, /currentUser !== "guest" \? userSettings\.signInDays : \[\]/);
