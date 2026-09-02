@@ -730,6 +730,35 @@ export function deleteNamedWorkspaceLayout(layout, mode, tab, presetId) {
   return next;
 }
 
+export function createShareableWorkspaceLayout({ items, name, mode, tab, screenWidth, screenHeight }) {
+  return {
+    format: "glowdocket-widget-layout", version: 1,
+    name: String(name || "Shared layout").trim().slice(0, 60) || "Shared layout",
+    mode, tab,
+    screen: { width: Math.max(1, Math.round(Number(screenWidth) || 1)), height: Math.max(1, Math.round(Number(screenHeight) || 1)) },
+    items: structuredClone(Array.isArray(items) ? items : []),
+    exportedAt: new Date().toISOString(),
+  };
+}
+
+export function importShareableWorkspaceLayout(value, targetWidth, targetHeight) {
+  if (value?.format !== "glowdocket-widget-layout" || value.version !== 1 || !Array.isArray(value.items)) throw new Error("This is not a valid GlowDocket widget layout file.");
+  const sourceWidth = Math.max(1, Number(value.screen?.width) || Number(targetWidth) || 1);
+  const sourceHeight = Math.max(1, Number(value.screen?.height) || Number(targetHeight) || 1);
+  const width = Math.max(1, Number(targetWidth) || sourceWidth);
+  const height = Math.max(1, Number(targetHeight) || sourceHeight);
+  const scaleX = width / sourceWidth;
+  const scaleY = height / sourceHeight;
+  const differentScreen = Math.abs(width - sourceWidth) > 1 || Math.abs(height - sourceHeight) > 1;
+  const items = value.items.map((item) => {
+    const scaledWidth = Math.min(width, Math.max(Math.min(MIN_WIDGET_WIDTH, width), (Number(item.width) || MIN_WIDGET_WIDTH) * scaleX));
+    const scaledX = Math.min(Math.max(0, (Number(item.x) || Number(item.desktopX) || 0) * scaleX), Math.max(0, width - scaledWidth));
+    const scaledY = Math.max(0, Math.round((Number(item.y) || Number(item.desktopY) || 0) * scaleY));
+    return { ...structuredClone(item), id: `${item.type || "widget"}-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`, x: Math.round(scaledX), desktopX: Math.round(scaledX), xRatio: width > 0 ? scaledX / width : 0, y: scaledY, desktopY: scaledY, width: Math.round(scaledWidth), height: Math.max(item.collapsed ? COLLAPSED_WIDGET_HEIGHT : getWidgetMinimumExpandedHeight(item.type), Math.round((Number(item.height) || getWidgetMinimumExpandedHeight(item.type)) * scaleY)) };
+  });
+  return { items, name: String(value.name || "Imported layout").slice(0, 60), differentScreen, sourceScreen: value.screen };
+}
+
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {
   const next = structuredClone(layout);
   const sourceTab = Object.keys(next[mode]).find((tab) =>

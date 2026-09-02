@@ -105,6 +105,7 @@ export default function AssignmentFlashcards({ task = {}, userId, onOpenDeck = (
           </select>
         </label>
         <button
+          className="assignment-create-deck-button"
           onClick={() =>
             task.flashcardTargetDate
               ? setConfirmRequest({

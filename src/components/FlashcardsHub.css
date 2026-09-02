@@ -1094,6 +1094,22 @@
   align-items: center;
   gap: 8px;
 }
+.assignment-create-deck-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--secondary-color) 65%, transparent) 0 16%, transparent 42%),
+    linear-gradient(135deg, var(--primary-color), color-mix(in srgb, var(--primary-color) 42%, var(--secondary-color)));
+  color: var(--button-primary-color, #fff);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary-color) 28%, transparent);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+.assignment-create-deck-button:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.assignment-create-deck-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary-color) 34%, transparent); outline-offset: 3px; }
 .flash-xp-status {
   font-weight: 800;
   color: var(--primary-color);

@@ -12,11 +12,13 @@ import {
   COLLAPSED_WIDGET_HEIGHT,
   MIN_WIDGET_LABEL_HEIGHT,
   createDefaultWorkspaceLayout,
+  createShareableWorkspaceLayout,
   deleteNamedWorkspaceLayout,
   getWidgetMinimumExpandedHeight,
   MAX_WIDGET_LABEL_HEIGHT,
   MIN_WIDGET_WIDTH,
   normalizeWorkspaceLayout,
+  importShareableWorkspaceLayout,
   placeWidget,
   saveNamedWorkspaceLayout,
   setWidgetCollapsedState,
@@ -2461,6 +2463,8 @@ function App() {
   const [widgetSearch, setWidgetSearch] = useState("");
   const [workspaceLayoutName, setWorkspaceLayoutName] = useState("");
   const [selectedWorkspaceLayoutId, setSelectedWorkspaceLayoutId] = useState("");
+  const [workspaceShareMessage, setWorkspaceShareMessage] = useState("");
+  const workspaceLayoutImportRef = useRef(null);
   const widgetsUnavailableOnCurrentTab = ["community", "flashcards"].includes(currentTab);
   const [helpSearch, setHelpSearch] = useState("");
   const [isMobileUi] = useState(isMobileDevice);
@@ -5434,11 +5438,26 @@ function App() {
     if (!editingTask) return;
     const taskBeforeEdit = tasks.find((task) => task.id === editingTaskId);
 
-    if (editLinkName.trim() || editLinkUrl.trim()) {
-      setEditLinkMessage(
-        "Finish both link fields and leave the field so the link can be added before saving.",
+    const pendingLinkName = editLinkName.trim();
+    const pendingLinkUrlInput = editLinkUrl.trim();
+    const pendingLinkUrl = normalizeWebUrl(pendingLinkUrlInput);
+    let rawLinks = getSafeLinks(editingTask);
+    if (pendingLinkName || pendingLinkUrlInput) {
+      if (!pendingLinkName || !pendingLinkUrlInput) {
+        setEditLinkMessage("Enter both a link name and web address.");
+        return;
+      }
+      if (!pendingLinkUrl) {
+        setEditLinkMessage("Enter a valid http/https web address.");
+        return;
+      }
+      const pendingLinkAlreadyAdded = rawLinks.some((link) =>
+        link.name.trim().toLowerCase() === pendingLinkName.toLowerCase() &&
+        normalizeWebUrl(link.url) === pendingLinkUrl
       );
-      return;
+      if (!pendingLinkAlreadyAdded) {
+        rawLinks = [...rawLinks, { id: Date.now() + Math.random(), name: pendingLinkName, url: pendingLinkUrl }];
+      }
     }
 
     const cleanedTitle = editingTask.title.trim();
@@ -5450,7 +5469,6 @@ function App() {
     const cleanedSubtasks = getSafeSubtasks(editingTask).filter((subtask) =>
       subtask.text.trim(),
     );
-    const rawLinks = getSafeLinks(editingTask);
     const hasInvalidLink = rawLinks.some(
       (link) => !link.name.trim() || !normalizeWebUrl(link.url),
     );
@@ -5540,6 +5558,9 @@ function App() {
 
     setEditingTaskId(null);
     setEditingTask(null);
+    setEditLinkName("");
+    setEditLinkUrl("");
+    setEditLinkMessage("");
     setPendingEditFiles([]);
     setAttachmentSelectionMessage("");
     setEditOptionalSections({ files: false, links: false, checklist: false });
@@ -6964,6 +6985,37 @@ function App() {
     if (!selected || !window.confirm(`Delete the saved layout “${selected.name}”?`)) return;
     saveWorkspace((previousLayout) => deleteNamedWorkspaceLayout(previousLayout, workspaceMode, currentTab, selectedWorkspaceLayoutId));
     setSelectedWorkspaceLayoutId("");
+  };
+
+  const handleExportWorkspaceLayout = () => {
+    const selected = savedWorkspaceLayouts.find((preset) => preset.id === selectedWorkspaceLayoutId);
+    const name = selected?.name || workspaceLayoutName.trim() || `${currentTab} layout`;
+    const payload = createShareableWorkspaceLayout({ items: selected?.items || workspaceLayout[workspaceMode]?.[currentTab] || [], name, mode: workspaceMode, tab: currentTab, screenWidth: getAvailableWorkspaceWidth(), screenHeight: window.innerHeight });
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "glowdocket-layout"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setWorkspaceShareMessage("Layout downloaded. Send the file to another user or open it on another device.");
+  };
+
+  const handleImportWorkspaceLayout = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const imported = importShareableWorkspaceLayout(JSON.parse(await file.text()), getAvailableWorkspaceWidth(), window.innerHeight);
+      if (imported.differentScreen) window.alert(`This layout came from a ${Math.round(imported.sourceScreen?.width || 0)} × ${Math.round(imported.sourceScreen?.height || 0)} screen. GlowDocket will continue the import and resize the widgets to fit this screen while keeping their relative locations.`);
+      saveWorkspace((previousLayout) => {
+        const next = structuredClone(previousLayout);
+        next[workspaceMode][currentTab] = imported.items;
+        return saveNamedWorkspaceLayout(next, workspaceMode, currentTab, imported.name);
+      });
+      setWorkspaceShareMessage(`“${imported.name}” imported and applied${imported.differentScreen ? " with screen-size adjustments" : ""}.`);
+    } catch (error) {
+      setWorkspaceShareMessage(error instanceof Error ? error.message : "The layout could not be imported.");
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -9710,6 +9762,12 @@ function App() {
                 <label><span>Choose a saved layout</span><select value={selectedWorkspaceLayoutId} onChange={(event) => setSelectedWorkspaceLayoutId(event.target.value)}><option value="">Select a layout…</option>{savedWorkspaceLayouts.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
                 <button type="button" className="btn btn-secondary" disabled={!selectedWorkspaceLayoutId} onClick={handleApplyNamedWorkspaceLayout}>Apply</button>
                 <button type="button" className="btn btn-danger" disabled={!selectedWorkspaceLayoutId} onClick={handleDeleteNamedWorkspaceLayout}>Delete</button>
+              </div>
+              <div className="saved-layout-share">
+                <div><strong>Share or move a layout</strong><span>Download the selected layout, or the current arrangement if none is selected.</span></div>
+                <div><button type="button" className="btn btn-secondary" onClick={handleExportWorkspaceLayout}>Download layout</button><button type="button" className="btn btn-primary" onClick={() => workspaceLayoutImportRef.current?.click()}>Import layout</button></div>
+                <input ref={workspaceLayoutImportRef} type="file" accept="application/json,.json" onChange={handleImportWorkspaceLayout} hidden />
+                {workspaceShareMessage && <span className="saved-layout-share-message" role="status">{workspaceShareMessage}</span>}
               </div>
             </div>
             <label className="widget-library-search"><span>Find a widget</span><input type="search" value={widgetSearch} onChange={(event) => setWidgetSearch(event.target.value)} placeholder="Search assignments, calendar, courses…" /></label>
