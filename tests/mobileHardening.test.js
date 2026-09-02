@@ -114,6 +114,12 @@ test("mobile assignment actions finish with a stable two-column grid", async () 
   assert.match(styles, /mobile-task-card \.task-action-pair[\s\S]{0,180}display: contents/);
 });
 
+test("mobile assignment summary gives overdue the full second row", async () => {
+  const styles = await read("../src/App.css");
+  assert.match(styles, /\.mobile-app-stat-strip\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s);
+  assert.match(styles, /\.mobile-app-stat-strip button:nth-child\(3\) \{ grid-column: 1 \/ -1; \}/);
+});
+
 test("mobile Add Assignment methods retain import, manual, then voice order", async () => {
   const styles = await read("../src/App.css");
   assert.match(styles, /assignment-entry-form > \.bulk-import-panel \{ order: 1; \}/);

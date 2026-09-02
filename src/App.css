@@ -1981,6 +1981,8 @@ button:disabled {
     box-shadow: 0 9px 24px rgba(15, 23, 42, 0.06);
   }
 
+  .mobile-app-stat-strip button:nth-child(3) { grid-column: 1 / -1; }
+
   .mobile-app-stat-strip strong { font-size: 1.45rem; line-height: 1; }
   .mobile-app-stat-strip span { color: var(--muted-text); font-size: 0.76rem; font-weight: 750; }
   .mobile-app-stat-strip .has-warning strong { color: #d97706; }
