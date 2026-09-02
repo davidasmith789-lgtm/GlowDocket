@@ -139,6 +139,19 @@ test("detached mini calendars hide their inactive internal resize handle", async
   assert.match(css, /\.detached-widget-content \.mini-calendar-height-handle\s*\{\s*display:\s*none;/);
 });
 
+test("detached widgets inherit the active theme and use the polished shared shell", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /sourceApp\?\.className/);
+  assert.match(source, /propertyName\.startsWith\("--"\)/);
+  assert.match(source, /popupPrimer\.textContent/);
+  assert.match(source, /className="detached-widget-title"/);
+  assert.match(css, /\.detached-widget-title > span/);
+  assert.match(css, /\.detached-widget-content :is\(h1, h2, h3, h4, strong, label\)/);
+});
+
 test("class repeat choices keep radio controls separate from wrapping text", async () => {
   const styles = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(styles, /\.schedule-mode-picker input\[type="radio"\]\s*\{[^}]*width:\s*20px[^}]*flex:\s*0 0 20px/s);

@@ -1792,7 +1792,10 @@ function WorkspaceCanvas({ children, height, scale = 1, width }) {
 function DetachedWidgetWindow({ title, portalRoot, onClose, children }) {
   return createPortal(
     <main className="detached-widget-shell">
-      <header><strong>{title}</strong><button type="button" onClick={onClose} aria-label={`Return ${title} to GlowDocket`}>Return to GlowDocket</button></header>
+      <header>
+        <div className="detached-widget-title"><span aria-hidden="true">✦</span><div><small>GlowDocket pop-out</small><strong>{title}</strong></div></div>
+        <button type="button" onClick={onClose} aria-label={`Return ${title} to GlowDocket`}>Return to GlowDocket</button>
+      </header>
       <div className="detached-widget-content">{children}</div>
     </main>,
     portalRoot,
@@ -8937,9 +8940,30 @@ function App() {
     const title = getWorkspaceWidgetTitle(instance.type);
     popup.document.title = `${title} · GlowDocket`;
     popup.document.documentElement.dataset.theme = document.documentElement.dataset.theme || theme;
+    popup.document.documentElement.className = document.documentElement.className;
+    const viewportMeta = popup.document.createElement("meta");
+    viewportMeta.name = "viewport";
+    viewportMeta.content = "width=device-width, initial-scale=1";
+    popup.document.head.appendChild(viewportMeta);
+    const sourceApp = document.querySelector(".App");
+    const sourceRootStyles = window.getComputedStyle(document.documentElement);
+    const sourceAppStyles = sourceApp ? window.getComputedStyle(sourceApp) : null;
+    for (const propertyName of sourceRootStyles) {
+      if (propertyName.startsWith("--")) popup.document.documentElement.style.setProperty(propertyName, sourceRootStyles.getPropertyValue(propertyName));
+    }
+    const popupPrimer = popup.document.createElement("style");
+    popupPrimer.textContent = "html,body,#glowdocket-detached-root{width:100%;min-height:100%;margin:0}body{overflow:hidden;background:var(--page-bg,var(--background-color,#0b1020));color:var(--text-color,#f9fafb)}";
+    popup.document.head.appendChild(popupPrimer);
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => popup.document.head.appendChild(node.cloneNode(true)));
     const portalRoot = popup.document.createElement("div");
-    portalRoot.className = `App ${theme} detached-widget-app`;
+    portalRoot.id = "glowdocket-detached-root";
+    portalRoot.className = `${sourceApp?.className || `App ${theme}`} detached-widget-app`;
+    if (sourceAppStyles) {
+      for (const propertyName of sourceAppStyles) {
+        if (propertyName.startsWith("--")) portalRoot.style.setProperty(propertyName, sourceAppStyles.getPropertyValue(propertyName));
+      }
+    }
+    popup.document.body.className = "detached-widget-body";
     popup.document.body.appendChild(portalRoot);
     popup.addEventListener("beforeunload", () => setDetachedWidgets((items) => items.filter((item) => item.id !== instance.id)));
     popup.focus();
