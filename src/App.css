@@ -5681,6 +5681,39 @@ a,
   background: transparent;
 }
 .task-actions .btn { min-height: 34px; }
+.task-card:not(.mobile-task-card) { container-type: inline-size; }
+.task-card:not(.mobile-task-card) > .task-card-summary {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+.task-card:not(.mobile-task-card) > .task-card-summary > :not(.task-actions) { min-width: 0; }
+.task-card:not(.mobile-task-card) > .task-card-summary > .task-actions {
+  grid-row: 5;
+  width: 100%;
+  margin-top: 10px;
+}
+@container (min-width: 940px) {
+  .task-card:not(.mobile-task-card) > .task-card-summary {
+    grid-template-columns: minmax(220px, 1fr) auto;
+    column-gap: 16px;
+  }
+  .task-card:not(.mobile-task-card) > .task-card-summary > .task-title-row { grid-column: 1; grid-row: 1; margin-bottom: 0; }
+  .task-card:not(.mobile-task-card) > .task-card-summary > .task-actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    margin-top: 0;
+    flex-wrap: nowrap;
+  }
+  .task-card:not(.mobile-task-card) > .task-card-summary > :is(.task-details, .assignment-countdown, .subtask-progress-line) { grid-column: 1 / -1; }
+  .task-card:not(.mobile-task-card) > .task-card-summary > .task-details { grid-row: 2; }
+  .task-card:not(.mobile-task-card) > .task-card-summary > .assignment-countdown { grid-row: 3; }
+  .task-card:not(.mobile-task-card) > .task-card-summary > .subtask-progress-line { grid-row: 4; }
+  .task-card:not(.mobile-task-card).expanded .task-actions-in-progress { width: auto; margin: 0; }
+}
 .task-card.expanded .task-actions-in-progress {
   display: flex;
   flex-wrap: nowrap;

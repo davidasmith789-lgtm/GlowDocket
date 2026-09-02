@@ -8918,7 +8918,7 @@ function App() {
   <li
     key={task.id}
     id={`${status}-task-${task.id}`}
-    className={`task-card${isMobileUi ? ` mobile-task-card mobile-task-level-${mobileLevel}` : ""}${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" && !isMobileUi ? " task-card-high" : ""}${overdue ? " is-overdue" : ""}${mobileSummaryOpen ? " expanded" : ""}`}
+    className={`task-card task-card-status-${status}${isMobileUi ? ` mobile-task-card mobile-task-level-${mobileLevel}` : ""}${status === "inProgress" ? " in-progress-task-card" : ""}${task.priority === "HIGH" && !isMobileUi ? " task-card-high" : ""}${overdue ? " is-overdue" : ""}${mobileSummaryOpen ? " expanded" : ""}`}
     onClick={() => toggleTaskExpansion(task.id)}
     onKeyDown={(event) => { if (isMobileUi && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleTaskExpansion(task.id); } }}
     role={isMobileUi ? "button" : undefined}
@@ -8926,7 +8926,7 @@ function App() {
     aria-expanded={isMobileUi ? mobileSummaryOpen : expandedTaskId === task.id}
     aria-label={isMobileUi ? `${task.title}, ${getWorkflowLabel(status)}. Detail level ${mobileLevel} of 3.` : undefined}
   >
-    <div>
+    <div className="task-card-summary">
       <div className="task-title-row">
         <strong className="task-title-text">{task.title}</strong>
 
@@ -8946,12 +8946,14 @@ function App() {
         {renderTaskReminderIndicator(task)}
       </div>
 
+      {!isMobileUi && mobileSummaryOpen && renderTaskActionButtons(task, status)}
+
       {mobileSummaryOpen && <div className="task-details">{formatTaskDetails(task)}</div>}
       {overdue || mobileSummaryOpen ? renderAssignmentCountdown(task) : null}
       {mobileSummaryOpen && renderSubtaskProgressLine(task)}
     </div>
 
-    {mobileSummaryOpen && renderTaskActionButtons(task, status)}
+    {isMobileUi && mobileSummaryOpen && renderTaskActionButtons(task, status)}
 
     {mobileDetailsOpen && (
       <div
