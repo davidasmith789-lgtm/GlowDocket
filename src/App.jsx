@@ -4134,6 +4134,16 @@ function App() {
     if (result.accepted.length > 0) setter((prev) => [...prev, ...result.accepted]);
   };
 
+  const handleRemovePendingFile = (setter, fileIndex) => {
+    setter((previousFiles) => {
+      const remainingFiles = previousFiles.filter((_, index) => index !== fileIndex);
+      setAttachmentSelectionMessage(remainingFiles.length > 0
+        ? `${remainingFiles.length} file${remainingFiles.length === 1 ? "" : "s"} ready to attach.`
+        : "");
+      return remainingFiles;
+    });
+  };
+
   const handleAttachmentDownload = async (attachment) => {
     try {
       const blob = await getAttachmentFile(attachment.id);
@@ -8022,7 +8032,7 @@ function App() {
         {draftFiles.map((file, index) => (
           <div className="attachment-draft-row" key={`${file.name}-${file.lastModified}-${index}`}>
             <span>{file.name}</span>
-            <button type="button" className="subtask-remove-button" onClick={() => setDraftFiles((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}>Remove</button>
+            <button type="button" className="subtask-remove-button" onClick={() => handleRemovePendingFile(setDraftFiles, index)}>Remove</button>
           </div>
         ))}
           </div>
@@ -12393,7 +12403,7 @@ function App() {
                       className="subtask-remove-button"
                       onClick={() => {
                         if (attachment.pendingIndex !== undefined) {
-                          setPendingEditFiles((prev) => prev.filter((_, index) => index !== attachment.pendingIndex));
+                          handleRemovePendingFile(setPendingEditFiles, attachment.pendingIndex);
                         } else {
                           setEditingTask((prev) => ({
                             ...prev,

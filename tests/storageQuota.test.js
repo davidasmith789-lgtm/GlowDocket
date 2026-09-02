@@ -42,4 +42,8 @@ test("storage monitoring and attachment warnings stay wired into the app", async
   assert.match(app, /Refresh Storage Check/);
   assert.match(app, /evaluateAttachmentSelection\(currentFiles, files, estimate\)/);
   assert.match(app, /Maximum 10 MB per file/);
+  assert.match(app, /handleRemovePendingFile/);
+  assert.match(app, /setAttachmentSelectionMessage\(remainingFiles\.length > 0/);
+  assert.match(app, /handleRemovePendingFile\(setDraftFiles, index\)/);
+  assert.match(app, /handleRemovePendingFile\(setPendingEditFiles, attachment\.pendingIndex\)/);
 });
