@@ -1789,6 +1789,23 @@ function WorkspaceCanvas({ children, height, scale = 1, width }) {
   return <div className="workspace-widget-canvas" data-workspace-scale={scale} style={{ width: width ? `${width}px` : undefined, height: `${height}px` }}>{children}</div>;
 }
 
+function syncDetachedWindowAppearance(popup, portalRoot, sourceApp) {
+  if (!popup || popup.closed || !portalRoot) return;
+  popup.document.documentElement.dataset.theme = document.documentElement.dataset.theme || "light";
+  popup.document.documentElement.className = document.documentElement.className;
+  portalRoot.className = `${sourceApp?.className || "App"} detached-widget-app`;
+  portalRoot.style.cssText = sourceApp?.getAttribute("style") || "";
+  for (const [sourceStyles, targetStyle] of [
+    [window.getComputedStyle(document.documentElement), popup.document.documentElement.style],
+    [sourceApp ? window.getComputedStyle(sourceApp) : null, portalRoot.style],
+  ]) {
+    if (!sourceStyles) continue;
+    for (const propertyName of sourceStyles) {
+      if (propertyName.startsWith("--")) targetStyle.setProperty(propertyName, sourceStyles.getPropertyValue(propertyName));
+    }
+  }
+}
+
 function DetachedWidgetWindow({ title, portalRoot, onClose, children }) {
   return createPortal(
     <main className="detached-widget-shell">
@@ -2906,6 +2923,11 @@ function App() {
     const appBarColor = normalizeHexColor(activeColors.page || "") || THEME_COLOR_DEFAULTS[theme].page;
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", appBarColor);
   }, [currentUser, theme, userSettings.customColors]);
+
+  useEffect(() => {
+    const sourceApp = document.querySelector(".App:not(.detached-widget-app)");
+    detachedWidgets.forEach(({ popup, portalRoot }) => syncDetachedWindowAppearance(popup, portalRoot, sourceApp));
+  }, [detachedWidgets, theme, userSettings.customColors, userSettings.fontFamily, userSettings.interfaceDensity, userSettings.pageColorWashColor, userSettings.pageColorWashEnabled, userSettings.textSize]);
 
   useEffect(() => {
     const requestedLogo = userSettings.mobileBookmarkLogo === "default" ? "midnight" : userSettings.mobileBookmarkLogo || "midnight";
@@ -8939,32 +8961,20 @@ function App() {
     }
     const title = getWorkspaceWidgetTitle(instance.type);
     popup.document.title = `${title} · GlowDocket`;
-    popup.document.documentElement.dataset.theme = document.documentElement.dataset.theme || theme;
-    popup.document.documentElement.className = document.documentElement.className;
     const viewportMeta = popup.document.createElement("meta");
     viewportMeta.name = "viewport";
     viewportMeta.content = "width=device-width, initial-scale=1";
     popup.document.head.appendChild(viewportMeta);
     const sourceApp = document.querySelector(".App");
-    const sourceRootStyles = window.getComputedStyle(document.documentElement);
-    const sourceAppStyles = sourceApp ? window.getComputedStyle(sourceApp) : null;
-    for (const propertyName of sourceRootStyles) {
-      if (propertyName.startsWith("--")) popup.document.documentElement.style.setProperty(propertyName, sourceRootStyles.getPropertyValue(propertyName));
-    }
     const popupPrimer = popup.document.createElement("style");
     popupPrimer.textContent = "html,body,#glowdocket-detached-root{width:100%;min-height:100%;margin:0}body{overflow:hidden;background:var(--page-bg,var(--background-color,#0b1020));color:var(--text-color,#f9fafb)}";
     popup.document.head.appendChild(popupPrimer);
     document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => popup.document.head.appendChild(node.cloneNode(true)));
     const portalRoot = popup.document.createElement("div");
     portalRoot.id = "glowdocket-detached-root";
-    portalRoot.className = `${sourceApp?.className || `App ${theme}`} detached-widget-app`;
-    if (sourceAppStyles) {
-      for (const propertyName of sourceAppStyles) {
-        if (propertyName.startsWith("--")) portalRoot.style.setProperty(propertyName, sourceAppStyles.getPropertyValue(propertyName));
-      }
-    }
     popup.document.body.className = "detached-widget-body";
     popup.document.body.appendChild(portalRoot);
+    syncDetachedWindowAppearance(popup, portalRoot, sourceApp);
     popup.addEventListener("beforeunload", () => setDetachedWidgets((items) => items.filter((item) => item.id !== instance.id)));
     popup.focus();
     setDetachedWidgets((items) => [...items.filter((item) => item.id !== instance.id), { id: instance.id, type: instance.type, popup, portalRoot }]);

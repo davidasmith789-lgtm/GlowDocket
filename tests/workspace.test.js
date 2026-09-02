@@ -145,6 +145,8 @@ test("detached widgets inherit the active theme and use the polished shared shel
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
   ]);
   assert.match(source, /sourceApp\?\.className/);
+  assert.match(source, /syncDetachedWindowAppearance/);
+  assert.match(source, /detachedWidgets\.forEach/);
   assert.match(source, /propertyName\.startsWith\("--"\)/);
   assert.match(source, /popupPrimer\.textContent/);
   assert.match(source, /className="detached-widget-title"/);
