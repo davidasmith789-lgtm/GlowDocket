@@ -10,7 +10,7 @@ import { getQuickMatchCustomPresets, getQuickMatchPresets, rankQuickMatchCandida
 import { createDemoData, getTutorialStorageKey, mergeDemoData, removeUnchangedDemoData } from "../src/onboardingUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "../src/voiceTaskUtils.js";
 import { getWorkloadPeriodRange, summarizeWorkload } from "../src/workloadUtils.js";
-import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, applyNamedWorkspaceLayout, canHideWidget, createDefaultWorkspaceLayout, deleteNamedWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, normalizeWorkspaceLayout, placeWidget, saveNamedWorkspaceLayout, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
+import { COLLAPSED_WIDGET_HEIGHT, DEFAULT_LAYOUT_VERSION, MIN_WIDGET_WIDTH, applyNamedWorkspaceLayout, canHideWidget, createDefaultWorkspaceLayout, createShareableWorkspaceLayout, deleteNamedWorkspaceLayout, getDesktopLayoutPresetWidth, getWidgetMinimumExpandedHeight, importShareableWorkspaceLayout, normalizeWorkspaceLayout, placeWidget, saveNamedWorkspaceLayout, setWidgetCollapsedState, shouldPreserveWidgetPositions } from "../src/workspaceLayout.js";
 
 function findWidgetOverlaps(items) {
   const visible = items.filter((item) => !item.hidden);
@@ -233,6 +233,19 @@ test("named layouts are scoped by device mode and tab and can be deleted", () =>
   const presetId = saved.savedLayouts.mobile.todo[0].id;
   const removed = deleteNamedWorkspaceLayout(saved, "mobile", "todo", presetId);
   assert.deepEqual(removed.savedLayouts.mobile.todo, []);
+});
+
+test("shared layout imports resize included widgets without removing existing widgets", () => {
+  const existing = createDefaultWorkspaceLayout().desktop.dashboard;
+  const sharedItems = existing.filter((item) => !["reminders", "checklists", "course-overview"].includes(item.type));
+  const payload = createShareableWorkspaceLayout({ items: sharedItems, name: "Shared", mode: "desktop", tab: "dashboard", screenWidth: 1600, screenHeight: 900 });
+  const imported = importShareableWorkspaceLayout(payload, 1200, 700, existing);
+  assert.equal(imported.differentScreen, true);
+  assert.equal(imported.retainedCount, 3);
+  assert.equal(imported.items.some((item) => item.type === "reminders"), true);
+  assert.equal(imported.items.some((item) => item.type === "checklists"), true);
+  assert.equal(imported.items.some((item) => item.type === "course-overview"), true);
+  assert.ok(imported.items.find((item) => item.type === sharedItems[0].type).width < sharedItems[0].width);
 });
 
 test("a protected widget can be hidden only when another visible copy exists", () => {

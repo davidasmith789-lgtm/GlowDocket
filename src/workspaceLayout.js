@@ -741,7 +741,7 @@ export function createShareableWorkspaceLayout({ items, name, mode, tab, screenW
   };
 }
 
-export function importShareableWorkspaceLayout(value, targetWidth, targetHeight) {
+export function importShareableWorkspaceLayout(value, targetWidth, targetHeight, existingItems = []) {
   if (value?.format !== "glowdocket-widget-layout" || value.version !== 1 || !Array.isArray(value.items)) throw new Error("This is not a valid GlowDocket widget layout file.");
   const sourceWidth = Math.max(1, Number(value.screen?.width) || Number(targetWidth) || 1);
   const sourceHeight = Math.max(1, Number(value.screen?.height) || Number(targetHeight) || 1);
@@ -750,13 +750,17 @@ export function importShareableWorkspaceLayout(value, targetWidth, targetHeight)
   const scaleX = width / sourceWidth;
   const scaleY = height / sourceHeight;
   const differentScreen = Math.abs(width - sourceWidth) > 1 || Math.abs(height - sourceHeight) > 1;
-  const items = value.items.map((item) => {
+  const importedItems = value.items.map((item) => {
     const scaledWidth = Math.min(width, Math.max(Math.min(MIN_WIDGET_WIDTH, width), (Number(item.width) || MIN_WIDGET_WIDTH) * scaleX));
     const scaledX = Math.min(Math.max(0, (Number(item.x) || Number(item.desktopX) || 0) * scaleX), Math.max(0, width - scaledWidth));
     const scaledY = Math.max(0, Math.round((Number(item.y) || Number(item.desktopY) || 0) * scaleY));
     return { ...structuredClone(item), id: `${item.type || "widget"}-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`, x: Math.round(scaledX), desktopX: Math.round(scaledX), xRatio: width > 0 ? scaledX / width : 0, y: scaledY, desktopY: scaledY, width: Math.round(scaledWidth), height: Math.max(item.collapsed ? COLLAPSED_WIDGET_HEIGHT : getWidgetMinimumExpandedHeight(item.type), Math.round((Number(item.height) || getWidgetMinimumExpandedHeight(item.type)) * scaleY)) };
   });
-  return { items, name: String(value.name || "Imported layout").slice(0, 60), differentScreen, sourceScreen: value.screen };
+  const importedTypes = new Set(importedItems.map((item) => item.type));
+  const retainedItems = (Array.isArray(existingItems) ? existingItems : [])
+    .filter((item) => !importedTypes.has(item.type))
+    .map((item) => structuredClone(item));
+  return { items: [...importedItems, ...retainedItems], retainedCount: retainedItems.length, name: String(value.name || "Imported layout").slice(0, 60), differentScreen, sourceScreen: value.screen };
 }
 
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {

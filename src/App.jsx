@@ -6990,7 +6990,7 @@ function App() {
   const handleExportWorkspaceLayout = () => {
     const selected = savedWorkspaceLayouts.find((preset) => preset.id === selectedWorkspaceLayoutId);
     const name = selected?.name || workspaceLayoutName.trim() || `${currentTab} layout`;
-    const payload = createShareableWorkspaceLayout({ items: selected?.items || workspaceLayout[workspaceMode]?.[currentTab] || [], name, mode: workspaceMode, tab: currentTab, screenWidth: getAvailableWorkspaceWidth(), screenHeight: window.innerHeight });
+    const payload = createShareableWorkspaceLayout({ items: workspaceLayout[workspaceMode]?.[currentTab] || [], name, mode: workspaceMode, tab: currentTab, screenWidth: getAvailableWorkspaceWidth(), screenHeight: window.innerHeight });
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a");
     link.href = url;
@@ -7005,7 +7005,7 @@ function App() {
     event.target.value = "";
     if (!file) return;
     try {
-      const imported = importShareableWorkspaceLayout(JSON.parse(await file.text()), getAvailableWorkspaceWidth(), window.innerHeight);
+      const imported = importShareableWorkspaceLayout(JSON.parse(await file.text()), getAvailableWorkspaceWidth(), window.innerHeight, workspaceLayout[workspaceMode]?.[currentTab] || []);
       if (imported.differentScreen) window.alert(`This layout came from a ${Math.round(imported.sourceScreen?.width || 0)} × ${Math.round(imported.sourceScreen?.height || 0)} screen. GlowDocket will continue the import and resize the widgets to fit this screen while keeping their relative locations.`);
       saveWorkspace((previousLayout) => {
         const next = structuredClone(previousLayout);
@@ -9764,7 +9764,7 @@ function App() {
                 <button type="button" className="btn btn-danger" disabled={!selectedWorkspaceLayoutId} onClick={handleDeleteNamedWorkspaceLayout}>Delete</button>
               </div>
               <div className="saved-layout-share">
-                <div><strong>Share or move a layout</strong><span>Download the selected layout, or the current arrangement if none is selected.</span></div>
+                <div><strong>Share or move a layout</strong><span>Download the arrangement currently on screen. Imports resize shared widgets and never remove widgets missing from the file.</span></div>
                 <div><button type="button" className="btn btn-secondary" onClick={handleExportWorkspaceLayout}>Download layout</button><button type="button" className="btn btn-primary" onClick={() => workspaceLayoutImportRef.current?.click()}>Import layout</button></div>
                 <input ref={workspaceLayoutImportRef} type="file" accept="application/json,.json" onChange={handleImportWorkspaceLayout} hidden />
                 {workspaceShareMessage && <span className="saved-layout-share-message" role="status">{workspaceShareMessage}</span>}
