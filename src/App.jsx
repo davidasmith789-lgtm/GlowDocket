@@ -7005,14 +7005,16 @@ function App() {
     event.target.value = "";
     if (!file) return;
     try {
-      const imported = importShareableWorkspaceLayout(JSON.parse(await file.text()), getAvailableWorkspaceWidth(), window.innerHeight, workspaceLayout[workspaceMode]?.[currentTab] || []);
+      const targetCanvasWidth = getAvailableWorkspaceWidth();
+      const fallbackLayout = createDefaultWorkspaceLayout({ desktopCanvasWidth: targetCanvasWidth });
+      const imported = importShareableWorkspaceLayout(JSON.parse(await file.text()), targetCanvasWidth, window.innerHeight, workspaceLayout[workspaceMode]?.[currentTab] || [], fallbackLayout[workspaceMode]?.[currentTab] || []);
       if (imported.differentScreen) window.alert(`This layout came from a ${Math.round(imported.sourceScreen?.width || 0)} × ${Math.round(imported.sourceScreen?.height || 0)} screen. GlowDocket will continue the import and resize the widgets to fit this screen while keeping their relative locations.`);
       saveWorkspace((previousLayout) => {
         const next = structuredClone(previousLayout);
         next[workspaceMode][currentTab] = imported.items;
         return saveNamedWorkspaceLayout(next, workspaceMode, currentTab, imported.name);
       });
-      setWorkspaceShareMessage(`“${imported.name}” imported and applied${imported.differentScreen ? " with screen-size adjustments" : ""}.`);
+      setWorkspaceShareMessage(`“${imported.name}” imported and applied${imported.differentScreen ? " with screen-size adjustments" : ""}${imported.restoredCount ? `; ${imported.restoredCount} missing widget${imported.restoredCount === 1 ? " was" : "s were"} restored` : ""}.`);
     } catch (error) {
       setWorkspaceShareMessage(error instanceof Error ? error.message : "The layout could not be imported.");
     }

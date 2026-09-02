@@ -741,7 +741,7 @@ export function createShareableWorkspaceLayout({ items, name, mode, tab, screenW
   };
 }
 
-export function importShareableWorkspaceLayout(value, targetWidth, targetHeight, existingItems = []) {
+export function importShareableWorkspaceLayout(value, targetWidth, targetHeight, existingItems = [], fallbackItems = []) {
   if (value?.format !== "glowdocket-widget-layout" || value.version !== 1 || !Array.isArray(value.items)) throw new Error("This is not a valid GlowDocket widget layout file.");
   const sourceWidth = Math.max(1, Number(value.screen?.width) || Number(targetWidth) || 1);
   const sourceHeight = Math.max(1, Number(value.screen?.height) || Number(targetHeight) || 1);
@@ -760,7 +760,11 @@ export function importShareableWorkspaceLayout(value, targetWidth, targetHeight,
   const retainedItems = (Array.isArray(existingItems) ? existingItems : [])
     .filter((item) => !importedTypes.has(item.type))
     .map((item) => structuredClone(item));
-  return { items: [...importedItems, ...retainedItems], retainedCount: retainedItems.length, name: String(value.name || "Imported layout").slice(0, 60), differentScreen, sourceScreen: value.screen };
+  const retainedTypes = new Set(retainedItems.map((item) => item.type));
+  const restoredItems = (Array.isArray(fallbackItems) ? fallbackItems : [])
+    .filter((item) => !importedTypes.has(item.type) && !retainedTypes.has(item.type))
+    .map((item) => structuredClone(item));
+  return { items: [...importedItems, ...retainedItems, ...restoredItems], retainedCount: retainedItems.length, restoredCount: restoredItems.length, name: String(value.name || "Imported layout").slice(0, 60), differentScreen, sourceScreen: value.screen };
 }
 
 export function placeWidget(layout, mode, targetTab, widget, { copy = false } = {}) {

@@ -248,6 +248,18 @@ test("shared layout imports resize included widgets without removing existing wi
   assert.ok(imported.items.find((item) => item.type === sharedItems[0].type).width < sharedItems[0].width);
 });
 
+test("shared layout imports restore widgets missing from both an old file and the current tab", () => {
+  const defaults = createDefaultWorkspaceLayout({ desktopCanvasWidth: 1200 }).desktop.dashboard;
+  const missingTypes = new Set(["reminders", "checklists", "course-overview"]);
+  const damaged = defaults.filter((item) => !missingTypes.has(item.type));
+  const payload = createShareableWorkspaceLayout({ items: damaged, name: "Old export", mode: "desktop", tab: "dashboard", screenWidth: 1204, screenHeight: 900 });
+  const imported = importShareableWorkspaceLayout(payload, 1200, 896, damaged, defaults);
+  assert.equal(imported.restoredCount, 3);
+  const importedTypes = new Set(imported.items.map((item) => item.type));
+  assert.equal([...missingTypes].every((type) => importedTypes.has(type)), true);
+  assert.ok(Math.abs(imported.items.find((item) => item.type === damaged[0].type).width - damaged[0].width) < 5);
+});
+
 test("a protected widget can be hidden only when another visible copy exists", () => {
   const layout = createDefaultWorkspaceLayout();
   assert.equal(canHideWidget(layout, "desktop", "checklists"), true);
