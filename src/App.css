@@ -5689,6 +5689,35 @@ a,
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
 }
+
+.task-details-fluid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 7px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
+  border-radius: 13px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--surface-alt) 56%, transparent);
+}
+.task-detail-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--card-bg) 58%, transparent);
+  text-align: center;
+}
+.task-detail-cell > span:last-child { display: grid; min-width: 0; gap: 2px; justify-items: center; }
+.task-detail-cell small { color: var(--muted-text); font-size: .68rem; font-weight: 750; letter-spacing: .02em; }
+.task-detail-cell strong { color: var(--text-color); font-size: .78rem; line-height: 1.25; overflow-wrap: anywhere; }
+.task-detail-icon { flex: 0 0 auto; font-size: .9rem; }
+.task-detail-countdown { margin: 5px auto 0; }
 .task-card:not(.mobile-task-card) > .task-card-summary > :not(.task-actions) { min-width: 0; }
 .task-card:not(.mobile-task-card) > .task-card-summary > .task-actions {
   grid-row: 5;

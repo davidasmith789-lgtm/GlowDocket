@@ -2865,7 +2865,7 @@ function App() {
         ? ` | 🔁 Repeats: ${formatRepeatLabel(task.repeat)}`
         : "";
 
-    return `📅 Due: ${dateLabel} at ${timeLabel} | ⏱️ Est: ${task.estimatedMinutes || 0} mins | ⚠️ Priority: ${task.priority}${repeatLabel}`;
+    return `📅 Due: ${dateLabel} at ${timeLabel} | ⏱️ Est: ${task.estimatedMinutes || 0} mins | Priority: ${task.priority}${repeatLabel}`;
   };
 
   const handleAddCustomCategory = () => {
@@ -7487,6 +7487,24 @@ function App() {
     return <AssignmentCountdown title={task.title} label={label} tone={tone} extraClassName={extraClassName} />;
   };
 
+  const renderTaskMetadataStrip = (task) => {
+    const hasDate = task.dueMonth && task.dueDay;
+    const monthLabel = hasDate ? monthNames[Number(task.dueMonth) - 1] : null;
+    const dateLabel = hasDate ? `${monthLabel} ${Number(task.dueDay)}` : "No date";
+    const repeatLabel = task.repeat && task.repeat !== "NONE" ? formatRepeatLabel(task.repeat) : "";
+    return (
+      <div className="task-details task-details-fluid">
+        <span className="task-detail-cell task-detail-due">
+          <span className="task-detail-icon" aria-hidden="true">📅</span>
+          <span><small>Due</small><strong>{dateLabel} at {formatAssignmentTime(task.dueHour, task.dueAmPm)}</strong>{renderAssignmentCountdown(task, "task-detail-countdown")}</span>
+        </span>
+        <span className="task-detail-cell"><span className="task-detail-icon" aria-hidden="true">⏱️</span><span><small>Estimate</small><strong>{task.estimatedMinutes || 0} mins</strong></span></span>
+        <span className="task-detail-cell"><span><small>Priority</small><strong>{task.priority || "No priority"}</strong></span></span>
+        {repeatLabel && <span className="task-detail-cell"><span className="task-detail-icon" aria-hidden="true">🔁</span><span><small>Repeats</small><strong>{repeatLabel}</strong></span></span>}
+      </div>
+    );
+  };
+
   const renderRecommendationMetadata = (item, { showCourse = false } = {}) => {
     const task = item.task;
     const estimate = getValidEstimate(task);
@@ -8948,8 +8966,7 @@ function App() {
 
       {!isMobileUi && mobileSummaryOpen && renderTaskActionButtons(task, status)}
 
-      {mobileSummaryOpen && <div className="task-details">{formatTaskDetails(task)}</div>}
-      {overdue || mobileSummaryOpen ? renderAssignmentCountdown(task) : null}
+      {mobileSummaryOpen && renderTaskMetadataStrip(task)}
       {mobileSummaryOpen && renderSubtaskProgressLine(task)}
     </div>
 
