@@ -8801,7 +8801,6 @@ html[data-theme="dark"] .sync-conflict-dialog {
 /* Keep the phone checklist list in the dashboard's normal vertical scroll flow. */
 @media (max-width: 767px) {
   .mobile-dashboard-checklists,
-  .mobile-dashboard-checklists .standalone-checklists,
   .mobile-dashboard-checklists .checklist-gallery-view {
     height: auto;
     min-height: max-content;
