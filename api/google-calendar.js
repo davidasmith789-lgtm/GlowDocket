@@ -8,6 +8,7 @@ import {
   authorizedCalendar,
   beginOAuth,
   canCreateEvents,
+  cleanupManagedAssignmentDuplicates,
   channelTokenHash,
   createAdmin,
   ensureDedicatedCalendar,
@@ -178,6 +179,16 @@ async function routeAction(req, admin, user) {
     return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], diagnosticRef, batchSize: 1, readOnly: true });
   }
   if (action === "audit-managed-assignments-readonly") return auditManagedAssignmentEvents({ admin, userId: user.id, calendar: auth.calendar, nativeIds: body.nativeIds });
+  if (action === "cleanup-managed-assignment-duplicates") {
+    const dryRun = body.confirmation !== "DELETE_VERIFIED_DUPLICATES";
+    return cleanupManagedAssignmentDuplicates({ admin, userId: user.id, calendar: auth.calendar, nativeIds: body.nativeIds, dryRun });
+  }
+  if (action === "resolve-verified-legacy-issue") {
+    const diagnosticRef = String(body.diagnosticRef || "").trim();
+    if (!/^GC-[A-Z0-9-]{1,40}$/i.test(diagnosticRef)) throw new GoogleCalendarError("invalid_diagnostic_reference", "That Google Calendar diagnostic reference is invalid.", 400);
+    if (diagnosticRef !== "GC-4420") throw new GoogleCalendarError("legacy_resolution_not_authorized", "That historical issue has not been approved for controlled resolution.", 409);
+    return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], diagnosticRef, batchSize: 1, readOnly: false, resolutionReason: "orphaned_recurring_class_cancelled" });
+  }
   if (action === "verify-legacy-issues") return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], cursor: body.cursor, batchSize: 10 });
   if (action === "calendars") return { calendars: await listCalendarChoices(auth) };
   if (action === "settings") {

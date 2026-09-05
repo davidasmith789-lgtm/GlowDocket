@@ -96,7 +96,7 @@ export async function resolveSyncIssues({ admin, userId, categories, type = null
   await completeIssueResolution(query, "resolve_sync_issues");
 }
 
-export async function verifyLegacyMappingIssues({ admin, userId, calendar, currentItems = [], cursor = 0, batchSize = 10, diagnosticRef = "", readOnly = false }) {
+export async function verifyLegacyMappingIssues({ admin, userId, calendar, currentItems = [], cursor = 0, batchSize = 10, diagnosticRef = "", readOnly = false, resolutionReason = "orphaned_google_event_cancelled" }) {
   const safeBatchSize = Math.min(10, Math.max(1, Number(batchSize) || 10));
   const [{ data: issues, error: issueError }, { data: mappings, error: mappingError }, { data: imports, error: importError }] = await Promise.all([
     admin.from("google_sync_issues").select("id,diagnostic_ref,glowdocket_id,google_calendar_id,google_event_id").eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", "class").is("resolved_at", null),
@@ -133,7 +133,7 @@ export async function verifyLegacyMappingIssues({ admin, userId, calendar, curre
   const counts = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).length]));
   const diagnosticReferences = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).map((result) => result.diagnosticRef)]));
   const cancelledIssueIds = results.filter((result) => result.classification === "cancelled").map((result) => result.issueId);
-  if (!readOnly && cancelledIssueIds.length) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "orphaned_google_event_cancelled", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").is("resolved_at", null).in("id", cancelledIssueIds), "resolve_cancelled_orphaned_events");
+  if (!readOnly && cancelledIssueIds.length) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: resolutionReason, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").is("resolved_at", null).in("id", cancelledIssueIds), "resolve_cancelled_orphaned_events");
   const nextCursor = batch.length ? String(batch.at(-1).id) : cursorId; const complete = start < 0 || start + batch.length >= candidates.length;
   console.info("[google-calendar] legacy verification batch", { checked: batch.length, totalCandidates: candidates.length, counts, diagnosticReferences, complete });
   return { counts, diagnosticReferences, checked: batch.length, totalCandidates: candidates.length, nextCursor, complete };
@@ -171,6 +171,47 @@ export async function auditManagedAssignmentEvents({ admin, userId, calendar, na
   }
   console.info("[google-calendar] read-only assignment provider audit", { nativeIds: ids, range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }, counts: results.map((result) => ({ nativeId: result.nativeId, active: result.activeManagedCount, cancelled: result.cancelledManagedCount, untracked: result.untrackedManagedCount })) });
   return { readOnly: true, range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }, assignments: results };
+}
+
+export async function cleanupManagedAssignmentDuplicates({ admin, userId, calendar, nativeIds = [], dryRun = true }) {
+  const ids = [...new Set((nativeIds || []).map(String).filter((id) => /^[A-Za-z0-9:_-]{1,160}$/.test(id)))];
+  if (!ids.length || ids.length > 20) throw new GoogleCalendarError("invalid_duplicate_cleanup", "Choose between one and twenty assignments to clean up.", 400);
+  const [{ data: cloud, error: cloudError }, { data: prefs, error: prefsError }, { data: mappings, error: mappingError }] = await Promise.all([
+    admin.from("taskcabinet_cloud_state").select("state").eq("user_id", userId).maybeSingle(),
+    admin.from("google_calendar_preferences").select("dedicated_calendar_id").eq("user_id", userId).maybeSingle(),
+    admin.from("google_event_mappings").select("id,glowdocket_type,glowdocket_id,google_calendar_id,google_event_id,state,last_google_snapshot").eq("user_id", userId),
+  ]);
+  if (cloudError || prefsError || mappingError) throw cloudError || prefsError || mappingError;
+  const existingNative = new Set((cloud?.state?.tasks || []).filter((task) => task?.id && !task.isDeleted).map((task) => String(task.id)));
+  if (ids.some((id) => !existingNative.has(id))) throw new GoogleCalendarError("duplicate_cleanup_native_missing", "Every cleanup target must still be a current GlowDocket assignment.", 409);
+  const calendarId = prefs?.dedicated_calendar_id; if (!calendarId) throw new GoogleCalendarError("dedicated_calendar_missing", "The dedicated GlowDocket calendar is not available.", 409);
+  const activeMappings = (mappings || []).filter((mapping) => mapping.state === "active");
+  const mappingByNative = new Map(activeMappings.filter((mapping) => mapping.glowdocket_type === "assignment" && ids.includes(String(mapping.glowdocket_id))).map((mapping) => [String(mapping.glowdocket_id), mapping]));
+  if (mappingByNative.size !== ids.length) throw new GoogleCalendarError("duplicate_cleanup_mapping_missing", "Every cleanup target must have a current active mapping.", 409);
+  const referencedEvents = new Set(activeMappings.map((mapping) => `${mapping.google_calendar_id}:${mapping.google_event_id}`));
+  const dates = [...mappingByNative.values()].flatMap((mapping) => [providerDate(mapping.last_google_snapshot?.start), providerDate(mapping.last_google_snapshot?.end)]).filter(Boolean).sort();
+  if (!dates.length) throw new GoogleCalendarError("duplicate_cleanup_dates_missing", "The selected assignments do not have synchronized Google dates.", 409);
+  const from = new Date(`${dates[0]}T00:00:00Z`); from.setUTCDate(from.getUTCDate() - 14); const to = new Date(`${dates.at(-1)}T23:59:59Z`); to.setUTCDate(to.getUTCDate() + 14);
+  const events = []; let pageToken = null;
+  for (let page = 0; page < 10; page += 1) { const response = await calendar.events.list({ calendarId, timeMin: from.toISOString(), timeMax: to.toISOString(), showDeleted: true, singleEvents: false, maxResults: 2500, pageToken: pageToken || undefined, fields: "items(id,status,extendedProperties/private),nextPageToken" }); events.push(...(response.data.items || [])); pageToken = response.data.nextPageToken || null; if (!pageToken) break; }
+  if (pageToken) throw new GoogleCalendarError("duplicate_cleanup_incomplete", "The cleanup check exceeded its safe page limit.", 409);
+  const summary = { dryRun: Boolean(dryRun), assignmentsChecked: ids.length, authoritativeEventsPreserved: 0, eligibleDuplicates: 0, deletedDuplicates: 0, skippedAmbiguousEvents: 0, lookupFailures: 0, providerRefs: [] };
+  for (const id of ids) {
+    const mapping = mappingByNative.get(id);
+    try { const response = await calendar.events.get({ calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id, fields: "id,status" }); if (response.data.status === "cancelled") throw new Error("authoritative_cancelled"); summary.authoritativeEventsPreserved += 1; } catch { summary.lookupFailures += 1; continue; }
+    const candidates = events.filter((event) => event.id !== mapping.google_event_id && event.status !== "cancelled" && event.extendedProperties?.private?.glowdocketManaged === "1" && event.extendedProperties?.private?.glowdocketItemType === "assignment" && String(event.extendedProperties?.private?.glowdocketItemId || "") === id);
+    for (const candidate of candidates) {
+      if (referencedEvents.has(`${calendarId}:${candidate.id}`)) { summary.skippedAmbiguousEvents += 1; continue; }
+      try {
+        const response = await calendar.events.get({ calendarId, eventId: candidate.id, fields: "id,status,extendedProperties/private" }); const event = response.data; const meta = event.extendedProperties?.private || {};
+        if (event.status === "cancelled" || meta.glowdocketManaged !== "1" || meta.glowdocketItemType !== "assignment" || String(meta.glowdocketItemId || "") !== id) { summary.skippedAmbiguousEvents += 1; continue; }
+        summary.eligibleDuplicates += 1; summary.providerRefs.push(safeProviderRef(candidate.id));
+        if (!dryRun) { await calendar.events.delete({ calendarId, eventId: candidate.id }); summary.deletedDuplicates += 1; }
+      } catch (error) { if ([404, 410].includes(Number(error?.code || error?.response?.status || 0))) summary.skippedAmbiguousEvents += 1; else summary.lookupFailures += 1; }
+    }
+  }
+  console.info("[google-calendar] managed duplicate cleanup", { dryRun: summary.dryRun, assignmentsChecked: summary.assignmentsChecked, authoritativeEventsPreserved: summary.authoritativeEventsPreserved, eligibleDuplicates: summary.eligibleDuplicates, deletedDuplicates: summary.deletedDuplicates, skippedAmbiguousEvents: summary.skippedAmbiguousEvents, lookupFailures: summary.lookupFailures });
+  return summary;
 }
 
 function encryptionKey(env = process.env) {
@@ -413,8 +454,21 @@ export async function synchronizeNativeItems({ admin, userId, jobId = null, cale
     if (Date.now() >= deadline) break;
     if (!item?.id || !item?.type || !item.googleEvent) continue;
     processed += 1;
-    const identity = `${item.type}:${item.id}`; const mapping = mappingByNative.get(identity);
-    if (mapping && ["unlinked_by_user", "google_deleted"].includes(mapping.state)) continue;
+    const identity = `${item.type}:${item.id}`; let mapping = mappingByNative.get(identity);
+    const disposition = item.type === "assignment" ? String(item.syncDisposition || "active") : "active";
+    if (mapping?.state === "unlinked_by_user") continue;
+    if (disposition !== "active") {
+      if (mapping?.state === "active") await calendar.events.delete({ calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id }).catch((error) => { if (![404, 410].includes(Number(error?.code || error?.response?.status))) throw error; });
+      if (mapping && mapping.state !== "google_deleted") await admin.from("google_event_mappings").update({ state: "google_deleted", suppression_reason: disposition, updated_at: new Date().toISOString() }).eq("id", mapping.id).eq("user_id", userId).throwOnError();
+      continue;
+    }
+    if (mapping?.state === "google_deleted" && mapping.suppression_reason) {
+      const reservedEventId = newManagedGoogleEventId();
+      await admin.from("google_event_mappings").update({ google_event_id: reservedEventId, google_calendar_id: destinationCalendarId, state: "creating", suppression_reason: null, updated_at: new Date().toISOString() }).eq("id", mapping.id).eq("user_id", userId).throwOnError();
+      mapping = { ...mapping, google_event_id: reservedEventId, google_calendar_id: destinationCalendarId, state: "creating", suppression_reason: null };
+      mappingByNative.set(identity, mapping);
+    }
+    if (mapping?.state === "google_deleted") continue;
     const version = Number(mapping?.sync_version || 0) + 1;
     const desired = { ...item.googleEvent, extendedProperties: { ...(item.googleEvent.extendedProperties || {}), private: { ...(item.googleEvent.extendedProperties?.private || {}), glowdocketManaged: "1", glowdocketItemId: String(item.id), glowdocketItemType: item.type, glowdocketSyncVersion: String(version) } } };
     const currentGlow = eventSnapshot(desired); const currentGlowHash = snapshotHash(currentGlow); let saved;
@@ -427,7 +481,7 @@ export async function synchronizeNativeItems({ admin, userId, jobId = null, cale
           googleWrites += 1;
         }
         const recoveredGoogle = eventSnapshot(saved); const recoveredGlow = eventSnapshot(desired);
-        await upsertEventMappings(admin, [{ ...mapping, state: "active", google_event_id: saved.id || mapping.google_event_id, google_etag: saved.etag, google_updated_at: saved.updated || null, glowdocket_updated_at: item.updatedAt || null, last_google_snapshot: recoveredGoogle, last_google_hash: snapshotHash(recoveredGoogle), last_glowdocket_snapshot: recoveredGlow, last_glowdocket_hash: snapshotHash(recoveredGlow), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, sync_version: version, updated_at: new Date().toISOString() }]);
+        await upsertEventMappings(admin, [{ ...mapping, state: "active", suppression_reason: null, google_event_id: saved.id || mapping.google_event_id, google_etag: saved.etag, google_updated_at: saved.updated || null, glowdocket_updated_at: item.updatedAt || null, last_google_snapshot: recoveredGoogle, last_google_hash: snapshotHash(recoveredGoogle), last_glowdocket_snapshot: recoveredGlow, last_glowdocket_hash: snapshotHash(recoveredGlow), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, sync_version: version, updated_at: new Date().toISOString() }]);
         markResolved(item.type, item.id);
         continue;
       } catch (error) {
@@ -512,7 +566,7 @@ export async function synchronizeNativeItems({ admin, userId, jobId = null, cale
       if (Date.now() >= deadline) { cleanupComplete = false; break; }
       await calendar.events.delete({ calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id }).catch((error) => { if (Number(error?.code || error?.response?.status) !== 404) throw error; });
       if (mapping.glowdocket_type === "class") await admin.from("google_event_mappings").delete().eq("id", mapping.id);
-      else await admin.from("google_event_mappings").update({ state: "unlinked_by_user", updated_at: new Date().toISOString() }).eq("id", mapping.id);
+      else await admin.from("google_event_mappings").update({ state: "google_deleted", suppression_reason: "deleted", updated_at: new Date().toISOString() }).eq("id", mapping.id);
       cleanupProcessed += 1;
     }
     if (cleanupProcessed < staleMappings.length) cleanupComplete = false;
@@ -544,7 +598,7 @@ export async function statusFor({ admin, userId }) {
     admin.from("google_sync_issues").select("id,category,direction,glowdocket_type,glowdocket_id,item_title,safe_explanation,recommended_action,diagnostic_ref,attempt_count,last_occurred_at,resolved_at").eq("user_id", userId).not("resolved_at", "is", null).order("resolved_at", { ascending: false }).limit(50),
     admin.from("google_sync_issues").select("id", { count: "exact", head: true }).eq("user_id", userId).is("resolved_at", null),
     admin.from("google_sync_issues").select("id", { count: "exact", head: true }).eq("user_id", userId).not("resolved_at", "is", null),
-    admin.from("google_event_mappings").select("glowdocket_type,glowdocket_id,state").eq("user_id", userId),
+    admin.from("google_event_mappings").select("glowdocket_type,glowdocket_id,state,suppression_reason").eq("user_id", userId),
   ]);
   const publicIssue = (issue) => ({ id: issue.id, category: issue.category || "temporary_provider_failure", direction: issue.direction || "glowdocket_to_google", itemType: issue.glowdocket_type || "", itemId: issue.glowdocket_id || "", itemTitle: issue.item_title || "Google Calendar item", explanation: issue.safe_explanation || ISSUE_COPY.temporary_provider_failure.explanation, recommendedAction: issue.recommended_action || ISSUE_COPY.temporary_provider_failure.action, diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN", attemptCount: Number(issue.attempt_count || 1), lastOccurredAt: issue.last_occurred_at, resolvedAt: issue.resolved_at });
   const syncActive = Boolean(connection?.sync_job_id && connection?.sync_lock_until && new Date(connection.sync_lock_until).getTime() > Date.now());

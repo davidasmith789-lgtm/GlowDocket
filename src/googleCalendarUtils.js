@@ -62,9 +62,16 @@ export function classGoogleEvents(courses, settings, { returnUrl = "", timeZone 
   return result;
 }
 
+export function assignmentGoogleSyncDisposition(task) {
+  if (task?.isDeleted) return "trash";
+  if (task?.isArchived) return "archive";
+  if (task?.isCompleted || task?.status === "completed") return "completed";
+  return "active";
+}
+
 export function buildGoogleCalendarItems({ tasks, calendarEvents, checklists, courses, settings, preferences, origin = globalThis.location?.origin || "https://glowdocket.com", timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" }) {
   const common = { includeNotes: Boolean(preferences.include_notes), returnUrl: `${origin}/?tab=calendar`, timeZone }; const items = [];
-  if (preferences.sync_assignments !== false) for (const task of tasks || []) if (!task.isDeleted && !task.isArchived && task.dueMonth && task.dueDay) items.push({ id: String(task.id), type: "assignment", updatedAt: task.updatedAt || task.createdAt, googleEvent: assignmentGoogleEvent(task, common) });
+  if (preferences.sync_assignments !== false) for (const task of tasks || []) if (task.dueMonth && task.dueDay) items.push({ id: String(task.id), type: "assignment", updatedAt: task.updatedAt || task.createdAt, syncDisposition: assignmentGoogleSyncDisposition(task), googleEvent: assignmentGoogleEvent(task, common) });
   if (preferences.sync_activities !== false) for (const entry of calendarEvents || []) if (["event", "day-note"].includes(entry.type) && entry.date) items.push({ id: String(entry.id), type: "activity", updatedAt: entry.updatedAt || entry.createdAt, googleEvent: activityGoogleEvent(entry, common) });
   if (preferences.sync_checklists) for (const list of checklists || []) for (const item of list.items || []) if (item.dueDate && !item.isDone) items.push({ id: String(item.id), type: "checklist", updatedAt: item.updatedAt, googleEvent: checklistGoogleEvent(item, list, common) });
   if (preferences.sync_classes !== false) items.push(...classGoogleEvents(courses || [], settings || {}, common));

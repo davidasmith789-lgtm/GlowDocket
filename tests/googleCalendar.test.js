@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { activityGoogleEvent, applyGoogleNativeUpdates, assignmentGoogleEvent, buildGoogleCalendarItems, buildNativeUpdateConfirmations, classGoogleEvents, googleDateTimeParts, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { auditManagedAssignmentEvents, canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, semanticallyEquivalentSnapshots, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
+import { activityGoogleEvent, applyGoogleNativeUpdates, assignmentGoogleEvent, assignmentGoogleSyncDisposition, buildGoogleCalendarItems, buildNativeUpdateConfirmations, classGoogleEvents, googleDateTimeParts, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
+import { auditManagedAssignmentEvents, canCreateEvents, changedFields, cleanupManagedAssignmentDuplicates, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, semanticallyEquivalentSnapshots, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
 import { claimSyncJob, confirmNativeUpdates, continueSyncJob, finalizeSyncJob, markWebhookDirty } from "../api/google-calendar.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
@@ -409,4 +409,88 @@ test("assignment provider audit finds tracked, untracked, cancelled, and same-ti
   const calendar = { events: { async list() { return { data: { items: events } }; }, async get() { return { data: { id: "tracked", status: "confirmed" } }; } } };
   const originalInfo = console.info; console.info = () => {}; let result; try { result = await auditManagedAssignmentEvents({ admin: { from: query }, userId: "user", calendar, nativeIds: ["assignment-1"] }); } finally { console.info = originalInfo; }
   const audited = result.assignments[0]; assert.equal(result.readOnly, true); assert.equal(audited.mappedStatus, "active"); assert.equal(audited.activeManagedCount, 2); assert.equal(audited.cancelledManagedCount, 1); assert.equal(audited.untrackedManagedCount, 2); assert.equal(audited.sameTitleDateEvents.length, 4); assert.doesNotMatch(JSON.stringify(result), /description|attendees/);
+});
+
+test("assignment lifecycle dispositions distinguish automatic suppression from intentional unlinking", () => {
+  assert.equal(assignmentGoogleSyncDisposition({}), "active");
+  assert.equal(assignmentGoogleSyncDisposition({ isCompleted: true }), "completed");
+  assert.equal(assignmentGoogleSyncDisposition({ isArchived: true }), "archive");
+  assert.equal(assignmentGoogleSyncDisposition({ isDeleted: true, isCompleted: true }), "trash");
+  const items = buildGoogleCalendarItems({ tasks: [{ id: "done", title: "Done", dueYear: 2026, dueMonth: 9, dueDay: 9, isCompleted: true }, { id: "trash", title: "Trash", dueYear: 2026, dueMonth: 9, dueDay: 10, isDeleted: true }], preferences: { sync_assignments: true }, calendarEvents: [], checklists: [], courses: [], settings: {}, origin: "https://glowdocket.com", timeZone: "UTC" });
+  assert.deepEqual(items.map((item) => item.syncDisposition), ["completed", "trash"]);
+});
+
+test("completed assignments remove their provider event, restore when active, and intentional unlinking wins", async () => {
+  const desired = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 9 }); const snapshot = eventSnapshot(desired);
+  let mapping = { id: "mapping", user_id: "user", glowdocket_type: "assignment", glowdocket_id: "assignment-1", google_calendar_id: "calendar", google_event_id: "tracked", state: "active", suppression_reason: null, last_google_snapshot: snapshot, last_google_hash: snapshotHash(snapshot), last_glowdocket_snapshot: snapshot, last_glowdocket_hash: snapshotHash(snapshot), sync_version: 1 };
+  const mappingQuery = () => { let update = null; return { select() { return this; }, eq() { return this; }, update(value) { update = value; return this; }, upsert(rows) { mapping = { ...mapping, ...rows[0] }; return { async throwOnError() {} }; }, async throwOnError() { if (update) mapping = { ...mapping, ...update }; }, then(resolve) { if (update) { mapping = { ...mapping, ...update }; resolve({ error: null }); } else resolve({ data: [mapping], error: null }); } }; };
+  const issueQuery = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
+  const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery() : issueQuery; } }; const deletes = []; const inserts = [];
+  const calendar = { events: { async delete({ eventId }) { deletes.push(eventId); }, async get({ eventId }) { if (eventId === "tracked") return { data: { id: eventId, ...desired } }; throw { code: 404 }; }, async insert({ requestBody }) { inserts.push(requestBody.id); return { data: { ...requestBody, id: requestBody.id, etag: "new-etag" } }; } } };
+  const common = { admin, userId: "user", calendar, destinationCalendarId: "calendar", enabledTypes: ["assignment"] };
+  await synchronizeNativeItems({ ...common, items: [{ id: "assignment-1", type: "assignment", syncDisposition: "completed", googleEvent: desired }] });
+  assert.equal(mapping.state, "google_deleted"); assert.equal(mapping.suppression_reason, "completed"); assert.deepEqual(deletes, ["tracked"]);
+  await synchronizeNativeItems({ ...common, items: [{ id: "assignment-1", type: "assignment", syncDisposition: "active", googleEvent: desired }] });
+  assert.equal(mapping.state, "active"); assert.equal(mapping.suppression_reason, null); assert.equal(inserts.length, 1); assert.notEqual(mapping.google_event_id, "tracked");
+  mapping = { ...mapping, state: "unlinked_by_user", suppression_reason: null }; const before = inserts.length;
+  await synchronizeNativeItems({ ...common, items: [{ id: "assignment-1", type: "assignment", syncDisposition: "active", googleEvent: desired }] });
+  assert.equal(mapping.state, "unlinked_by_user"); assert.equal(inserts.length, before, "completion and restoration cannot override an intentional unlink");
+});
+
+test("archive and trash remain automatically suppressed until the assignment is restored", async () => {
+  const source = [{ id: "archive", title: "Archived", dueYear: 2026, dueMonth: 9, dueDay: 9, isArchived: true }, { id: "trash", title: "Trashed", dueYear: 2026, dueMonth: 9, dueDay: 10, isDeleted: true }];
+  const items = buildGoogleCalendarItems({ tasks: source, preferences: { sync_assignments: true }, calendarEvents: [], checklists: [], courses: [], settings: {}, timeZone: "UTC" });
+  assert.deepEqual(items.map(({ id, syncDisposition }) => [id, syncDisposition]), [["archive", "archive"], ["trash", "trash"]]);
+  const restored = buildGoogleCalendarItems({ tasks: source.map((task) => ({ ...task, isArchived: false, isDeleted: false })), preferences: { sync_assignments: true }, calendarEvents: [], checklists: [], courses: [], settings: {}, timeZone: "UTC" });
+  assert.ok(restored.every((item) => item.syncDisposition === "active"));
+});
+
+test("automatic Google sync is debounced for meaningful native changes and preserves app-open fallbacks", async () => {
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /googleCalendarNativeFingerprintRef/); assert.match(app, /Math\.max\(1200, 15_000 - elapsed\)/);
+  assert.match(app, /window\.addEventListener\("focus", sync\)/); assert.match(app, /window\.addEventListener\("online", sync\)/);
+  assert.match(app, /runGoogleCalendarSync\(\{ quiet: true \}\)/);
+});
+
+test("duplicate cleanup preserves the authoritative event and only deletes verified managed assignment duplicates", async () => {
+  const mapping = { id: "mapping", glowdocket_type: "assignment", glowdocket_id: "assignment-1", google_calendar_id: "calendar", google_event_id: "tracked", state: "active", last_google_snapshot: { start: { date: "2026-09-08" }, end: { date: "2026-09-09" } } };
+  const otherMapping = { id: "other-mapping", glowdocket_type: "assignment", glowdocket_id: "assignment-2", google_calendar_id: "calendar", google_event_id: "other-mapped", state: "active" };
+  const query = (table) => ({ select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: table === "taskcabinet_cloud_state" ? { state: { tasks: [{ id: "assignment-1" }, { id: "assignment-2" }] } } : { dedicated_calendar_id: "calendar" }, error: null }; }, then(resolve) { resolve({ data: table === "google_event_mappings" ? [mapping, otherMapping] : null, error: null }); } });
+  const metadata = { glowdocketManaged: "1", glowdocketItemType: "assignment", glowdocketItemId: "assignment-1" };
+  let events = [{ id: "tracked", status: "confirmed", extendedProperties: { private: metadata } }, { id: "duplicate", status: "confirmed", extendedProperties: { private: metadata } }, { id: "other-mapped", status: "confirmed", extendedProperties: { private: metadata } }, { id: "title-only", status: "confirmed" }]; const deletes = [];
+  const calendar = { events: { async list() { return { data: { items: events } }; }, async get({ eventId }) { const event = events.find((entry) => entry.id === eventId); if (!event) throw { code: 404 }; return { data: event }; }, async delete({ eventId }) { deletes.push(eventId); events = events.map((event) => event.id === eventId ? { ...event, status: "cancelled" } : event); } } };
+  const args = { admin: { from: query }, userId: "user", calendar, nativeIds: ["assignment-1"] };
+  const dryRun = await cleanupManagedAssignmentDuplicates({ ...args, dryRun: true });
+  assert.deepEqual({ preserved: dryRun.authoritativeEventsPreserved, eligible: dryRun.eligibleDuplicates, deleted: dryRun.deletedDuplicates, skipped: dryRun.skippedAmbiguousEvents }, { preserved: 1, eligible: 1, deleted: 0, skipped: 1 }); assert.deepEqual(deletes, []);
+  const cleanup = await cleanupManagedAssignmentDuplicates({ ...args, dryRun: false }); assert.equal(cleanup.deletedDuplicates, 1); assert.deepEqual(deletes, ["duplicate"]);
+  const repeated = await cleanupManagedAssignmentDuplicates({ ...args, dryRun: false }); assert.equal(repeated.eligibleDuplicates, 0); assert.equal(repeated.deletedDuplicates, 0); assert.deepEqual(deletes, ["duplicate"]);
+});
+
+test("ordinary assignment retries and webhook echoes never create a second provider event when an active mapping exists", async () => {
+  const desired = assignmentGoogleEvent({ title: "Quiz", dueYear: 2026, dueMonth: 9, dueDay: 8 }); const snapshot = eventSnapshot(desired);
+  const mapping = { id: "mapping", user_id: "user", glowdocket_type: "assignment", glowdocket_id: "assignment-1", google_calendar_id: "calendar", google_event_id: "tracked", state: "active", last_google_snapshot: snapshot, last_google_hash: snapshotHash(snapshot), last_glowdocket_snapshot: snapshot, last_glowdocket_hash: snapshotHash(snapshot), sync_version: 1 };
+  const mappingQuery = { select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: [mapping], error: null }); } }; const issueQuery = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
+  const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery : issueQuery; } }; const calls = { insert: 0, update: 0, delete: 0, get: 0 };
+  const calendar = { events: Object.fromEntries(Object.keys(calls).map((method) => [method, async () => { calls[method] += 1; throw new Error(`unexpected ${method}`); }])) };
+  const args = { admin, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "assignment-1", type: "assignment", syncDisposition: "active", googleEvent: desired }], enabledTypes: ["assignment"], managedEvents: [{ mapping, event: { id: "tracked", ...desired } }] };
+  for (let pass = 0; pass < 8; pass += 1) { const result = await synchronizeNativeItems(args); assert.equal(result.noops, 1); }
+  assert.deepEqual(calls, { insert: 0, update: 0, delete: 0, get: 0 });
+});
+
+test("provider creation followed by mapping activation failure retries the reserved provider identity", async () => {
+  const desired = assignmentGoogleEvent({ title: "Quiz", dueYear: 2026, dueMonth: 9, dueDay: 8 }); let mapping = null; let upserts = 0; let inserts = 0;
+  const mappingQuery = () => ({ select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: mapping ? [mapping] : [], error: null }); }, upsert(rows) { upserts += 1; const row = rows[0]; if (!mapping) mapping = { id: "mapping", ...row }; if (upserts === 2) return { async throwOnError() { throw Object.assign(new Error("temporary database failure"), { code: "PGRST000" }); } }; mapping = { ...mapping, ...row }; return { async throwOnError() {} }; }, update(value) { mapping = { ...mapping, ...value }; return { eq() { return this; } }; } });
+  const issueQuery = { update() { return this; }, insert() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } }; const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery() : issueQuery; } };
+  let providerEvent = null; const calendar = { events: { async insert({ requestBody }) { inserts += 1; providerEvent = { ...requestBody, id: requestBody.id, etag: "etag" }; return { data: providerEvent }; }, async get({ eventId }) { if (providerEvent?.id === eventId) return { data: providerEvent }; throw { code: 404 }; } } };
+  const args = { admin, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "assignment-1", type: "assignment", syncDisposition: "active", googleEvent: desired }], enabledTypes: ["assignment"] };
+  await assert.rejects(synchronizeNativeItems(args), /temporary database failure/); const reservedId = mapping.google_event_id; assert.equal(mapping.state, "creating"); assert.equal(inserts, 1);
+  await synchronizeNativeItems(args); assert.equal(mapping.state, "active"); assert.equal(mapping.google_event_id, reservedId); assert.equal(inserts, 1, "retry finds the event created under the reserved ID instead of creating a duplicate");
+});
+
+test("GC-4420 resolution retains history with the recurring-class cancellation reason", async () => {
+  const issue = { id: "issue", diagnostic_ref: "GC-4420", glowdocket_id: "weekly:APES-1-1788105185173", google_calendar_id: "calendar", google_event_id: "cancelled" }; const updates = [];
+  const query = (table) => { let payload = null; return { select() { return this; }, eq() { return this; }, is() { return this; }, in() { return this; }, update(value) { payload = value; return this; }, then(resolve) { if (payload) { updates.push(payload); resolve({ error: null }); } else resolve({ data: table === "google_sync_issues" ? [issue] : [], error: null }); } }; };
+  const calendar = { events: { async get() { return { data: { status: "cancelled" } }; } } }; const originalInfo = console.info; console.info = () => {};
+  try { await verifyLegacyMappingIssues({ admin: { from: query }, userId: "user", calendar, diagnosticRef: "GC-4420", readOnly: false, resolutionReason: "orphaned_recurring_class_cancelled" }); } finally { console.info = originalInfo; }
+  assert.equal(updates[0].resolution_reason, "orphaned_recurring_class_cancelled"); assert.ok(updates[0].resolved_at);
 });

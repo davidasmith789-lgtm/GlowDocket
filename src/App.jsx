@@ -2263,6 +2263,9 @@ function App() {
   const [removeDeletedAssignmentFromGoogle, setRemoveDeletedAssignmentFromGoogle] = useState(true);
   const googleCalendarSyncingRef = useRef(false);
   const googleCalendarLastAutoSyncRef = useRef(0);
+  const googleCalendarNativeFingerprintRef = useRef("");
+  const googleCalendarNativeSyncPendingRef = useRef(false);
+  const googleCalendarAutoSyncTimerRef = useRef(null);
   const googleCalendarSyncedTimerRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
@@ -2317,7 +2320,10 @@ function App() {
   }, [accountMode, googleCalendarPreviewEnabled]);
 
   const runGoogleCalendarSync = useCallback(async ({ quiet = false } = {}) => {
-    if (!googleCalendarPreviewEnabled || !googleCalendarState.connected || googleCalendarSyncingRef.current) return;
+    if (!googleCalendarPreviewEnabled || !googleCalendarState.connected || googleCalendarSyncingRef.current) {
+      if (googleCalendarPreviewEnabled && googleCalendarState.connected && googleCalendarSyncingRef.current) googleCalendarNativeSyncPendingRef.current = true;
+      return;
+    }
     googleCalendarSyncingRef.current = true;
     if (!quiet) { window.clearTimeout(googleCalendarSyncedTimerRef.current); setGoogleCalendarBusy("sync"); setGoogleCalendarNotice(""); }
     let completed = false;
@@ -2359,7 +2365,10 @@ function App() {
       setGoogleCalendarNotice(error.message);
       if (error.code === "sync_in_progress") await refreshGoogleCalendarStatus();
     }
-    finally { googleCalendarSyncingRef.current = false; if (!quiet && !completed) setGoogleCalendarBusy(""); }
+    finally {
+      googleCalendarSyncingRef.current = false; if (!quiet && !completed) setGoogleCalendarBusy("");
+      if (googleCalendarNativeSyncPendingRef.current) { googleCalendarNativeSyncPendingRef.current = false; window.clearTimeout(googleCalendarAutoSyncTimerRef.current); googleCalendarAutoSyncTimerRef.current = window.setTimeout(() => { void runGoogleCalendarSync({ quiet: true }); }, 1200); }
+    }
   // The save helpers are intentionally read at execution time; adding the large App-local
   // callbacks as dependencies would retrigger synchronization on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2380,6 +2389,17 @@ function App() {
     const timer = window.setTimeout(sync, 1200);
     return () => { window.clearTimeout(timer); window.removeEventListener("focus", sync); window.removeEventListener("online", sync); document.removeEventListener("visibilitychange", focus); };
   }, [googleCalendarPreviewEnabled, googleCalendarState.connected, runGoogleCalendarSync]);
+  useEffect(() => {
+    if (!googleCalendarPreviewEnabled || !googleCalendarState.connected) return undefined;
+    const fingerprint = JSON.stringify({ tasks, calendarEvents, checklists, courses, googlePreferences: googleCalendarState.preferences, calendarSettings: { calendarSystem: userSettings.calendarSystem, cycleAnchorDate: userSettings.cycleAnchorDate, cycleDayNames: userSettings.cycleDayNames, courseCycleDays: userSettings.courseCycleDays, cycleCourseMeetings: userSettings.cycleCourseMeetings } });
+    if (!googleCalendarNativeFingerprintRef.current) { googleCalendarNativeFingerprintRef.current = fingerprint; return undefined; }
+    if (googleCalendarNativeFingerprintRef.current === fingerprint) return undefined;
+    googleCalendarNativeFingerprintRef.current = fingerprint;
+    const elapsed = Date.now() - googleCalendarLastAutoSyncRef.current;
+    window.clearTimeout(googleCalendarAutoSyncTimerRef.current);
+    googleCalendarAutoSyncTimerRef.current = window.setTimeout(() => { void runGoogleCalendarSync({ quiet: true }); }, Math.max(1200, 15_000 - elapsed));
+    return () => window.clearTimeout(googleCalendarAutoSyncTimerRef.current);
+  }, [calendarEvents, checklists, courses, googleCalendarPreviewEnabled, googleCalendarState.connected, googleCalendarState.preferences, runGoogleCalendarSync, tasks, userSettings.calendarSystem, userSettings.courseCycleDays, userSettings.cycleAnchorDate, userSettings.cycleCourseMeetings, userSettings.cycleDayNames]);
 
   const handleGoogleConnect = async () => {
     setGoogleCalendarBusy("connect"); setGoogleCalendarNotice("");
@@ -11867,7 +11887,7 @@ function App() {
                           </article>)}</div>
                         </details>}
                       </section>}
-                      {googleCalendarState.mappings?.length > 0 && <details className="google-managed-items"><summary>Synced GlowDocket items</summary><div>{googleCalendarState.mappings.slice(0, 100).map((mapping) => <div key={`${mapping.glowdocket_type}:${mapping.glowdocket_id}`}><span><strong>{googleManagedItemLabel(mapping)}</strong><small>{mapping.glowdocket_type} · {mapping.state === "active" ? "In Google Calendar" : "Not in Google Calendar"}</small></span><button type="button" className="btn btn-secondary" onClick={() => handleGoogleManagedItemAction(mapping)} disabled={Boolean(googleCalendarBusy)}>{mapping.state === "active" ? "Remove from Google Calendar" : "Add back to Google Calendar"}</button></div>)}</div></details>}
+                      {googleCalendarState.mappings?.length > 0 && <details className="google-managed-items"><summary>Synced GlowDocket items</summary><div>{googleCalendarState.mappings.slice(0, 100).map((mapping) => <div key={`${mapping.glowdocket_type}:${mapping.glowdocket_id}`}><span><strong>{googleManagedItemLabel(mapping)}</strong><small>{mapping.glowdocket_type} · {mapping.state === "active" ? "In Google Calendar" : mapping.suppression_reason ? `Paused while ${mapping.suppression_reason}` : "Not in Google Calendar"}</small></span>{!mapping.suppression_reason && <button type="button" className="btn btn-secondary" onClick={() => handleGoogleManagedItemAction(mapping)} disabled={Boolean(googleCalendarBusy)}>{mapping.state === "active" ? "Remove from Google Calendar" : "Add back to Google Calendar"}</button>}</div>)}</div></details>}
                     </>}
                     {googleCalendarNotice && <p className="hint-text" role="status">{googleCalendarNotice}</p>}
                   </SettingsCard> : <section className="settings-section settings-section-wide google-calendar-settings-locked" aria-disabled="true">

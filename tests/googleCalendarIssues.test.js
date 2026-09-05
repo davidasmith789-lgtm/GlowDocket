@@ -55,3 +55,9 @@ test("manual sync feedback remains active through continuations and restores ser
   assert.match(service, /sync_job_id,sync_lock_until,sync_started_at/);
   assert.match(service, /const syncActive = Boolean/);
 });
+
+test("assignment suppression migration is additive and does not rewrite existing mappings", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/202609050003_google_assignment_sync_suppression.sql", import.meta.url), "utf8");
+  assert.match(migration, /add column if not exists suppression_reason text/i);
+  assert.doesNotMatch(migration, /\b(update|delete|truncate)\s+public\.google_event_mappings/i);
+});

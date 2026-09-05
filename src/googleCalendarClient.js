@@ -45,6 +45,8 @@ export async function verifyLegacyGoogleCalendarIssues(items) {
 }
 export const verifyLegacyGoogleCalendarIssueReadOnly = (diagnosticRef, items) => request("verify-legacy-issue-readonly", { diagnosticRef, items: (items || []).map((item) => ({ id: item?.id, type: item?.type })) });
 export const auditManagedGoogleAssignmentsReadOnly = (nativeIds) => request("audit-managed-assignments-readonly", { nativeIds });
+export const cleanupManagedGoogleAssignmentDuplicates = (nativeIds, execute = false) => request("cleanup-managed-assignment-duplicates", { nativeIds, ...(execute ? { confirmation: "DELETE_VERIFIED_DUPLICATES" } : {}) });
+export const resolveVerifiedLegacyGoogleIssue = (diagnosticRef, items) => request("resolve-verified-legacy-issue", { diagnosticRef, items: (items || []).map((item) => ({ id: item?.id, type: item?.type })) });
 export const unlinkGoogleCalendarItem = (type, id, deleteGoogle = true) => request("unlink", { type, id, deleteGoogle });
 export const restoreGoogleCalendarItem = (type, id) => request("restore", { type, id });
 export const actOnGoogleCalendarIssue = (issueId, issueAction) => request("issue-action", { issueId, issueAction });
