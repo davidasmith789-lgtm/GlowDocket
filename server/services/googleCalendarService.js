@@ -38,16 +38,27 @@ const ISSUE_COPY = {
   permission_problem: { kind: "sync_error", explanation: "Google Calendar did not allow GlowDocket to complete this operation.", action: "Reconnect Google Calendar and confirm the requested permissions." },
   recurrence_problem: { kind: "sync_error", explanation: "Google Calendar could not apply this repeating schedule safely.", action: "Review the class schedule, then retry synchronization." },
   temporary_provider_failure: { kind: "sync_error", explanation: "Google Calendar was temporarily unavailable while processing this item.", action: "Retry synchronization in a moment." },
+  internal_database_failure: { kind: "sync_error", explanation: "GlowDocket could not save part of this synchronization.", action: "Retry synchronization. If the problem continues, contact support with the diagnostic reference." },
   stale_sync_state: { kind: "sync_error", explanation: "Google asked GlowDocket to refresh its saved synchronization state.", action: "Retry synchronization; GlowDocket can safely rebuild this calendar's state." },
 };
 
 export function syncIssueDefaults(category) { return ISSUE_COPY[category] || ISSUE_COPY.temporary_provider_failure; }
 export function providerIssueCategory(error, itemType = "") {
   const status = Number(error?.code || error?.response?.status || 0);
+  const databaseCode = String(error?.code || "");
+  if (/^(?:22|23|42)[0-9A-Z]{3}$/.test(databaseCode) || /^PGRST[0-9A-Z]+$/.test(databaseCode)) return "internal_database_failure";
   if ([401, 403].includes(status)) return "permission_problem";
   if (status === 410) return "stale_sync_state";
   if (itemType === "class" && status === 400) return "recurrence_problem";
   return "temporary_provider_failure";
+}
+
+export async function upsertEventMappings(admin, writes) {
+  const existing = writes.filter((row) => row.id != null);
+  const newlyCreated = writes.filter((row) => row.id == null).map((row) => { const withoutId = { ...row }; delete withoutId.id; return withoutId; });
+  const options = { onConflict: "user_id,glowdocket_type,glowdocket_id" };
+  if (existing.length) await admin.from("google_event_mappings").upsert(existing, options).throwOnError();
+  if (newlyCreated.length) await admin.from("google_event_mappings").upsert(newlyCreated, options).throwOnError();
 }
 export function syncIssueIdentity({ category, direction = "glowdocket_to_google", type = null, id = null, calendarId = null, eventId = null }) {
   return sha256([category, direction, type || "connection", id || "", calendarId || "", eventId || ""].join("|"));
@@ -225,7 +236,7 @@ export async function syncImportedCalendar({ admin, userId, calendar, selection,
   }
   if (deleteIds.length) await admin.from("google_imported_events").delete().eq("user_id", userId).eq("calendar_id", selection.calendar_id).in("event_id", [...new Set(deleteIds)]);
   if (importedRows.length) await admin.from("google_imported_events").upsert(importedRows, { onConflict: "user_id,calendar_id,event_id" }).throwOnError();
-  if (managedMappingWrites.length) await admin.from("google_event_mappings").upsert(managedMappingWrites, { onConflict: "user_id,glowdocket_type,glowdocket_id" }).throwOnError();
+  if (managedMappingWrites.length) await upsertEventMappings(admin, managedMappingWrites);
   if (cancelledMappingIds.length) await admin.from("google_event_mappings").update({ state: "unlinked_by_user", updated_at: new Date().toISOString() }).in("id", cancelledMappingIds);
   if (recoveryIssues.length) await Promise.all(recoveryIssues.map((issue) => recordSyncIssue({ admin, userId, ...issue })));
   for (const [type, ids] of recoveredByType) await admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "mapping_verified", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null);
@@ -348,7 +359,7 @@ export async function synchronizeNativeItems({ admin, userId, calendar, destinat
     mappingWrites.push({ user_id: userId, glowdocket_type: item.type, glowdocket_id: String(item.id), google_calendar_id: mapping?.google_calendar_id || destinationCalendarId, google_event_id: saved.id, state: "active", google_etag: saved.etag, google_updated_at: saved.updated || null, glowdocket_updated_at: item.updatedAt || null, last_google_snapshot: googleSnapshot, last_google_hash: snapshotHash(googleSnapshot), last_glowdocket_snapshot: glowSnapshot, last_glowdocket_hash: snapshotHash(glowSnapshot), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, sync_version: version, updated_at: new Date().toISOString() });
     markResolved(item.type, item.id);
   }
-  if (mappingWrites.length) await admin.from("google_event_mappings").upsert(mappingWrites, { onConflict: "user_id,glowdocket_type,glowdocket_id" }).throwOnError();
+  if (mappingWrites.length) await upsertEventMappings(admin, mappingWrites);
   for (const [type, ids] of resolvedByType) await admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "successful_sync", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null);
   const nextCursor = startIndex + processed; const itemsComplete = nextCursor >= items.length;
   let cleanupComplete = true; let cleanupProcessed = 0;

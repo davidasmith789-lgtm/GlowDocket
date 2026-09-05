@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, snapshotHash, synchronizeNativeItems } from "../server/services/googleCalendarService.js";
+import { canCreateEvents, changedFields, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings } from "../server/services/googleCalendarService.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -89,4 +89,21 @@ test("a large unchanged managed dedicated calendar terminates without provider r
   const manual = { id: "manual", summary: "Family dinner", start: { dateTime: "2026-09-01T18:00:00" } };
   const importable = [...managedEvents.map(({ event }) => event), manual].filter((event) => managedProjectionDecision(event, mappings.find((mapping) => mapping.google_event_id === event.id)) === "import");
   assert.deepEqual(importable.map((event) => event.id), ["manual"], "the manual event is imported once beside managed no-ops");
+});
+
+test("mapping batches omit IDs for new rows and retain IDs for existing rows", async () => {
+  const batches = [];
+  const admin = { from(table) { assert.equal(table, "google_event_mappings"); return { upsert(rows) { batches.push(rows); return { async throwOnError() {} }; } }; } };
+  await upsertEventMappings(admin, [
+    { id: "existing-uuid", user_id: "user", glowdocket_type: "assignment", glowdocket_id: "old" },
+    { id: null, user_id: "user", glowdocket_type: "assignment", glowdocket_id: "new" },
+  ]);
+  assert.equal(batches.length, 2, "new and existing mappings cannot share a PostgREST batch column set");
+  assert.equal(batches[0][0].id, "existing-uuid");
+  assert.equal(Object.hasOwn(batches[1][0], "id"), false, "PostgreSQL must supply the UUID default");
+});
+
+test("database constraint failures are not classified as provider failures", () => {
+  assert.equal(providerIssueCategory({ code: "23502", message: "null value violates not-null constraint" }), "internal_database_failure");
+  assert.equal(providerIssueCategory({ code: 503 }), "temporary_provider_failure");
 });
