@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings } from "../server/services/googleCalendarService.js";
+import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -121,4 +121,22 @@ test("issue-resolution database failures are logged server-side and surfaced wit
     });
   } finally { console.error = originalError; }
   assert.deepEqual(protectedDiagnostic, ["[google-calendar] issue lifecycle query failed", { operation: "resolve_verified_mappings", code: "42703", message: rawMessage }]);
+});
+
+test("legacy mapping verification is read-only, filtered, bounded, and safely classified", async () => {
+  const issues = [
+    { id: "1", diagnostic_ref: "GC-0001", glowdocket_id: "cycle:Math:2027-06-02", google_calendar_id: "calendar", google_event_id: "missing" },
+    { id: "2", diagnostic_ref: "GC-0002", glowdocket_id: "cycle:Math:2027-06-03", google_calendar_id: "calendar", google_event_id: "cancelled" },
+    { id: "3", diagnostic_ref: "GC-0003", glowdocket_id: "cycle:Math:2027-06-04", google_calendar_id: "calendar", google_event_id: "active" },
+    { id: "4", diagnostic_ref: "GC-0004", glowdocket_id: "cycle:Math:2027-06-05", google_calendar_id: "calendar", google_event_id: "forbidden" },
+    { id: "5", diagnostic_ref: "GC-0005", glowdocket_id: "weekly:not-a-cycle", google_calendar_id: "calendar", google_event_id: "excluded" },
+  ];
+  const rows = { google_sync_issues: issues, google_event_mappings: [], google_imported_events: [] }; let writes = 0;
+  const query = (table) => ({ select() { return this; }, eq() { return this; }, is() { return this; }, update() { writes += 1; return this; }, delete() { writes += 1; return this; }, then(resolve) { resolve({ data: rows[table], error: null }); } });
+  const calls = []; const calendar = { events: { async get({ eventId }) { calls.push(eventId); if (eventId === "missing") throw { code: 404 }; if (eventId === "forbidden") throw { code: 403, message: "private provider detail" }; return { data: { status: eventId === "cancelled" ? "cancelled" : "confirmed", description: "must not leak" } }; } } };
+  const originalInfo = console.info; console.info = () => {};
+  let result; try { result = await verifyLegacyMappingIssues({ admin: { from: query }, userId: "user", calendar, currentItems: [], batchSize: 10 }); } finally { console.info = originalInfo; }
+  assert.deepEqual(result.counts, { missing: 1, cancelled: 1, active_orphan: 1, permission_or_lookup_failure: 1 });
+  assert.deepEqual(calls, ["missing", "cancelled", "active", "forbidden"]); assert.equal(result.checked, 4); assert.equal(result.complete, true); assert.equal(writes, 0);
+  assert.doesNotMatch(JSON.stringify(result), /private provider detail|must not leak/);
 });

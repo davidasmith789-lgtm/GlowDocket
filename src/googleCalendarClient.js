@@ -16,11 +16,21 @@ export async function syncGoogleCalendar(items) {
   for (let requestCount = 0; requestCount < 100; requestCount += 1) {
     const result = await request("sync", { items, continuationToken });
     nativeUpdates = [...nativeUpdates, ...(result.nativeUpdates || [])];
-    if (result.syncState !== "in_progress") return { ...result, nativeUpdates };
+    if (result.syncState !== "in_progress") return { ...result, nativeUpdates, legacyIssueVerification: await verifyLegacyGoogleCalendarIssues(items) };
     continuationToken = result.continuationToken;
   }
   const error = new Error("Google Calendar is still synchronizing a very large calendar. Press Sync now to continue safely.");
   error.code = "sync_continuation_limit"; throw error;
+}
+export async function verifyLegacyGoogleCalendarIssues(items) {
+  let cursor = 0; const counts = { missing: 0, cancelled: 0, active_orphan: 0, permission_or_lookup_failure: 0 }; const diagnosticReferences = { missing: [], cancelled: [], active_orphan: [], permission_or_lookup_failure: [] };
+  for (let requestCount = 0; requestCount < 100; requestCount += 1) {
+    const result = await request("verify-legacy-issues", { items: (items || []).map((item) => ({ id: item?.id, type: item?.type })), cursor });
+    for (const classification of Object.keys(counts)) { counts[classification] += Number(result.counts?.[classification] || 0); diagnosticReferences[classification].push(...(result.diagnosticReferences?.[classification] || [])); }
+    if (result.complete) return { counts, diagnosticReferences, checked: Object.values(counts).reduce((total, count) => total + count, 0), totalCandidates: Number(result.totalCandidates || 0) };
+    cursor = Number(result.nextCursor || 0);
+  }
+  throw new Error("GlowDocket could not finish verifying the old Google Calendar issues in the bounded request limit.");
 }
 export const unlinkGoogleCalendarItem = (type, id, deleteGoogle = true) => request("unlink", { type, id, deleteGoogle });
 export const restoreGoogleCalendarItem = (type, id) => request("restore", { type, id });

@@ -91,6 +91,45 @@ export async function resolveSyncIssues({ admin, userId, categories, type = null
   await completeIssueResolution(query, "resolve_sync_issues");
 }
 
+export async function verifyLegacyMappingIssues({ admin, userId, calendar, currentItems = [], cursor = 0, batchSize = 10 }) {
+  const safeBatchSize = Math.min(10, Math.max(1, Number(batchSize) || 10));
+  const [{ data: issues, error: issueError }, { data: mappings, error: mappingError }, { data: imports, error: importError }] = await Promise.all([
+    admin.from("google_sync_issues").select("id,diagnostic_ref,glowdocket_id,google_calendar_id,google_event_id").eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", "class").is("resolved_at", null),
+    admin.from("google_event_mappings").select("glowdocket_type,glowdocket_id,google_calendar_id,google_event_id,state").eq("user_id", userId).eq("state", "active"),
+    admin.from("google_imported_events").select("calendar_id,event_id").eq("user_id", userId),
+  ]);
+  const queryError = issueError || mappingError || importError;
+  if (queryError) {
+    console.error("[google-calendar] legacy verification query failed", { code: queryError.code || "database_error", message: queryError.message || "Unknown database error" });
+    throw new GoogleCalendarError("google_issue_verification_failure", "GlowDocket could not verify the old Google Calendar issues. Retry synchronization.", 500);
+  }
+  const currentNative = new Set(currentItems.filter((item) => item?.type === "class" && item?.id).map((item) => String(item.id)));
+  const mappedNative = new Set((mappings || []).map((mapping) => `${mapping.glowdocket_type}:${mapping.glowdocket_id}`));
+  const mappedGoogle = new Set((mappings || []).map((mapping) => `${mapping.google_calendar_id}:${mapping.google_event_id}`));
+  const importedGoogle = new Set((imports || []).map((event) => `${event.calendar_id}:${event.event_id}`));
+  const candidates = (issues || []).filter((issue) => /^cycle:.+:\d{4}-\d{2}-\d{2}$/.test(String(issue.glowdocket_id || ""))
+    && !currentNative.has(String(issue.glowdocket_id))
+    && !mappedNative.has(`class:${issue.glowdocket_id}`)
+    && !mappedGoogle.has(`${issue.google_calendar_id}:${issue.google_event_id}`)
+    && !importedGoogle.has(`${issue.google_calendar_id}:${issue.google_event_id}`)).sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  const start = Math.max(0, Number(cursor) || 0); const batch = candidates.slice(start, start + safeBatchSize);
+  const results = await Promise.all(batch.map(async (issue) => {
+    try {
+      const { data: event } = await calendar.events.get({ calendarId: issue.google_calendar_id, eventId: issue.google_event_id });
+      return { classification: event?.status === "cancelled" ? "cancelled" : "active_orphan", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN" };
+    } catch (error) {
+      const status = Number(error?.code || error?.response?.status || 0);
+      return { classification: [404, 410].includes(status) ? "missing" : "permission_or_lookup_failure", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN" };
+    }
+  }));
+  const classifications = ["missing", "cancelled", "active_orphan", "permission_or_lookup_failure"];
+  const counts = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).length]));
+  const diagnosticReferences = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).map((result) => result.diagnosticRef)]));
+  const nextCursor = start + batch.length; const complete = nextCursor >= candidates.length;
+  console.info("[google-calendar] legacy verification batch", { start, checked: batch.length, totalCandidates: candidates.length, counts, diagnosticReferences, complete });
+  return { counts, diagnosticReferences, checked: batch.length, totalCandidates: candidates.length, nextCursor, complete };
+}
+
 function encryptionKey(env = process.env) {
   const source = String(env.GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY || "");
   if (source.length < 32) throw new GoogleCalendarError("integration_unavailable", "Google Calendar encryption is not configured.", 503);

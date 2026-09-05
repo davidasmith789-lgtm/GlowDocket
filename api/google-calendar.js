@@ -22,6 +22,7 @@ import {
   syncImportedCalendar,
   synchronizeNativeItems,
   unlinkManagedItem,
+  verifyLegacyMappingIssues,
 } from "../server/services/googleCalendarService.js";
 
 const jsonBody = (req) => typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
@@ -108,6 +109,7 @@ async function routeAction(req, admin, user) {
   }
   if (action === "clear-resolved-issues") { await admin.from("google_sync_issues").delete().eq("user_id", user.id).not("resolved_at", "is", null); return statusFor({ admin, userId: user.id }); }
   const auth = await authorizedCalendar({ admin, userId: user.id });
+  if (action === "verify-legacy-issues") return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], cursor: body.cursor, batchSize: 10 });
   if (action === "calendars") return { calendars: await listCalendarChoices(auth) };
   if (action === "settings") {
     const allowed = ["sync_assignments", "sync_activities", "sync_classes", "sync_checklists", "include_notes"];
