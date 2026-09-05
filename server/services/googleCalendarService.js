@@ -112,21 +112,24 @@ export async function verifyLegacyMappingIssues({ admin, userId, calendar, curre
     && !mappedNative.has(`class:${issue.glowdocket_id}`)
     && !mappedGoogle.has(`${issue.google_calendar_id}:${issue.google_event_id}`)
     && !importedGoogle.has(`${issue.google_calendar_id}:${issue.google_event_id}`)).sort((left, right) => String(left.id).localeCompare(String(right.id)));
-  const start = Math.max(0, Number(cursor) || 0); const batch = candidates.slice(start, start + safeBatchSize);
+  const cursorId = String(cursor || ""); const start = cursorId ? candidates.findIndex((issue) => String(issue.id).localeCompare(cursorId) > 0) : 0;
+  const batch = start < 0 ? [] : candidates.slice(start, start + safeBatchSize);
   const results = await Promise.all(batch.map(async (issue) => {
     try {
       const { data: event } = await calendar.events.get({ calendarId: issue.google_calendar_id, eventId: issue.google_event_id });
-      return { classification: event?.status === "cancelled" ? "cancelled" : "active_orphan", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN" };
+      return { classification: event?.status === "cancelled" ? "cancelled" : "active_orphan", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN", issueId: issue.id };
     } catch (error) {
       const status = Number(error?.code || error?.response?.status || 0);
-      return { classification: [404, 410].includes(status) ? "missing" : "permission_or_lookup_failure", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN" };
+      return { classification: [404, 410].includes(status) ? "missing" : "permission_or_lookup_failure", diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN", issueId: issue.id };
     }
   }));
   const classifications = ["missing", "cancelled", "active_orphan", "permission_or_lookup_failure"];
   const counts = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).length]));
   const diagnosticReferences = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).map((result) => result.diagnosticRef)]));
-  const nextCursor = start + batch.length; const complete = nextCursor >= candidates.length;
-  console.info("[google-calendar] legacy verification batch", { start, checked: batch.length, totalCandidates: candidates.length, counts, diagnosticReferences, complete });
+  const cancelledIssueIds = results.filter((result) => result.classification === "cancelled").map((result) => result.issueId);
+  if (cancelledIssueIds.length) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "orphaned_google_event_cancelled", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").is("resolved_at", null).in("id", cancelledIssueIds), "resolve_cancelled_orphaned_events");
+  const nextCursor = batch.length ? String(batch.at(-1).id) : cursorId; const complete = start < 0 || start + batch.length >= candidates.length;
+  console.info("[google-calendar] legacy verification batch", { checked: batch.length, totalCandidates: candidates.length, counts, diagnosticReferences, complete });
   return { counts, diagnosticReferences, checked: batch.length, totalCandidates: candidates.length, nextCursor, complete };
 }
 

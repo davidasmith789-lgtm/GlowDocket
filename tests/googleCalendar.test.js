@@ -123,7 +123,7 @@ test("issue-resolution database failures are logged server-side and surfaced wit
   assert.deepEqual(protectedDiagnostic, ["[google-calendar] issue lifecycle query failed", { operation: "resolve_verified_mappings", code: "42703", message: rawMessage }]);
 });
 
-test("legacy mapping verification is read-only, filtered, bounded, and safely classified", async () => {
+test("legacy mapping verification resolves only cancelled orphan events and safely classifies all outcomes", async () => {
   const issues = [
     { id: "1", diagnostic_ref: "GC-0001", glowdocket_id: "cycle:Math:2027-06-02", google_calendar_id: "calendar", google_event_id: "missing" },
     { id: "2", diagnostic_ref: "GC-0002", glowdocket_id: "cycle:Math:2027-06-03", google_calendar_id: "calendar", google_event_id: "cancelled" },
@@ -131,12 +131,14 @@ test("legacy mapping verification is read-only, filtered, bounded, and safely cl
     { id: "4", diagnostic_ref: "GC-0004", glowdocket_id: "cycle:Math:2027-06-05", google_calendar_id: "calendar", google_event_id: "forbidden" },
     { id: "5", diagnostic_ref: "GC-0005", glowdocket_id: "weekly:not-a-cycle", google_calendar_id: "calendar", google_event_id: "excluded" },
   ];
-  const rows = { google_sync_issues: issues, google_event_mappings: [], google_imported_events: [] }; let writes = 0;
-  const query = (table) => ({ select() { return this; }, eq() { return this; }, is() { return this; }, update() { writes += 1; return this; }, delete() { writes += 1; return this; }, then(resolve) { resolve({ data: rows[table], error: null }); } });
+  const rows = { google_sync_issues: issues, google_event_mappings: [], google_imported_events: [] }; const updates = [];
+  const query = (table) => { const state = { operation: "select", payload: null, filters: [] }; return { select() { return this; }, eq(column, value) { state.filters.push(["eq", column, value]); return this; }, is(column, value) { state.filters.push(["is", column, value]); return this; }, in(column, value) { state.filters.push(["in", column, value]); return this; }, update(payload) { state.operation = "update"; state.payload = payload; return this; }, then(resolve) { if (state.operation === "update") { updates.push({ table, payload: state.payload, filters: state.filters }); resolve({ data: null, error: null }); } else resolve({ data: rows[table], error: null }); } }; };
   const calls = []; const calendar = { events: { async get({ eventId }) { calls.push(eventId); if (eventId === "missing") throw { code: 404 }; if (eventId === "forbidden") throw { code: 403, message: "private provider detail" }; return { data: { status: eventId === "cancelled" ? "cancelled" : "confirmed", description: "must not leak" } }; } } };
   const originalInfo = console.info; console.info = () => {};
   let result; try { result = await verifyLegacyMappingIssues({ admin: { from: query }, userId: "user", calendar, currentItems: [], batchSize: 10 }); } finally { console.info = originalInfo; }
   assert.deepEqual(result.counts, { missing: 1, cancelled: 1, active_orphan: 1, permission_or_lookup_failure: 1 });
-  assert.deepEqual(calls, ["missing", "cancelled", "active", "forbidden"]); assert.equal(result.checked, 4); assert.equal(result.complete, true); assert.equal(writes, 0);
+  assert.deepEqual(calls, ["missing", "cancelled", "active", "forbidden"]); assert.equal(result.checked, 4); assert.equal(result.complete, true);
+  assert.equal(updates.length, 1); assert.equal(updates[0].payload.resolution_reason, "orphaned_google_event_cancelled");
+  assert.deepEqual(updates[0].filters.find(([operator, column]) => operator === "in" && column === "id")[2], ["2"]);
   assert.doesNotMatch(JSON.stringify(result), /private provider detail|must not leak/);
 });
