@@ -29,7 +29,7 @@ export function assignmentGoogleEvent(task, { includeNotes = false, returnUrl = 
 export function activityGoogleEvent(entry, { includeNotes = false, returnUrl = "", timeZone = "UTC" } = {}) {
   if (!entry.time) return { summary: entry.name || "GlowDocket activity", description: managedDescription({ ...entry, returnUrl }, includeNotes), location: entry.location || undefined, start: { date: entry.date }, end: { date: nextDate(entry.date) } };
   const startTime = entry.time; const start = localDateTime(entry.date, startTime);
-  const end = entry.endTime ? localDateTime(entry.date, entry.endTime) : addMinutes(start, 30);
+  const end = entry.endTime ? localDateTime(entry.endDate || entry.date, entry.endTime) : addMinutes(start, 30);
   return { summary: entry.name || "GlowDocket event", description: managedDescription({ ...entry, returnUrl }, includeNotes), location: entry.location || undefined, start: { dateTime: start, timeZone }, end: { dateTime: end, timeZone } };
 }
 
@@ -71,8 +71,27 @@ export function buildGoogleCalendarItems({ tasks, calendarEvents, checklists, co
   return items;
 }
 
-export function googleEventDateKey(event) { return event?.start?.date || String(event?.start?.dateTime || "").slice(0, 10); }
-export function googleEventTime(event) { return event?.allDay ? "" : String(event?.start?.dateTime || "").slice(11, 16); }
+const googleDateTimeFormatter = (timeZone) => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const partsObject = (formatter, instant) => Object.fromEntries(formatter.formatToParts(instant).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+const safeTimeZone = (candidate, fallback = "UTC") => { try { googleDateTimeFormatter(candidate || fallback).format(0); return candidate || fallback; } catch { return fallback; } };
+const zonedWallTimeInstant = (value, timeZone) => {
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/); if (!match) return null;
+  const target = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6] || 0));
+  let guess = target; const formatter = googleDateTimeFormatter(timeZone);
+  for (let pass = 0; pass < 3; pass += 1) { const shown = partsObject(formatter, new Date(guess)); const represented = Date.UTC(Number(shown.year), Number(shown.month) - 1, Number(shown.day), Number(shown.hour), Number(shown.minute)); guess += target - represented; }
+  return new Date(guess);
+};
+export function googleDateTimeParts(field, fallbackTimeZone = "UTC") {
+  if (field?.date) return { date: String(field.date), time: "", timeZone: null, allDay: true };
+  const value = String(field?.dateTime || ""); if (!value) return { date: "", time: "", timeZone: null, allDay: false };
+  const timeZone = safeTimeZone(field?.timeZone, safeTimeZone(fallbackTimeZone, "UTC"));
+  const instant = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? new Date(value) : zonedWallTimeInstant(value, timeZone);
+  if (!instant || Number.isNaN(instant.getTime())) return { date: "", time: "", timeZone, allDay: false };
+  const parts = partsObject(googleDateTimeFormatter(timeZone), instant);
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}`, timeZone, allDay: false };
+}
+export function googleEventDateKey(event) { return googleDateTimeParts(event?.start, event?.timeZone || "UTC").date; }
+export function googleEventTime(event) { return event?.allDay ? "" : googleDateTimeParts(event?.start, event?.timeZone || "UTC").time; }
 const weekdayCode = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 export function googleEventOccursOnDate(event, targetKey) {
   if (googleEventDateKey(event) === targetKey) return event.status !== "cancelled";
@@ -89,25 +108,30 @@ export function googleEventOccursOnDate(event, targetKey) {
   return false;
 }
 export function googleEventsForDate(events, targetKey) {
-  const exceptions = new Set((events || []).filter((event) => event.recurringEventId && (event.originalStartTime?.date || event.originalStartTime?.dateTime || "").slice(0, 10) === targetKey).map((event) => event.recurringEventId));
+  const exceptions = new Set((events || []).filter((event) => event.recurringEventId && googleDateTimeParts(event.originalStartTime, event.start?.timeZone || "UTC").date === targetKey).map((event) => event.recurringEventId));
   return (events || []).filter((event) => event.status !== "cancelled" && (googleEventDateKey(event) === targetKey || (!exceptions.has(event.id) && googleEventOccursOnDate(event, targetKey))));
 }
 
-const assignmentFieldsFromGoogle = (fields) => {
-  const start = fields.start?.dateTime || fields.start?.date || ""; const date = start.slice(0, 10); const time = fields.start?.dateTime?.slice(11, 16);
+const assignmentFieldsFromGoogle = (fields, fallbackTimeZone) => {
+  const start = googleDateTimeParts(fields.start, fallbackTimeZone); const date = start.date; const time = start.time;
   const result = {};
   if (typeof fields.summary === "string") result.title = fields.summary.replace(/^Due:\s*/i, "");
   if (date) { const [year, month, day] = date.split("-").map(Number); Object.assign(result, { dueYear: year, dueMonth: month, dueDay: day }); }
   if (time) { const [hour] = time.split(":").map(Number); Object.assign(result, { dueHour: hour % 12 || 12, dueAmPm: hour >= 12 ? "PM" : "AM" }); }
+  else if (start.allDay) Object.assign(result, { dueHour: "", dueAmPm: "" });
   if (typeof fields.location === "string") result.location = fields.location;
   return result;
 };
 export function applyGoogleNativeUpdates({ tasks, calendarEvents, checklists }, updates = []) {
   let nextTasks = tasks; let nextEvents = calendarEvents; let nextChecklists = checklists;
   for (const update of updates) {
-    if (update.type === "assignment") nextTasks = nextTasks.map((task) => String(task.id) === update.id ? { ...task, ...assignmentFieldsFromGoogle(update.fields), syncUpdatedAt: new Date().toISOString() } : task);
-    if (update.type === "activity") nextEvents = nextEvents.map((event) => String(event.id) === update.id ? { ...event, ...(typeof update.fields.summary === "string" ? { name: update.fields.summary } : {}), ...(update.fields.start?.dateTime ? { date: update.fields.start.dateTime.slice(0, 10), time: update.fields.start.dateTime.slice(11, 16) } : {}), ...(update.fields.end?.dateTime ? { endTime: update.fields.end.dateTime.slice(11, 16) } : {}), ...(typeof update.fields.location === "string" ? { location: update.fields.location } : {}) } : event);
-    if (update.type === "checklist") nextChecklists = nextChecklists.map((list) => ({ ...list, items: (list.items || []).map((item) => String(item.id) === update.id ? { ...item, ...(typeof update.fields.summary === "string" ? { text: update.fields.summary.replace(/^Due:\s*/i, "") } : {}), ...(update.fields.start?.date || update.fields.start?.dateTime ? { dueDate: (update.fields.start.date || update.fields.start.dateTime).slice(0, 10), dueTime: update.fields.start.dateTime?.slice(11, 16) || "" } : {}) } : item) }));
+    if (update.type === "assignment") nextTasks = nextTasks.map((task) => String(task.id) === update.id ? { ...task, ...assignmentFieldsFromGoogle(update.fields, update.timeZone), syncUpdatedAt: new Date().toISOString() } : task);
+    if (update.type === "activity") nextEvents = nextEvents.map((event) => {
+      if (String(event.id) !== update.id) return event;
+      const start = googleDateTimeParts(update.fields.start, update.timeZone); const end = googleDateTimeParts(update.fields.end, update.timeZone);
+      return { ...event, ...(typeof update.fields.summary === "string" ? { name: update.fields.summary } : {}), ...(start.date ? { date: start.date, time: start.time } : {}), ...(end.time ? { endDate: end.date, endTime: end.time } : {}), ...(start.allDay ? { endDate: "", endTime: "" } : {}), ...(typeof update.fields.location === "string" ? { location: update.fields.location } : {}), syncUpdatedAt: new Date().toISOString() };
+    });
+    if (update.type === "checklist") nextChecklists = nextChecklists.map((list) => ({ ...list, items: (list.items || []).map((item) => { if (String(item.id) !== update.id) return item; const start = googleDateTimeParts(update.fields.start, update.timeZone); return { ...item, ...(typeof update.fields.summary === "string" ? { text: update.fields.summary.replace(/^Due:\s*/i, "") } : {}), ...(start.date ? { dueDate: start.date, dueTime: start.time } : {}), syncUpdatedAt: new Date().toISOString() }; }) }));
   }
   return { tasks: nextTasks, calendarEvents: nextEvents, checklists: nextChecklists };
 }
@@ -118,4 +142,24 @@ export function applyGoogleUpdatesToSyncItems(items = [], updates = []) {
     const fields = byIdentity.get(`${item.type}:${item.id}`);
     return fields ? { ...item, googleEvent: { ...item.googleEvent, ...fields } } : item;
   });
+}
+
+export function googleSyncEventSnapshot(event) {
+  return Object.fromEntries(["summary", "description", "location", "start", "end", "recurrence"].map((field) => [field, event?.[field] ?? null]));
+}
+
+export function buildNativeUpdateConfirmations(updates, persistedItems) {
+  if (!Array.isArray(persistedItems)) {
+    const error = new Error("GlowDocket could not confirm that the Google Calendar change was saved. Retry synchronization.");
+    error.code = "native_sync_persistence_unconfirmed"; throw error;
+  }
+  return updates.map((update) => {
+    if (!update.confirmation) return null;
+    const item = persistedItems.find((candidate) => candidate.type === update.type && String(candidate.id) === String(update.id));
+    if (!item) {
+      const error = new Error("GlowDocket could not confirm that the Google Calendar change was saved. Retry synchronization.");
+      error.code = "native_sync_persistence_unconfirmed"; throw error;
+    }
+    return { ...update.confirmation, glowdocketSnapshot: googleSyncEventSnapshot(item.googleEvent) };
+  }).filter(Boolean);
 }

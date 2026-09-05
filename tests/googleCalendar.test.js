@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { activityGoogleEvent, applyGoogleNativeUpdates, applyGoogleUpdatesToSyncItems, assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
-import { finalizeSyncJob, markWebhookDirty } from "../api/google-calendar.js";
+import { activityGoogleEvent, applyGoogleNativeUpdates, assignmentGoogleEvent, buildGoogleCalendarItems, buildNativeUpdateConfirmations, classGoogleEvents, googleDateTimeParts, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
+import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, semanticallyEquivalentSnapshots, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
+import { claimSyncJob, confirmNativeUpdates, continueSyncJob, finalizeSyncJob, markWebhookDirty } from "../api/google-calendar.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -43,6 +43,51 @@ test("snapshot conflicts merge different fields and preserve same-field conflict
   assert.deepEqual(mergeSnapshots(base, { ...base, summary: "Glow" }, { ...base, summary: "Google" }).conflicts, ["summary"]);
   assert.deepEqual(changedFields(base, base), []); assert.equal(snapshotHash({ b: { y: 2, x: 1 }, a: 1 }), snapshotHash({ a: 1, b: { x: 1, y: 2 } }));
   assert.equal(googleEventDateKey({ start: { dateTime: "2026-09-02T09:00:00-04:00" } }), "2026-09-02");
+});
+
+test("Google timed fields convert absolute instants into the configured IANA timezone", () => {
+  assert.deepEqual(googleDateTimeParts({ dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" }), { date: "2026-09-05", time: "15:00", timeZone: "America/New_York", allDay: false });
+  assert.equal(googleDateTimeParts({ dateTime: "2026-01-05T19:00:00Z", timeZone: "America/New_York" }).time, "14:00", "winter uses EST");
+  assert.deepEqual(googleDateTimeParts({ dateTime: "2026-09-06T02:30:00Z", timeZone: "America/New_York" }), { date: "2026-09-05", time: "22:30", timeZone: "America/New_York", allDay: false });
+  assert.equal(googleDateTimeParts({ dateTime: "2026-03-08T07:30:00Z", timeZone: "America/New_York" }).time, "03:30", "spring transition uses the post-transition offset");
+  assert.equal(googleDateTimeParts({ dateTime: "2026-11-01T06:30:00Z", timeZone: "America/New_York" }).time, "01:30", "fall transition preserves the instant in the repeated hour");
+  assert.equal(googleDateTimeParts({ dateTime: "2026-09-05T21:00:00+02:00", timeZone: "America/New_York" }).time, "15:00", "explicit offsets are instants, not local clock text");
+  assert.deepEqual(googleDateTimeParts({ date: "2026-09-05" }, "America/New_York"), { date: "2026-09-05", time: "", timeZone: null, allDay: true });
+});
+
+test("semantic snapshots equate native local clocks with Google UTC or offset instants", () => {
+  const local = eventSnapshot({ summary: "Due: Work", start: { dateTime: "2026-09-05T15:00:00", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T15:15:00", timeZone: "America/New_York" } });
+  const utc = eventSnapshot({ summary: "Due: Work", start: { dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T19:15:00Z", timeZone: "America/New_York" } });
+  const offset = eventSnapshot({ summary: "Due: Work", start: { dateTime: "2026-09-05T21:00:00+02:00", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T21:15:00+02:00", timeZone: "America/New_York" } });
+  assert.equal(semanticallyEquivalentSnapshots(local, utc), true);
+  assert.equal(semanticallyEquivalentSnapshots(local, offset), true);
+  assert.equal(semanticallyEquivalentSnapshots(eventSnapshot({ start: { date: "2026-09-05" }, end: { date: "2026-09-06" } }), eventSnapshot({ start: { date: "2026-09-05" }, end: { date: "2026-09-06" } })), true);
+  assert.equal(semanticallyEquivalentSnapshots(eventSnapshot({ start: { date: "2026-09-05" } }), eventSnapshot({ start: { date: "2026-09-06" } })), false, "all-day dates remain date-only values");
+});
+
+test("timezone conversion is applied to assignments, activities, and checklist deadlines", () => {
+  const native = {
+    tasks: [{ id: "assignment-1", title: "Quiz", dueYear: 2026, dueMonth: 9, dueDay: 6, dueHour: 7, dueAmPm: "PM" }],
+    calendarEvents: [{ id: "activity-1", name: "Study", date: "2026-09-06", time: "01:00", endTime: "02:00" }],
+    checklists: [{ id: "list-1", items: [{ id: "check-1", text: "Pack", dueDate: "2026-09-06", dueTime: "02:00" }] }],
+  };
+  const fields = { start: { dateTime: "2026-09-06T02:30:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-06T03:30:00Z", timeZone: "America/New_York" } };
+  const saved = applyGoogleNativeUpdates(native, [
+    { type: "assignment", id: "assignment-1", fields, timeZone: "America/New_York" },
+    { type: "activity", id: "activity-1", fields, timeZone: "America/New_York" },
+    { type: "checklist", id: "check-1", fields, timeZone: "America/New_York" },
+  ]);
+  assert.deepEqual([saved.tasks[0].dueYear, saved.tasks[0].dueMonth, saved.tasks[0].dueDay, saved.tasks[0].dueHour, saved.tasks[0].dueAmPm], [2026, 9, 5, 10, "PM"]);
+  assert.deepEqual([saved.calendarEvents[0].date, saved.calendarEvents[0].time, saved.calendarEvents[0].endDate, saved.calendarEvents[0].endTime], ["2026-09-05", "22:30", "2026-09-05", "23:30"]);
+  assert.deepEqual([saved.checklists[0].items[0].dueDate, saved.checklists[0].items[0].dueTime], ["2026-09-05", "22:30"]);
+  const allDay = applyGoogleNativeUpdates(saved, [
+    { type: "assignment", id: "assignment-1", fields: { start: { date: "2026-09-07" } }, timeZone: "America/New_York" },
+    { type: "activity", id: "activity-1", fields: { start: { date: "2026-09-07" }, end: { date: "2026-09-08" } }, timeZone: "America/New_York" },
+    { type: "checklist", id: "check-1", fields: { start: { date: "2026-09-07" } }, timeZone: "America/New_York" },
+  ]);
+  assert.deepEqual([allDay.tasks[0].dueYear, allDay.tasks[0].dueMonth, allDay.tasks[0].dueDay, allDay.tasks[0].dueHour, allDay.tasks[0].dueAmPm], [2026, 9, 7, "", ""]);
+  assert.deepEqual([allDay.calendarEvents[0].date, allDay.calendarEvents[0].time, allDay.calendarEvents[0].endTime], ["2026-09-07", "", ""]);
+  assert.deepEqual([allDay.checklists[0].items[0].dueDate, allDay.checklists[0].items[0].dueTime], ["2026-09-07", ""]);
 });
 
 test("recurring imports materialize in the selected view and exceptions replace masters", () => {
@@ -179,27 +224,114 @@ test("clean atomic finalization releases only its owning job", async () => {
   assert.equal(current.state.jobId, null);
 });
 
+const continuationAdmin = ({ accepted = true } = {}) => {
+  const calls = [];
+  return { calls, admin: { async rpc(name, args) { calls.push([name, args]); return { data: accepted ? { jobId: "11111111-1111-4111-8111-111111111111", cursor: 7 } : null, error: null }; } } };
+};
+
+test("an expired or stale continuation token cannot revive its historical sync job", async () => {
+  const expired = continuationAdmin({ accepted: false });
+  await assert.rejects(claimSyncJob(expired.admin, "user", "11111111-1111-4111-8111-111111111111"), (error) => error.code === "sync_expired");
+  assert.equal(expired.calls[0][0], "continue_google_sync_job");
+  const stale = continuationAdmin({ accepted: false });
+  await assert.rejects(continueSyncJob(stale.admin, "user", "22222222-2222-4222-8222-222222222222", 8), (error) => error.code === "sync_expired");
+  assert.equal(stale.calls[0][1].p_cursor, 8);
+  const active = continuationAdmin();
+  assert.deepEqual(await claimSyncJob(active.admin, "user", "11111111-1111-4111-8111-111111111111"), { jobId: "11111111-1111-4111-8111-111111111111", cursor: 7 });
+});
+
 test("a Google activity end-time edit persists in native state and the next export uses it", () => {
-  const native = { tasks: [], calendarEvents: [{ id: "activity-1", name: "Study", date: "2026-09-05", time: "13:00", endTime: "14:00" }], checklists: [] };
-  const updates = [{ type: "activity", id: "activity-1", fields: { end: { dateTime: "2026-09-05T15:00:00", timeZone: "America/New_York" } } }];
+  const native = { tasks: [], calendarEvents: [{ id: "activity-1", name: "Study", date: "2026-09-05", time: "13:00", endTime: "19:00" }], checklists: [] };
+  const updates = [{ type: "activity", id: "activity-1", fields: { start: { dateTime: "2026-09-05T17:00:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" } }, timeZone: "America/New_York" }];
   const saved = applyGoogleNativeUpdates(native, updates);
   assert.equal(saved.calendarEvents[0].endTime, "15:00");
-  const items = [{ id: "activity-1", type: "activity", googleEvent: activityGoogleEvent(native.calendarEvents[0], { timeZone: "America/New_York" }) }];
-  const refreshedItems = applyGoogleUpdatesToSyncItems(items, updates);
-  assert.equal(refreshedItems[0].googleEvent.end.dateTime, "2026-09-05T15:00:00");
+  const refreshedEvent = activityGoogleEvent(saved.calendarEvents[0], { timeZone: "America/New_York" });
+  assert.equal(refreshedEvent.end.dateTime, "2026-09-05T15:00:00");
 });
 
 test("native reconciliation imports a Google-only edit without writing stale state back", async () => {
-  const oldEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "14:00" }, { timeZone: "America/New_York" });
-  const googleEvent = { id: "google-1", ...oldEvent, end: { dateTime: "2026-09-05T15:00:00", timeZone: "America/New_York" }, etag: "etag-2", updated: "2026-09-05T19:01:00Z" };
+  const oldEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "19:00" }, { timeZone: "America/New_York" });
+  const googleEvent = { id: "google-1", ...oldEvent, start: { dateTime: "2026-09-05T17:00:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" }, etag: "etag-2", updated: "2026-09-05T19:01:00Z" };
   const mapping = { id: "mapping-1", user_id: "user", glowdocket_type: "activity", glowdocket_id: "activity-1", google_calendar_id: "calendar", google_event_id: "google-1", state: "active", last_google_snapshot: eventSnapshot(oldEvent), last_google_hash: snapshotHash(eventSnapshot(oldEvent)), last_glowdocket_snapshot: eventSnapshot(oldEvent), last_glowdocket_hash: snapshotHash(eventSnapshot(oldEvent)), sync_version: 1 };
-  const mappingQuery = { select() { return this; }, eq() { return this; }, upsert() { return { async throwOnError() {} }; }, then(resolve) { resolve({ data: [mapping], error: null }); } };
+  const mappingUpdates = [];
+  const mappingQuery = { select() { return this; }, eq() { return this; }, update(payload) { mappingUpdates.push(payload); return this; }, async throwOnError() {}, upsert() { return { async throwOnError() {} }; }, then(resolve) { resolve({ data: [mapping], error: null }); } };
   const issueQuery = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
   const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery : issueQuery; } };
   const calendar = { events: { async get() { assert.fail("unchanged native state must not cause a provider read"); }, async update() { assert.fail("the imported Google edit must not be overwritten"); }, async insert() { assert.fail("the mapped event must not be duplicated"); }, async delete() { assert.fail("the mapped event must not be cancelled"); } } };
   const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: oldEvent }], enabledTypes: ["activity"], managedEvents: [{ mapping, event: googleEvent }] });
   assert.equal(result.googleWrites, 0); assert.equal(result.nativeUpdates.length, 1);
-  assert.equal(result.nativeUpdates[0].fields.end.dateTime, "2026-09-05T15:00:00");
+  assert.equal(result.nativeUpdates[0].fields.end.dateTime, "2026-09-05T19:00:00Z");
+  assert.equal(mappingUpdates.length, 1); assert.equal(mappingUpdates[0].pending_google_snapshot.end.dateTime, "2026-09-05T19:00:00Z");
+  assert.equal(Object.hasOwn(mappingUpdates[0], "last_google_snapshot"), false, "the synchronized baseline cannot advance before native persistence succeeds");
+
+  const native = { tasks: [], calendarEvents: [{ id: "activity-1", name: "Study", date: "2026-09-05", time: "13:00", endTime: "19:00" }], checklists: [] };
+  const savedNative = applyGoogleNativeUpdates(native, result.nativeUpdates); const synchronizedEvent = activityGoogleEvent(savedNative.calendarEvents[0], { timeZone: "America/New_York" });
+  assert.deepEqual([savedNative.calendarEvents[0].time, savedNative.calendarEvents[0].endTime], ["13:00", "15:00"]);
+  const confirmedMapping = { ...mapping, last_google_snapshot: eventSnapshot(googleEvent), last_google_hash: snapshotHash(eventSnapshot(googleEvent)), last_glowdocket_snapshot: eventSnapshot(synchronizedEvent), last_glowdocket_hash: snapshotHash(eventSnapshot(synchronizedEvent)), pending_google_snapshot: null, pending_google_hash: null };
+  const confirmedQuery = { select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: [confirmedMapping], error: null }); } };
+  const repeated = await synchronizeNativeItems({ admin: { from(table) { return table === "google_event_mappings" ? confirmedQuery : issueQuery; } }, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: synchronizedEvent }], enabledTypes: ["activity"], managedEvents: [{ mapping: confirmedMapping, event: googleEvent }] });
+  assert.equal(repeated.noops, 1); assert.equal(repeated.googleWrites, 0); assert.equal(repeated.nativeUpdates.length, 0);
+});
+
+test("a persisted Google edit with a missed confirmation recovers semantically without a provider write or conflict", async () => {
+  const oldEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "19:00" }, { timeZone: "America/New_York" });
+  const persistedEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "15:00" }, { timeZone: "America/New_York" });
+  const googleEvent = { id: "google-1", ...oldEvent, start: { dateTime: "2026-09-05T17:00:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" }, etag: "etag-2", updated: "2026-09-05T19:01:00Z" };
+  const pending = eventSnapshot(googleEvent); const mapping = { id: "11111111-1111-4111-8111-111111111111", user_id: "user", glowdocket_type: "activity", glowdocket_id: "activity-1", google_calendar_id: "calendar", google_event_id: "google-1", state: "active", last_google_snapshot: eventSnapshot(oldEvent), last_google_hash: snapshotHash(eventSnapshot(oldEvent)), last_glowdocket_snapshot: eventSnapshot(oldEvent), last_glowdocket_hash: snapshotHash(eventSnapshot(oldEvent)), pending_google_snapshot: pending, pending_google_hash: snapshotHash(pending), sync_version: 1 };
+  await assert.rejects(confirmNativeUpdates({ async rpc() { return { data: false, error: null }; } }, "user", "expired-job", [{ mappingId: mapping.id, pendingGoogleHash: mapping.pending_google_hash, glowdocketSnapshot: eventSnapshot(persistedEvent) }]), (error) => error.code === "native_sync_confirmation_failed");
+  const mappingQuery = { select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: [mapping], error: null }); } }; const issueQuery = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
+  const rpcCalls = []; const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery : issueQuery; }, async rpc(name, args) { rpcCalls.push({ name, args }); return { data: true, error: null }; } };
+  const calendar = { events: { async get() { assert.fail("semantic recovery must not read the provider"); }, async update() { assert.fail("semantic recovery must not write the provider"); }, async insert() { assert.fail("semantic recovery must not duplicate the event"); }, async delete() { assert.fail("semantic recovery must not delete the event"); } } };
+  const result = await synchronizeNativeItems({ admin, userId: "user", jobId: "22222222-2222-4222-8222-222222222222", calendar, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: persistedEvent }], enabledTypes: ["activity"], managedEvents: [{ mapping, event: googleEvent }] });
+  assert.equal(result.noops, 1); assert.equal(result.googleWrites, 0); assert.deepEqual(result.nativeUpdates, []); assert.equal(rpcCalls.length, 1);
+  assert.equal(rpcCalls[0].args.p_pending_google_hash, mapping.pending_google_hash);
+  assert.equal(semanticallyEquivalentSnapshots(eventSnapshot(persistedEvent), pending), true, "local 15:00 New York and 19:00Z are the same instant");
+
+  const genuinelyEdited = eventSnapshot(activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "16:00" }, { timeZone: "America/New_York" }));
+  assert.equal(semanticallyEquivalentSnapshots(genuinelyEdited, pending), false);
+  assert.deepEqual(mergeSnapshots(eventSnapshot(oldEvent), genuinelyEdited, pending).conflicts, ["end"], "a later genuine native edit remains on the normal conflict path");
+});
+
+test("a newer pending Google edit cannot be finalized using the older pending hash", async () => {
+  const nativeEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "15:00" }, { timeZone: "America/New_York" });
+  const googleEvent = { id: "google-1", ...nativeEvent, start: { dateTime: "2026-09-05T17:00:00Z", timeZone: "America/New_York" }, end: { dateTime: "2026-09-05T19:00:00Z", timeZone: "America/New_York" } }; const current = eventSnapshot(googleEvent);
+  const mapping = { id: "11111111-1111-4111-8111-111111111111", user_id: "user", glowdocket_type: "activity", glowdocket_id: "activity-1", google_calendar_id: "calendar", google_event_id: "google-1", state: "active", last_google_snapshot: current, last_google_hash: "old", last_glowdocket_snapshot: eventSnapshot(nativeEvent), last_glowdocket_hash: "old", pending_google_snapshot: current, pending_google_hash: "b".repeat(64) };
+  const mappingQuery = { select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: [mapping], error: null }); } };
+  const admin = { from() { return mappingQuery; }, async rpc() { assert.fail("a mismatched pending hash must not reach confirmation"); } };
+  await assert.rejects(synchronizeNativeItems({ admin, userId: "user", jobId: "22222222-2222-4222-8222-222222222222", calendar: { events: {} }, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: nativeEvent }], enabledTypes: ["activity"], managedEvents: [{ mapping, event: googleEvent }] }), (error) => error.code === "native_sync_confirmation_failed");
+});
+
+test("native persistence confirmation advances the baseline only while the sync job owns the lock", async () => {
+  const calls = []; const mappingId = "11111111-1111-4111-8111-111111111111"; const pendingGoogleHash = "a".repeat(64);
+  const admin = { async rpc(name, args) { calls.push({ name, args }); return { data: true, error: null }; } };
+  const snapshot = eventSnapshot(activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "15:00" }, { timeZone: "America/New_York" }));
+  await confirmNativeUpdates(admin, "user-id", "job-id", [{ mappingId, pendingGoogleHash, glowdocketSnapshot: snapshot }]);
+  assert.equal(calls[0].name, "confirm_google_native_update");
+  assert.equal(calls[0].args.p_mapping_id, mappingId); assert.equal(calls[0].args.p_pending_google_hash, pendingGoogleHash);
+  assert.equal(calls[0].args.p_glowdocket_snapshot.end.dateTime, "2026-09-05T15:00:00");
+  await assert.rejects(confirmNativeUpdates({ async rpc() { return { data: false, error: null }; } }, "user-id", "stale-job", [{ mappingId, pendingGoogleHash, glowdocketSnapshot: snapshot }]), (error) => error.code === "native_sync_confirmation_failed");
+});
+
+test("a failed or unverified native save cannot generate a synchronized-baseline confirmation", () => {
+  const updates = [{ type: "activity", id: "activity-1", confirmation: { mappingId: "11111111-1111-4111-8111-111111111111", pendingGoogleHash: "a".repeat(64) } }];
+  assert.throws(() => buildNativeUpdateConfirmations(updates), (error) => error.code === "native_sync_persistence_unconfirmed");
+  assert.throws(() => buildNativeUpdateConfirmations(updates, []), (error) => error.code === "native_sync_persistence_unconfirmed");
+  const googleEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "15:00" }, { timeZone: "America/New_York" });
+  const confirmations = buildNativeUpdateConfirmations(updates, [{ type: "activity", id: "activity-1", googleEvent }]);
+  assert.equal(confirmations[0].glowdocketSnapshot.end.dateTime, "2026-09-05T15:00:00");
+});
+
+test("native confirmation migration is service-only and atomically finalizes pending baselines", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/202609050002_confirm_google_native_updates.sql", import.meta.url), "utf8");
+  assert.match(migration, /security definer[\s\S]*set search_path = pg_catalog/i);
+  assert.match(migration, /select sync_job_id, sync_lock_until[\s\S]*from public\.google_calendar_connections[\s\S]*for update[\s\S]*owned_job is distinct from p_job_id[\s\S]*owned_lock_until is null[\s\S]*owned_lock_until <= clock_timestamp\(\)/i);
+  assert.match(migration, /where id = p_mapping_id[\s\S]*user_id = p_user_id[\s\S]*state = 'active'[\s\S]*pending_google_hash = p_pending_google_hash[\s\S]*pending_google_snapshot is not null/i);
+  for (const rejectedState of ["creating", "error", "unlinked_by_user", "google_deleted", "recovery_required"]) assert.doesNotMatch(migration.match(/where id = p_mapping_id[\s\S]*?pending_google_snapshot is not null/i)[0], new RegExp(`state\\s*=\\s*'${rejectedState}'`, "i"));
+  assert.match(migration, /last_google_snapshot = pending_google_snapshot[\s\S]*pending_google_snapshot = null/i);
+  assert.match(migration, /revoke all[\s\S]*from public, anon, authenticated/i);
+  assert.match(migration, /grant execute[\s\S]*to service_role/i);
+  assert.match(migration, /continue_google_sync_job[\s\S]*for update[\s\S]*owned_lock_until <= checked_at[\s\S]*sync_lock_until = p_lock_until/i);
+  assert.match(migration, /revoke all on function public\.continue_google_sync_job\(uuid, uuid, timestamptz, integer\) from public, anon, authenticated/i);
 });
 
 test("race coordination migration adds dirty coalescing and pending mapping state", async () => {

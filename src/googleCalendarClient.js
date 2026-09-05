@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from "./supabaseClient.js";
-import { applyGoogleUpdatesToSyncItems } from "./googleCalendarUtils.js";
+import { buildNativeUpdateConfirmations } from "./googleCalendarUtils.js";
 
 async function request(action, body = {}, method = "POST") {
   const client = await getSupabaseBrowserClient(); const { data } = await client.auth.getSession();
@@ -13,14 +13,16 @@ export const getGoogleCalendarChoices = () => request("calendars");
 export const startGoogleCalendarOAuth = (kind = "initial") => request("oauth-start", { kind });
 export const saveGoogleCalendarSettings = (settings) => request("settings", settings);
 export async function syncGoogleCalendar(items, { onNativeUpdates } = {}) {
-  let continuationToken = null; let nativeUpdates = []; let currentItems = items;
+  let continuationToken = null; let nativeUpdates = []; let currentItems = items; let confirmations = [];
   for (let requestCount = 0; requestCount < 100; requestCount += 1) {
-    const result = await request("sync", { items: currentItems, continuationToken });
+    const result = await request("sync", { items: currentItems, continuationToken, confirmations });
+    confirmations = [];
     const updates = result.nativeUpdates || [];
     if (updates.length) {
-      await onNativeUpdates?.(updates);
-      currentItems = applyGoogleUpdatesToSyncItems(currentItems, updates);
+      const persistedItems = await onNativeUpdates?.(updates);
+      currentItems = persistedItems;
       nativeUpdates = [...nativeUpdates, ...updates];
+      confirmations = buildNativeUpdateConfirmations(updates, persistedItems);
     }
     if (result.syncState !== "in_progress") {
       const legacyIssueVerification = await verifyLegacyGoogleCalendarIssues(items);

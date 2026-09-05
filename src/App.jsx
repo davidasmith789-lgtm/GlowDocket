@@ -2345,6 +2345,7 @@ function App() {
         setTasks(workingNative.tasks); saveTasksForCurrentUser(workingNative.tasks);
         saveCalendarEvents(workingNative.calendarEvents);
         setChecklists(workingNative.checklists); localStorage.setItem(checklistStorageKey, JSON.stringify(workingNative.checklists));
+        return buildGoogleCalendarItems({ tasks: workingNative.tasks, calendarEvents: workingNative.calendarEvents, checklists: workingNative.checklists, courses, settings: userSettings, preferences: googleCalendarState.preferences || {} });
       } });
       setGoogleCalendarState(result);
       setGoogleCalendarNotice("Google Calendar is up to date.");

@@ -224,6 +224,19 @@ export function normalizeGoogleEvent(event, calendarId) {
 const comparableFields = ["summary", "description", "location", "start", "end", "recurrence"];
 export function eventSnapshot(event) { return Object.fromEntries(comparableFields.map((field) => [field, event?.[field] ?? null])); }
 export function changedFields(before, after) { return comparableFields.filter((field) => stable(before?.[field]) !== stable(after?.[field])); }
+const semanticDateTime = (field) => {
+  if (field?.date) return { kind: "date", value: String(field.date) };
+  const value = String(field?.dateTime || ""); if (!value) return null;
+  if (/(?:Z|[+-]\d{2}:\d{2})$/i.test(value)) { const instant = new Date(value); return Number.isNaN(instant.getTime()) ? null : { kind: "instant", value: instant.toISOString() }; }
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/); if (!match) return null;
+  const timeZone = String(field?.timeZone || "UTC"); let formatter;
+  try { formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }); } catch { return null; }
+  const target = Date.UTC(...[Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6] || 0)]); let guess = target;
+  for (let pass = 0; pass < 3; pass += 1) { const parts = Object.fromEntries(formatter.formatToParts(new Date(guess)).filter((part) => part.type !== "literal").map((part) => [part.type, part.value])); const represented = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second)); guess += target - represented; }
+  return { kind: "instant", value: new Date(guess).toISOString() };
+};
+export function semanticEventSnapshot(snapshot) { return Object.fromEntries(comparableFields.map((field) => [field, ["start", "end"].includes(field) ? semanticDateTime(snapshot?.[field]) : canonical(snapshot?.[field] ?? null)])); }
+export function semanticallyEquivalentSnapshots(left, right) { return stable(semanticEventSnapshot(left)) === stable(semanticEventSnapshot(right)); }
 export function mergeSnapshots(base, glow, googleNow) {
   const glowChanged = changedFields(base, glow); const googleChanged = changedFields(base, googleNow);
   const conflicts = glowChanged.filter((field) => googleChanged.includes(field) && stable(glow[field]) !== stable(googleNow[field]));
@@ -352,7 +365,7 @@ export async function ensureDedicatedImportSelection({ admin, userId, calendarId
   return calendarId;
 }
 
-export async function synchronizeNativeItems({ admin, userId, calendar, destinationCalendarId, items = [], enabledTypes = [], startIndex = 0, maxItems = 250, managedEvents = [], deadline = Infinity }) {
+export async function synchronizeNativeItems({ admin, userId, jobId = null, calendar, destinationCalendarId, items = [], enabledTypes = [], startIndex = 0, maxItems = 250, managedEvents = [], deadline = Infinity }) {
   const startedAt = Date.now(); const nativeUpdates = []; const mappingWrites = []; let googleWrites = 0; let noops = 0;
   const resolvedByType = new Map();
   const markResolved = (type, id) => { const ids = resolvedByType.get(type) || new Set(); ids.add(String(id)); resolvedByType.set(type, ids); };
@@ -392,13 +405,22 @@ export async function synchronizeNativeItems({ admin, userId, calendar, destinat
     const currentGoogleEtag = scannedGoogle?.etag || mapping?.pending_google_etag || mapping?.google_etag;
     const glowChanged = !mapping || mapping.last_glowdocket_hash !== currentGlowHash;
     const googleChanged = Boolean(mapping && currentGoogle && mapping.last_google_hash !== snapshotHash(currentGoogle));
+    if (mapping?.state === "active" && mapping.pending_google_snapshot && currentGoogle && glowChanged && googleChanged && semanticallyEquivalentSnapshots(currentGlow, currentGoogle)) {
+      const expectedHash = snapshotHash(currentGoogle);
+      if (!jobId || expectedHash !== mapping.pending_google_hash) throw new GoogleCalendarError("native_sync_confirmation_failed", "GlowDocket kept the Google Calendar change pending. Retry synchronization.", 409);
+      const { data, error } = await admin.rpc("confirm_google_native_update", { p_user_id: userId, p_job_id: jobId, p_mapping_id: mapping.id, p_pending_google_hash: expectedHash, p_glowdocket_snapshot: currentGlow, p_glowdocket_hash: currentGlowHash });
+      if (error) throw error;
+      if (!data) throw new GoogleCalendarError("native_sync_confirmation_failed", "GlowDocket kept the Google Calendar change pending. Retry synchronization.", 409);
+      noops += 1; markResolved(item.type, item.id); continue;
+    }
     if (mapping && !glowChanged && !googleChanged) { noops += 1; markResolved(item.type, item.id); if (mapping.pending_google_snapshot) mappingWrites.push({ ...mapping, pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, updated_at: new Date().toISOString() }); continue; }
     if (mapping && !glowChanged && googleChanged && item.type !== "class") {
       const googleFields = changedFields(mapping.last_google_snapshot || {}, currentGoogle);
-      if (googleFields.length) nativeUpdates.push({ type: item.type, id: String(item.id), fields: Object.fromEntries(googleFields.map((field) => [field, currentGoogle[field]])) });
-      const synchronizedGlow = { ...currentGlow, ...Object.fromEntries(googleFields.map((field) => [field, currentGoogle[field]])) };
-      mappingWrites.push({ ...mapping, google_etag: currentGoogleEtag, google_updated_at: scannedGoogle?.updated || mapping.pending_google_updated_at || null, last_google_snapshot: currentGoogle, last_google_hash: snapshotHash(currentGoogle), last_glowdocket_snapshot: synchronizedGlow, last_glowdocket_hash: snapshotHash(synchronizedGlow), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, updated_at: new Date().toISOString() });
-      markResolved(item.type, item.id);
+      const pendingGoogleHash = snapshotHash(currentGoogle);
+      if (googleFields.length) {
+        await admin.from("google_event_mappings").update({ pending_google_snapshot: currentGoogle, pending_google_hash: pendingGoogleHash, pending_google_etag: currentGoogleEtag, pending_google_updated_at: scannedGoogle?.updated || mapping.pending_google_updated_at || null, updated_at: new Date().toISOString() }).eq("id", mapping.id).eq("user_id", userId).throwOnError();
+        nativeUpdates.push({ type: item.type, id: String(item.id), fields: Object.fromEntries(googleFields.map((field) => [field, currentGoogle[field]])), timeZone: currentGoogle.end?.timeZone || currentGoogle.start?.timeZone || currentGlow.end?.timeZone || currentGlow.start?.timeZone || "UTC", confirmation: { mappingId: mapping.id, pendingGoogleHash } });
+      }
       continue;
     }
     if (!mapping) {

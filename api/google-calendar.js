@@ -19,6 +19,7 @@ import {
   resolveSyncIssues,
   restoreManagedItem,
   statusFor,
+  snapshotHash,
   syncImportedCalendar,
   synchronizeNativeItems,
   unlinkManagedItem,
@@ -31,12 +32,13 @@ const safeError = (error) => error instanceof GoogleCalendarError ? error : new 
 const SYNC_BUDGET_MS = 20_000;
 const WEBHOOK_BUDGET_MS = 15_000;
 
-async function claimSyncJob(admin, userId, requestedJobId) {
+export async function claimSyncJob(admin, userId, requestedJobId) {
   const now = new Date(); const lockUntil = new Date(now.getTime() + 45_000).toISOString();
   if (requestedJobId) {
-    const { data } = await admin.from("google_calendar_connections").update({ sync_lock_until: lockUntil }).eq("user_id", userId).eq("sync_job_id", requestedJobId).select("sync_job_id,sync_cursor").maybeSingle();
+    const { data, error } = await admin.rpc("continue_google_sync_job", { p_user_id: userId, p_job_id: requestedJobId, p_lock_until: lockUntil, p_cursor: null });
+    if (error) throw error;
     if (!data) throw new GoogleCalendarError("sync_expired", "That synchronization pass expired. Start Sync now again.", 409);
-    return { jobId: data.sync_job_id, cursor: Number(data.sync_cursor || 0) };
+    return { jobId: data.jobId, cursor: Number(data.cursor || 0) };
   }
   const jobId = crypto.randomUUID();
   const { data } = await admin.from("google_calendar_connections").update({ sync_job_id: jobId, sync_cursor: 0, sync_lock_until: lockUntil, sync_started_at: now.toISOString() }).eq("user_id", userId).or(`sync_lock_until.is.null,sync_lock_until.lt.${now.toISOString()}`).select("sync_job_id,sync_cursor").maybeSingle();
@@ -44,8 +46,23 @@ async function claimSyncJob(admin, userId, requestedJobId) {
   return { jobId, cursor: 0 };
 }
 
-async function continueSyncJob(admin, userId, jobId, cursor) {
-  await admin.from("google_calendar_connections").update({ sync_cursor: cursor, sync_lock_until: new Date(Date.now() + 45_000).toISOString() }).eq("user_id", userId).eq("sync_job_id", jobId);
+export async function continueSyncJob(admin, userId, jobId, cursor) {
+  const { data, error } = await admin.rpc("continue_google_sync_job", { p_user_id: userId, p_job_id: jobId, p_lock_until: new Date(Date.now() + 45_000).toISOString(), p_cursor: cursor });
+  if (error) throw error;
+  if (!data) throw new GoogleCalendarError("sync_expired", "That synchronization pass expired. Start Sync now again.", 409);
+}
+
+export async function confirmNativeUpdates(admin, userId, jobId, confirmations = []) {
+  if (!Array.isArray(confirmations) || confirmations.length > 250) throw new GoogleCalendarError("invalid_sync_confirmation", "Google Calendar could not confirm the saved changes. Retry synchronization.", 400);
+  for (const confirmation of confirmations) {
+    const mappingId = String(confirmation?.mappingId || ""); const pendingGoogleHash = String(confirmation?.pendingGoogleHash || "");
+    const glowdocketSnapshot = confirmation?.glowdocketSnapshot;
+    if (!/^[0-9a-f-]{36}$/i.test(mappingId) || !/^[0-9a-f]{64}$/i.test(pendingGoogleHash) || !glowdocketSnapshot || typeof glowdocketSnapshot !== "object") throw new GoogleCalendarError("invalid_sync_confirmation", "Google Calendar could not confirm the saved changes. Retry synchronization.", 400);
+    const allowedSnapshot = Object.fromEntries(["summary", "description", "location", "start", "end", "recurrence"].map((field) => [field, glowdocketSnapshot[field] ?? null]));
+    const { data, error } = await admin.rpc("confirm_google_native_update", { p_user_id: userId, p_job_id: jobId, p_mapping_id: mappingId, p_pending_google_hash: pendingGoogleHash, p_glowdocket_snapshot: allowedSnapshot, p_glowdocket_hash: snapshotHash(allowedSnapshot) });
+    if (error) throw error;
+    if (!data) throw new GoogleCalendarError("native_sync_confirmation_failed", "GlowDocket kept the Google Calendar change pending. Retry synchronization.", 409);
+  }
 }
 
 export async function markWebhookDirty(admin, userId, calendarId) {
@@ -178,6 +195,7 @@ async function routeAction(req, admin, user) {
   if (action === "sync") {
     const syncStartedAt = Date.now(); const deadline = syncStartedAt + SYNC_BUDGET_MS;
     const job = await claimSyncJob(admin, user.id, body.continuationToken ? String(body.continuationToken) : null);
+    await confirmNativeUpdates(admin, user.id, job.jobId, body.confirmations || []);
     const { data: prefs } = await admin.from("google_calendar_preferences").select("*").eq("user_id", user.id).single();
     let destination = prefs.destination_calendar_id;
     if (prefs.destination_kind === "dedicated") destination = await ensureDedicatedCalendar({ admin, userId: user.id, calendar: auth.calendar });
@@ -194,11 +212,15 @@ async function routeAction(req, admin, user) {
       return { syncState: "in_progress", continuationToken: job.jobId, phase: "imports", processed: importedProcessed };
     }
     const enabledTypes = [["assignment", prefs.sync_assignments], ["activity", prefs.sync_activities], ["class", prefs.sync_classes], ["checklist", prefs.sync_checklists]].filter(([, enabled]) => enabled).map(([type]) => type);
-    const nativeResult = destination ? await synchronizeNativeItems({ admin, userId: user.id, calendar: auth.calendar, destinationCalendarId: destination, items: Array.isArray(body.items) ? body.items : [], enabledTypes, startIndex: job.cursor, managedEvents, deadline }) : { nativeUpdates: [], complete: true, nextCursor: 0 };
+    const nativeResult = destination ? await synchronizeNativeItems({ admin, userId: user.id, jobId: job.jobId, calendar: auth.calendar, destinationCalendarId: destination, items: Array.isArray(body.items) ? body.items : [], enabledTypes, startIndex: job.cursor, managedEvents, deadline }) : { nativeUpdates: [], complete: true, nextCursor: 0 };
     if (!nativeResult.complete) {
       await continueSyncJob(admin, user.id, job.jobId, nativeResult.nextCursor);
       console.info("[google-calendar-sync] continuation", { phase: "native", cursor: nativeResult.nextCursor, total: Array.isArray(body.items) ? body.items.length : 0, googleWrites: nativeResult.googleWrites, noops: nativeResult.noops, durationMs: Date.now() - syncStartedAt });
       return { syncState: "in_progress", continuationToken: job.jobId, phase: "native", cursor: nativeResult.nextCursor, nativeUpdates: nativeResult.nativeUpdates };
+    }
+    if (nativeResult.nativeUpdates.length) {
+      await continueSyncJob(admin, user.id, job.jobId, nativeResult.nextCursor);
+      return { syncState: "in_progress", continuationToken: job.jobId, phase: "native_persistence", cursor: nativeResult.nextCursor, nativeUpdates: nativeResult.nativeUpdates };
     }
     for (const selection of selections || []) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: selection.calendar_id });
     if (destination && !(selections || []).some((selection) => selection.calendar_id === destination)) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: destination });
