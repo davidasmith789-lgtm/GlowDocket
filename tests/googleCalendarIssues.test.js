@@ -47,7 +47,7 @@ test("later successful synchronization automatically resolves matching active is
 test("manual sync feedback remains active through continuations and restores server job state", async () => {
   const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
   const service = await readFile(new URL("../server/services/googleCalendarService.js", import.meta.url), "utf8");
-  assert.match(app, /result\.syncActive \? "sync"/);
+  assert.match(app, /reconcileGoogleSyncStatus\(result, current, ""\)\.busy/);
   assert.match(app, /googleCalendarBusy === "sync" \? "Syncing/);
   assert.match(app, /googleCalendarBusy === "synced" \? "Synced"/);
   assert.match(app, /Syncing Google Calendar/);

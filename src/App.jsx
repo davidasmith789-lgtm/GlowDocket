@@ -76,6 +76,7 @@ import { getFocusTimeUpdate } from "./focusSessionUtils.js";
 import { getUniqueAssignmentMetadata } from "./assignmentMetadataUtils.js";
 import { startAdaptiveMotionMonitor } from "./adaptiveMotion.js";
 import { applyGoogleNativeUpdates, buildGoogleCalendarItems, googleEventTime, googleEventsForDate } from "./googleCalendarUtils.js";
+import { GOOGLE_SYNC_STATUS_POLL_MS, reconcileGoogleSyncStatus } from "./googleCalendarStatus.js";
 import { actOnGoogleCalendarIssue, clearResolvedGoogleCalendarIssues, disconnectGoogleCalendar, getGoogleCalendarChoices, getGoogleCalendarStatus, restoreGoogleCalendarItem, saveGoogleCalendarSettings, startGoogleCalendarOAuth, syncGoogleCalendar, unlinkGoogleCalendarItem } from "./googleCalendarClient.js";
 import { normalizeGoogleSyncIssue, summarizeGoogleSyncIssues } from "./googleCalendarIssues.js";
 import { advanceBadgeMastery, applyFlashcardMasterySummary, BADGE_MASTERY_CHALLENGES, CELEBRATION_STUDIO_REQUIRED_DAYS, DEFAULT_GAMIFICATION, GAMIFICATION_ACHIEVEMENTS, GAMIFICATION_CONFETTI, GAMIFICATION_TITLES, getCelebrationStudioProgress, getCompletionStreak, getGamificationLevel, getLocalSignInDay, getNewAchievementIds, grantAllGamificationRewards, isGamificationTestAccount, normalizeGamification, normalizeSignInDays, summarizeWeeklyMomentum, XP_REWARDS } from "./gamificationUtils.js";
@@ -2303,7 +2304,8 @@ function App() {
     try {
       const result = await getGoogleCalendarStatus();
       setGoogleCalendarState(result);
-      setGoogleCalendarBusy((current) => result.syncActive ? "sync" : (current === "sync" ? "" : current));
+      setGoogleCalendarBusy((current) => reconcileGoogleSyncStatus(result, current, "").busy);
+      setGoogleCalendarNotice((current) => reconcileGoogleSyncStatus(result, "", current).notice);
       googleCalendarLastAutoSyncRef.current = Date.now();
       if (result.connected) {
         const choices = await getGoogleCalendarChoices();
@@ -2352,7 +2354,10 @@ function App() {
         setGoogleCalendarBusy("synced");
         googleCalendarSyncedTimerRef.current = window.setTimeout(() => setGoogleCalendarBusy((current) => current === "synced" ? "" : current), 1600);
       }
-    } catch (error) { setGoogleCalendarNotice(error.message); }
+    } catch (error) {
+      setGoogleCalendarNotice(error.message);
+      if (error.code === "sync_in_progress") await refreshGoogleCalendarStatus();
+    }
     finally { googleCalendarSyncingRef.current = false; if (!quiet && !completed) setGoogleCalendarBusy(""); }
   // The save helpers are intentionally read at execution time; adding the large App-local
   // callbacks as dependencies would retrigger synchronization on every render.
@@ -2360,6 +2365,11 @@ function App() {
   }, [calendarEvents, checklistStorageKey, checklists, courses, googleCalendarPreviewEnabled, googleCalendarState.connected, googleCalendarState.preferences, tasks, userSettings]);
 
   useEffect(() => { refreshGoogleCalendarStatus(); }, [refreshGoogleCalendarStatus, currentUser]);
+  useEffect(() => {
+    if (!googleCalendarState.connected || googleCalendarState.syncActive !== true) return undefined;
+    const timer = window.setTimeout(() => { void refreshGoogleCalendarStatus(); }, GOOGLE_SYNC_STATUS_POLL_MS);
+    return () => window.clearTimeout(timer);
+  }, [googleCalendarState.connected, googleCalendarState.syncActive, refreshGoogleCalendarStatus]);
   useEffect(() => { if (googleCalendarState.syncPending && !googleCalendarState.syncActive) runGoogleCalendarSync({ quiet: true }); }, [googleCalendarState.syncActive, googleCalendarState.syncPending, runGoogleCalendarSync]);
   useEffect(() => {
     if (!googleCalendarPreviewEnabled || !googleCalendarState.connected) return undefined;
