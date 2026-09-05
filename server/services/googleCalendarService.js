@@ -77,11 +77,18 @@ export async function recordSyncIssue({ admin, userId, category, direction = "gl
   return { id: existing?.id || null, diagnosticRef, attemptCount: row.attempt_count };
 }
 
+export async function completeIssueResolution(query, operation) {
+  const { error } = await query;
+  if (!error) return;
+  console.error("[google-calendar] issue lifecycle query failed", { operation, code: error.code || "database_error", message: error.message || "Unknown database error" });
+  throw new GoogleCalendarError("google_issue_lifecycle_failure", "Google Calendar synchronized, but GlowDocket could not update its issue status. Retry synchronization.", 500);
+}
+
 export async function resolveSyncIssues({ admin, userId, categories, type = null, id = null, reason = "successful_sync" }) {
   let query = admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: reason, updated_at: new Date().toISOString() }).eq("user_id", userId).is("resolved_at", null).in("category", categories);
   if (type) query = query.eq("glowdocket_type", type);
   if (id) query = query.eq("glowdocket_id", String(id));
-  await query;
+  await completeIssueResolution(query, "resolve_sync_issues");
 }
 
 function encryptionKey(env = process.env) {
@@ -239,11 +246,11 @@ export async function syncImportedCalendar({ admin, userId, calendar, selection,
   if (managedMappingWrites.length) await upsertEventMappings(admin, managedMappingWrites);
   if (cancelledMappingIds.length) await admin.from("google_event_mappings").update({ state: "unlinked_by_user", updated_at: new Date().toISOString() }).in("id", cancelledMappingIds);
   if (recoveryIssues.length) await Promise.all(recoveryIssues.map((issue) => recordSyncIssue({ admin, userId, ...issue })));
-  for (const [type, ids] of recoveredByType) await admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "mapping_verified", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null);
+  for (const [type, ids] of recoveredByType) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "mapping_verified", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null), "resolve_verified_mappings");
   const nextPageToken = response.data.nextPageToken || null;
   if (nextPageToken) await admin.from("google_selected_calendars").update({ pending_page_token: nextPageToken, pending_sync_mode: mode, pending_started_at: selection.pending_started_at || new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", userId).eq("calendar_id", selection.calendar_id);
   else await admin.from("google_selected_calendars").update({ sync_token: response.data.nextSyncToken, pending_page_token: null, pending_sync_mode: null, pending_started_at: null, last_sync_job_id: jobId, full_sync_required: false, updated_at: new Date().toISOString() }).eq("user_id", userId).eq("calendar_id", selection.calendar_id);
-  if (!nextPageToken) await admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "calendar_state_refreshed", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "stale_sync_state").eq("google_calendar_id", selection.calendar_id).is("resolved_at", null);
+  if (!nextPageToken) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "calendar_state_refreshed", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "stale_sync_state").eq("google_calendar_id", selection.calendar_id).is("resolved_at", null), "resolve_refreshed_calendar_state");
   console.info("[google-calendar-sync] import-page", { calendarKey: sha256(selection.calendar_id).slice(0, 10), mode, processed: events.length, managed: managedEvents.length, imported: importedRows.length, complete: !nextPageToken, durationMs: Date.now() - startedAt });
   return { complete: !nextPageToken, managedEvents, processed: events.length };
 }
@@ -360,7 +367,7 @@ export async function synchronizeNativeItems({ admin, userId, calendar, destinat
     markResolved(item.type, item.id);
   }
   if (mappingWrites.length) await upsertEventMappings(admin, mappingWrites);
-  for (const [type, ids] of resolvedByType) await admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "successful_sync", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null);
+  for (const [type, ids] of resolvedByType) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "successful_sync", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("glowdocket_type", type).in("glowdocket_id", [...ids]).is("resolved_at", null), "resolve_synchronized_items");
   const nextCursor = startIndex + processed; const itemsComplete = nextCursor >= items.length;
   let cleanupComplete = true; let cleanupProcessed = 0;
   if (itemsComplete && enabledTypes.length) {

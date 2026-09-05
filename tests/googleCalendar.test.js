@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings } from "../server/services/googleCalendarService.js";
+import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings } from "../server/services/googleCalendarService.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -106,4 +106,19 @@ test("mapping batches omit IDs for new rows and retain IDs for existing rows", a
 test("database constraint failures are not classified as provider failures", () => {
   assert.equal(providerIssueCategory({ code: "23502", message: "null value violates not-null constraint" }), "internal_database_failure");
   assert.equal(providerIssueCategory({ code: 503 }), "temporary_provider_failure");
+});
+
+test("issue-resolution database failures are logged server-side and surfaced with safe user copy", async () => {
+  const rawMessage = "column google_sync_issues.category does not exist";
+  const originalError = console.error; let protectedDiagnostic;
+  console.error = (...args) => { protectedDiagnostic = args; };
+  try {
+    await assert.rejects(completeIssueResolution(Promise.resolve({ error: { code: "42703", message: rawMessage } }), "resolve_verified_mappings"), (error) => {
+      assert.equal(error.code, "google_issue_lifecycle_failure");
+      assert.equal(error.status, 500);
+      assert.doesNotMatch(error.message, /category|column|42703/i);
+      return true;
+    });
+  } finally { console.error = originalError; }
+  assert.deepEqual(protectedDiagnostic, ["[google-calendar] issue lifecycle query failed", { operation: "resolve_verified_mappings", code: "42703", message: rawMessage }]);
 });
