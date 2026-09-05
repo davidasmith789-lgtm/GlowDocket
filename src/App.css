@@ -8993,6 +8993,11 @@ html[data-theme="dark"] .sync-conflict-dialog {
   background: color-mix(in srgb, var(--surface-alt) 62%, transparent);
 }
 .google-calendar-settings .google-calendar-actions { margin-top: 2px; }
+.google-sync-button,
+.google-sync-progress { display: inline-flex; align-items: center; gap: 0.45rem; }
+.google-sync-progress { margin-left: 0.75rem; }
+.google-sync-spinner { width: 0.85rem; height: 0.85rem; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: google-sync-spin 0.75s linear infinite; flex: none; }
+@keyframes google-sync-spin { to { transform: rotate(360deg); } }
 .google-calendar-settings .google-sync-issues,
 .google-calendar-settings .google-managed-items { width: 100%; min-width: 0; margin-top: 0; }
 

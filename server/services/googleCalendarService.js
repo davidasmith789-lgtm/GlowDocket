@@ -26,9 +26,14 @@ const stable = (value) => JSON.stringify(canonical(value));
 export const snapshotHash = (value) => sha256(stable(value));
 export const canCreateEvents = (role) => WRITABLE_ACCESS_ROLES.has(String(role || ""));
 export const isManagedEvent = (event) => event?.extendedProperties?.private?.[MANAGED] === "1";
+export const newManagedGoogleEventId = () => crypto.randomBytes(16).toString("hex");
 export function managedProjectionDecision(event, mapping = null) {
   if (mapping) return "managed";
   return isManagedEvent(event) ? "recovery_required" : "import";
+}
+export function managedIdentityDecision(event, directMapping = null, nativeMapping = null) {
+  if (directMapping) return { mapping: directMapping, suppressRecovery: false };
+  return { mapping: null, suppressRecovery: Boolean(isManagedEvent(event) && nativeMapping?.state === "active") };
 }
 
 const ISSUE_COPY = {
@@ -264,13 +269,15 @@ export async function syncImportedCalendar({ admin, userId, calendar, selection,
   const byNative = new Map((mappings || []).map((mapping) => [`${mapping.glowdocket_type}:${mapping.glowdocket_id}`, mapping]));
   const managedEvents = []; const managedMappingWrites = []; const importedRows = []; const deleteIds = []; const cancelledMappingIds = []; const recoveryIssues = []; const recoveredByType = new Map();
   for (const event of events) {
-    const meta = event.extendedProperties?.private || {}; let mapping = byGoogle.get(`${selection.calendar_id}:${event.id}`);
+    const meta = event.extendedProperties?.private || {}; let mapping = byGoogle.get(`${selection.calendar_id}:${event.id}`); let managedByDifferentActiveMapping = false;
     if (!mapping && isManagedEvent(event) && meta.glowdocketItemId && meta.glowdocketItemType) {
       const candidate = byNative.get(`${meta.glowdocketItemType}:${meta.glowdocketItemId}`);
-      if (candidate) {
-        const { data } = await admin.from("google_event_mappings").update({ google_calendar_id: selection.calendar_id, google_event_id: event.id, state: "active", google_etag: event.etag, updated_at: new Date().toISOString() }).eq("id", candidate.id).select("*").single();
-        mapping = data;
-      }
+      const identityDecision = managedIdentityDecision(event, mapping, candidate);
+      mapping = identityDecision.mapping; managedByDifferentActiveMapping = identityDecision.suppressRecovery;
+    }
+    if (managedByDifferentActiveMapping) {
+      deleteIds.push(event.id);
+      continue;
     }
     const decision = managedProjectionDecision(event, mapping);
     if (decision !== "import") {
@@ -362,7 +369,24 @@ export async function synchronizeNativeItems({ admin, userId, calendar, destinat
     if (mapping && ["unlinked_by_user", "google_deleted"].includes(mapping.state)) continue;
     const version = Number(mapping?.sync_version || 0) + 1;
     const desired = { ...item.googleEvent, extendedProperties: { ...(item.googleEvent.extendedProperties || {}), private: { ...(item.googleEvent.extendedProperties?.private || {}), glowdocketManaged: "1", glowdocketItemId: String(item.id), glowdocketItemType: item.type, glowdocketSyncVersion: String(version) } } };
-    const currentGlow = eventSnapshot(desired); const currentGlowHash = snapshotHash(currentGlow);
+    const currentGlow = eventSnapshot(desired); const currentGlowHash = snapshotHash(currentGlow); let saved;
+    if (mapping && ["creating", "error"].includes(mapping.state)) {
+      try {
+        try { saved = (await calendar.events.get({ calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id })).data; }
+        catch (error) {
+          if (Number(error?.code || error?.response?.status) !== 404) throw error;
+          saved = (await calendar.events.insert({ calendarId: mapping.google_calendar_id, requestBody: { ...desired, id: mapping.google_event_id } })).data;
+          googleWrites += 1;
+        }
+        const recoveredGoogle = eventSnapshot(saved); const recoveredGlow = eventSnapshot(desired);
+        await upsertEventMappings(admin, [{ ...mapping, state: "active", google_event_id: saved.id || mapping.google_event_id, google_etag: saved.etag, google_updated_at: saved.updated || null, glowdocket_updated_at: item.updatedAt || null, last_google_snapshot: recoveredGoogle, last_google_hash: snapshotHash(recoveredGoogle), last_glowdocket_snapshot: recoveredGlow, last_glowdocket_hash: snapshotHash(recoveredGlow), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, sync_version: version, updated_at: new Date().toISOString() }]);
+        markResolved(item.type, item.id);
+        continue;
+      } catch (error) {
+        await recordSyncIssue({ admin, userId, category: providerIssueCategory(error, item.type), direction: "glowdocket_to_google", type: item.type, id: item.id, title: desired.summary || "GlowDocket item", calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id });
+        throw error;
+      }
+    }
     const scannedGoogle = mapping ? scannedByGoogle.get(`${mapping.google_calendar_id}:${mapping.google_event_id}`) : null;
     const currentGoogle = scannedGoogle ? eventSnapshot(scannedGoogle) : mapping?.pending_google_snapshot || null;
     const currentGoogleEtag = scannedGoogle?.etag || mapping?.pending_google_etag || mapping?.google_etag;
@@ -377,10 +401,23 @@ export async function synchronizeNativeItems({ admin, userId, calendar, destinat
       markResolved(item.type, item.id);
       continue;
     }
-    let saved;
     if (!mapping) {
-      try { saved = (await calendar.events.insert({ calendarId: destinationCalendarId, requestBody: desired })).data; googleWrites += 1; }
-      catch (error) { await recordSyncIssue({ admin, userId, category: providerIssueCategory(error, item.type), direction: "glowdocket_to_google", type: item.type, id: item.id, title: desired.summary || "GlowDocket item", calendarId: destinationCalendarId }); throw error; }
+      const reservedEventId = newManagedGoogleEventId();
+      const pendingMapping = { user_id: userId, glowdocket_type: item.type, glowdocket_id: String(item.id), google_calendar_id: destinationCalendarId, google_event_id: reservedEventId, state: "creating", glowdocket_updated_at: item.updatedAt || null, last_glowdocket_snapshot: currentGlow, last_glowdocket_hash: currentGlowHash, sync_version: version, updated_at: new Date().toISOString() };
+      try {
+        await upsertEventMappings(admin, [pendingMapping]);
+        saved = (await calendar.events.insert({ calendarId: destinationCalendarId, requestBody: { ...desired, id: reservedEventId } })).data;
+        googleWrites += 1;
+      } catch (error) {
+        await admin.from("google_event_mappings").update({ state: "error", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("glowdocket_type", item.type).eq("glowdocket_id", String(item.id));
+        await recordSyncIssue({ admin, userId, category: providerIssueCategory(error, item.type), direction: "glowdocket_to_google", type: item.type, id: item.id, title: desired.summary || "GlowDocket item", calendarId: destinationCalendarId, eventId: reservedEventId });
+        throw error;
+      }
+      const googleSnapshot = eventSnapshot(saved); const glowSnapshot = eventSnapshot(desired);
+      await upsertEventMappings(admin, [{ ...pendingMapping, google_event_id: saved.id || reservedEventId, state: "active", google_etag: saved.etag, google_updated_at: saved.updated || null, last_google_snapshot: googleSnapshot, last_google_hash: snapshotHash(googleSnapshot), last_glowdocket_snapshot: glowSnapshot, last_glowdocket_hash: snapshotHash(glowSnapshot), pending_google_snapshot: null, pending_google_hash: null, pending_google_etag: null, pending_google_updated_at: null, updated_at: new Date().toISOString() }]);
+      mappingByNative.set(identity, { ...pendingMapping, google_event_id: saved.id || reservedEventId, state: "active" });
+      markResolved(item.type, item.id);
+      continue;
     } else {
       try {
         let result;
@@ -442,9 +479,9 @@ export async function restoreManagedItem({ admin, userId, type, id }) {
 
 export async function statusFor({ admin, userId }) {
   const [{ data: connection }, { data: preferences }, { data: selected }, { data: imports }, { data: issues }, { data: resolvedIssues }, { count: activeIssueCount }, { count: resolvedIssueCount }, { data: mappings }] = await Promise.all([
-    admin.from("google_calendar_connections").select("google_email,status,last_sync_at,granted_scopes").eq("user_id", userId).maybeSingle(),
+    admin.from("google_calendar_connections").select("google_email,status,last_sync_at,granted_scopes,sync_job_id,sync_lock_until,sync_started_at").eq("user_id", userId).maybeSingle(),
     admin.from("google_calendar_preferences").select("*").eq("user_id", userId).maybeSingle(),
-    admin.from("google_selected_calendars").select("calendar_id,summary,access_role,selected_for_import").eq("user_id", userId),
+    admin.from("google_selected_calendars").select("calendar_id,summary,access_role,selected_for_import,webhook_dirty").eq("user_id", userId),
     admin.from("google_imported_events").select("normalized_event").eq("user_id", userId).eq("hidden", false),
     admin.from("google_sync_issues").select("id,category,direction,glowdocket_type,glowdocket_id,item_title,safe_explanation,recommended_action,diagnostic_ref,attempt_count,last_occurred_at,resolved_at").eq("user_id", userId).is("resolved_at", null).order("last_occurred_at", { ascending: false }).limit(100),
     admin.from("google_sync_issues").select("id,category,direction,glowdocket_type,glowdocket_id,item_title,safe_explanation,recommended_action,diagnostic_ref,attempt_count,last_occurred_at,resolved_at").eq("user_id", userId).not("resolved_at", "is", null).order("resolved_at", { ascending: false }).limit(50),
@@ -453,7 +490,9 @@ export async function statusFor({ admin, userId }) {
     admin.from("google_event_mappings").select("glowdocket_type,glowdocket_id,state").eq("user_id", userId),
   ]);
   const publicIssue = (issue) => ({ id: issue.id, category: issue.category || "temporary_provider_failure", direction: issue.direction || "glowdocket_to_google", itemType: issue.glowdocket_type || "", itemId: issue.glowdocket_id || "", itemTitle: issue.item_title || "Google Calendar item", explanation: issue.safe_explanation || ISSUE_COPY.temporary_provider_failure.explanation, recommendedAction: issue.recommended_action || ISSUE_COPY.temporary_provider_failure.action, diagnosticRef: issue.diagnostic_ref || "GC-UNKNOWN", attemptCount: Number(issue.attempt_count || 1), lastOccurredAt: issue.last_occurred_at, resolvedAt: issue.resolved_at });
-  return { connected: Boolean(connection && connection.status !== "disconnected"), connection: connection || null, preferences: preferences || null, selectedCalendars: selected || [], importedEvents: (imports || []).map((row) => row.normalized_event), issues: (issues || []).map(publicIssue), resolvedIssues: (resolvedIssues || []).map(publicIssue), activeIssueCount: Number(activeIssueCount || 0), resolvedIssueCount: Number(resolvedIssueCount || 0), mappings: mappings || [] };
+  const syncActive = Boolean(connection?.sync_job_id && connection?.sync_lock_until && new Date(connection.sync_lock_until).getTime() > Date.now());
+  const syncPending = (selected || []).some((calendar) => calendar.webhook_dirty);
+  return { connected: Boolean(connection && connection.status !== "disconnected"), connection: connection || null, syncActive, syncPending, preferences: preferences || null, selectedCalendars: selected || [], importedEvents: (imports || []).map((row) => row.normalized_event), issues: (issues || []).map(publicIssue), resolvedIssues: (resolvedIssues || []).map(publicIssue), activeIssueCount: Number(activeIssueCount || 0), resolvedIssueCount: Number(resolvedIssueCount || 0), mappings: mappings || [] };
 }
 
 export const channelTokenHash = sha256;

@@ -111,3 +111,11 @@ export function applyGoogleNativeUpdates({ tasks, calendarEvents, checklists }, 
   }
   return { tasks: nextTasks, calendarEvents: nextEvents, checklists: nextChecklists };
 }
+
+export function applyGoogleUpdatesToSyncItems(items = [], updates = []) {
+  const byIdentity = new Map(updates.map((update) => [`${update.type}:${update.id}`, update.fields || {}]));
+  return items.map((item) => {
+    const fields = byIdentity.get(`${item.type}:${item.id}`);
+    return fields ? { ...item, googleEvent: { ...item.googleEvent, ...fields } } : item;
+  });
+}

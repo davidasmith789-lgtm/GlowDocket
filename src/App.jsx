@@ -2262,6 +2262,7 @@ function App() {
   const [removeDeletedAssignmentFromGoogle, setRemoveDeletedAssignmentFromGoogle] = useState(true);
   const googleCalendarSyncingRef = useRef(false);
   const googleCalendarLastAutoSyncRef = useRef(0);
+  const googleCalendarSyncedTimerRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCourse, setFilterCourse] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("ALL");
@@ -2302,6 +2303,7 @@ function App() {
     try {
       const result = await getGoogleCalendarStatus();
       setGoogleCalendarState(result);
+      setGoogleCalendarBusy((current) => result.syncActive ? "sync" : (current === "sync" ? "" : current));
       googleCalendarLastAutoSyncRef.current = Date.now();
       if (result.connected) {
         const choices = await getGoogleCalendarChoices();
@@ -2315,26 +2317,50 @@ function App() {
   const runGoogleCalendarSync = useCallback(async ({ quiet = false } = {}) => {
     if (!googleCalendarPreviewEnabled || !googleCalendarState.connected || googleCalendarSyncingRef.current) return;
     googleCalendarSyncingRef.current = true;
-    if (!quiet) setGoogleCalendarBusy("sync");
+    if (!quiet) { window.clearTimeout(googleCalendarSyncedTimerRef.current); setGoogleCalendarBusy("sync"); setGoogleCalendarNotice(""); }
+    let completed = false;
     try {
       const items = buildGoogleCalendarItems({ tasks, calendarEvents, checklists, courses, settings: userSettings, preferences: googleCalendarState.preferences || {} });
-      const result = await syncGoogleCalendar(items);
-      if (result.nativeUpdates?.length) {
-        const updated = applyGoogleNativeUpdates({ tasks, calendarEvents, checklists }, result.nativeUpdates);
-        setTasks(updated.tasks); saveTasksForCurrentUser(updated.tasks);
-        saveCalendarEvents(updated.calendarEvents);
-        setChecklists(updated.checklists); localStorage.setItem(checklistStorageKey, JSON.stringify(updated.checklists));
-      }
+      let workingNative = { tasks, calendarEvents, checklists };
+      const result = await syncGoogleCalendar(items, { onNativeUpdates: async (updates) => {
+        workingNative = applyGoogleNativeUpdates(workingNative, updates);
+        let snapshot = collectSyncableState({ tasks: workingNative.tasks, courses, courseColors, userSettings, checklists: workingNative.checklists, calendarEvents: workingNative.calendarEvents, workspaceLayout, theme, displayName });
+        try {
+          const saved = await waitForCloudRequest(replaceCloudSnapshot(await getSupabaseBrowserClient(), currentUser, snapshot, cloudRevisionRef.current), "Saving the Google Calendar change took too long. Retry synchronization.");
+          cloudRevisionRef.current = Number(saved.revision);
+        } catch (error) {
+          if (error.code !== "revision_conflict") throw error;
+          const newest = await loadCloudSnapshot(await getSupabaseBrowserClient(), currentUser);
+          if (!newest) throw error;
+          workingNative = applyGoogleNativeUpdates({ tasks: newest.state.tasks, calendarEvents: newest.state.calendarEvents, checklists: newest.state.checklists }, updates);
+          snapshot = { ...newest.state, ...workingNative };
+          const saved = await waitForCloudRequest(replaceCloudSnapshot(await getSupabaseBrowserClient(), currentUser, snapshot, newest.revision), "Saving the Google Calendar change took too long. Retry synchronization.");
+          cloudRevisionRef.current = Number(saved.revision);
+        }
+        cloudLastSavedFingerprintRef.current = getCloudStateFingerprint(snapshot);
+        latestCloudStateRef.current = snapshot;
+        saveLocalSnapshot(localStorage, currentUser, snapshot, cloudRevisionRef.current, false);
+        setTasks(workingNative.tasks); saveTasksForCurrentUser(workingNative.tasks);
+        saveCalendarEvents(workingNative.calendarEvents);
+        setChecklists(workingNative.checklists); localStorage.setItem(checklistStorageKey, JSON.stringify(workingNative.checklists));
+      } });
       setGoogleCalendarState(result);
       setGoogleCalendarNotice("Google Calendar is up to date.");
+      googleCalendarLastAutoSyncRef.current = Date.now();
+      completed = true;
+      if (!quiet) {
+        setGoogleCalendarBusy("synced");
+        googleCalendarSyncedTimerRef.current = window.setTimeout(() => setGoogleCalendarBusy((current) => current === "synced" ? "" : current), 1600);
+      }
     } catch (error) { setGoogleCalendarNotice(error.message); }
-    finally { googleCalendarSyncingRef.current = false; if (!quiet) setGoogleCalendarBusy(""); }
+    finally { googleCalendarSyncingRef.current = false; if (!quiet && !completed) setGoogleCalendarBusy(""); }
   // The save helpers are intentionally read at execution time; adding the large App-local
   // callbacks as dependencies would retrigger synchronization on every render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarEvents, checklistStorageKey, checklists, courses, googleCalendarPreviewEnabled, googleCalendarState.connected, googleCalendarState.preferences, tasks, userSettings]);
 
   useEffect(() => { refreshGoogleCalendarStatus(); }, [refreshGoogleCalendarStatus, currentUser]);
+  useEffect(() => { if (googleCalendarState.syncPending && !googleCalendarState.syncActive) runGoogleCalendarSync({ quiet: true }); }, [googleCalendarState.syncActive, googleCalendarState.syncPending, runGoogleCalendarSync]);
   useEffect(() => {
     if (!googleCalendarPreviewEnabled || !googleCalendarState.connected) return undefined;
     const sync = () => { if (Date.now() - googleCalendarLastAutoSyncRef.current >= 15_000) runGoogleCalendarSync({ quiet: true }); };
@@ -11803,8 +11829,8 @@ function App() {
                       {googleCalendarState.preferences?.destination_kind === "existing" && <label className="settings-select-row"><span>Existing calendar</span><select value={googleCalendarState.preferences?.destination_calendar_id || ""} onChange={(event) => handleGoogleSetting({ destination_kind: "existing", destination_calendar_id: event.target.value })}>{googleCalendarChoices.filter((calendar) => calendar.writable).map((calendar) => <option value={calendar.id} key={calendar.id}>{calendar.summary}</option>)}</select></label>}
                       <fieldset className="google-calendar-category-grid"><legend>Sync GlowDocket items</legend><div>{[["sync_assignments","Assignments"],["sync_activities","Activities/events"],["sync_classes","Classes"],["sync_checklists","Dated checklist items"]].map(([key,label]) => <label className="google-calendar-compact-option" key={key}><input type="checkbox" checked={Boolean(googleCalendarState.preferences?.[key])} onChange={(event) => handleGoogleSetting({ [key]: event.target.checked })} /><span>{label}</span></label>)}</div></fieldset>
                       <label className="settings-toggle settings-toggle-copy"><span><strong>Include GlowDocket notes in Google events</strong><small>Off by default because the destination calendar may be shared.</small></span><input type="checkbox" checked={Boolean(googleCalendarState.preferences?.include_notes)} onChange={(event) => handleGoogleSetting({ include_notes: event.target.checked })} /></label>
-                      <div className="google-calendar-actions"><button type="button" className="btn btn-primary" onClick={() => runGoogleCalendarSync()} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "sync" ? "Syncing…" : "Sync now"}</button><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(true)} disabled={Boolean(googleCalendarBusy)}>Disconnect Google</button></div>
-                      <p className="hint-text">Last sync: {googleCalendarState.connection?.last_sync_at ? new Date(googleCalendarState.connection.last_sync_at).toLocaleString() : "Not yet"}</p>
+                      <div className="google-calendar-actions"><button type="button" className="btn btn-primary google-sync-button" onClick={() => runGoogleCalendarSync()} disabled={Boolean(googleCalendarBusy)}>{googleCalendarBusy === "sync" && <span className="google-sync-spinner" aria-hidden="true" />}{googleCalendarBusy === "sync" ? "Syncing…" : googleCalendarBusy === "synced" ? "Synced" : "Sync now"}</button><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(true)} disabled={Boolean(googleCalendarBusy)}>Disconnect Google</button></div>
+                      <p className="hint-text">Last sync: {googleCalendarState.connection?.last_sync_at ? new Date(googleCalendarState.connection.last_sync_at).toLocaleString() : "Not yet"}{googleCalendarBusy === "sync" && <span className="google-sync-progress" role="status"><span className="google-sync-spinner" aria-hidden="true" />Syncing Google Calendar…</span>}</p>
                       {(googleIssueSummary.activeCount > 0 || googleIssueSummary.resolvedCount > 0) && <section className="google-sync-issues" aria-label="Google Calendar synchronization issues">
                         <div className="google-sync-issue-summary">
                           {googleIssueSummary.activeCount > 0 && <strong>{googleIssueSummary.needsAttentionLabel}</strong>}

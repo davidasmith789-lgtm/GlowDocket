@@ -29,6 +29,7 @@ const jsonBody = (req) => typeof req.body === "string" ? JSON.parse(req.body || 
 const appOrigin = () => String(process.env.GOOGLE_CALENDAR_APP_ORIGIN || process.env.PUSH_ALLOWED_ORIGIN || "").replace(/\/$/, "");
 const safeError = (error) => error instanceof GoogleCalendarError ? error : new GoogleCalendarError("google_calendar_failure", "Google Calendar could not finish that request. Your GlowDocket data was not changed.", 500);
 const SYNC_BUDGET_MS = 20_000;
+const WEBHOOK_BUDGET_MS = 15_000;
 
 async function claimSyncJob(admin, userId, requestedJobId) {
   const now = new Date(); const lockUntil = new Date(now.getTime() + 45_000).toISOString();
@@ -47,8 +48,52 @@ async function continueSyncJob(admin, userId, jobId, cursor) {
   await admin.from("google_calendar_connections").update({ sync_cursor: cursor, sync_lock_until: new Date(Date.now() + 45_000).toISOString() }).eq("user_id", userId).eq("sync_job_id", jobId);
 }
 
-async function finishSyncJob(admin, userId, jobId) {
-  await admin.from("google_calendar_connections").update({ sync_job_id: null, sync_cursor: 0, sync_lock_until: null, sync_started_at: null }).eq("user_id", userId).eq("sync_job_id", jobId);
+export async function markWebhookDirty(admin, userId, calendarId) {
+  const { data, error } = await admin.rpc("mark_google_webhook_dirty", { p_user_id: userId, p_calendar_id: calendarId });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function consumeWebhookDirty(admin, userId) {
+  const { data, error } = await admin.rpc("consume_google_webhook_dirty", { p_user_id: userId });
+  if (error) throw error;
+  return (data || []).map((row) => row.calendar_id);
+}
+
+export async function finalizeSyncJob(admin, userId, jobId) {
+  const { data, error } = await admin.rpc("finalize_google_sync_job", { p_user_id: userId, p_job_id: jobId });
+  if (error) throw error;
+  const rows = data || []; const result = rows[0]?.result || "not_owner";
+  if (result === "not_owner") throw new GoogleCalendarError("sync_expired", "That synchronization pass expired. Start Sync now again.", 409);
+  return { complete: result === "complete", calendarIds: rows.filter((row) => row.result === "continue" && row.calendar_id).map((row) => row.calendar_id) };
+}
+
+async function runCoordinatedWebhookImport(admin, userId) {
+  let job;
+  try { job = await claimSyncJob(admin, userId, null); }
+  catch (error) { if (error.code === "sync_in_progress") return { deferred: true }; throw error; }
+  const deadline = Date.now() + WEBHOOK_BUDGET_MS;
+  let pendingCalendars = await consumeWebhookDirty(admin, userId);
+  while (true) {
+    const auth = await authorizedCalendar({ admin, userId });
+    for (const calendarId of pendingCalendars) {
+      let complete = false;
+      while (!complete && Date.now() < deadline) {
+        const { data: selection } = await admin.from("google_selected_calendars").select("*").eq("user_id", userId).eq("calendar_id", calendarId).eq("selected_for_import", true).maybeSingle();
+        if (!selection) { complete = true; break; }
+        const result = await syncImportedCalendar({ admin, userId, calendar: auth.calendar, selection, jobId: job.jobId });
+        complete = result.complete;
+      }
+      if (!complete) await markWebhookDirty(admin, userId, calendarId);
+    }
+    const finalized = await finalizeSyncJob(admin, userId, job.jobId);
+    if (finalized.complete) return { deferred: false };
+    pendingCalendars = finalized.calendarIds;
+    if (Date.now() >= deadline) {
+      for (const calendarId of pendingCalendars) await markWebhookDirty(admin, userId, calendarId);
+      return { deferred: true, jobId: job.jobId };
+    }
+  }
 }
 
 async function callback(req, res, admin) {
@@ -67,8 +112,8 @@ async function webhook(req, res, admin) {
   if (!channel || channel.token_hash !== channelTokenHash(token) || (channel.resource_id && channel.resource_id !== resourceId)) return res.status(404).end();
   if (!Number.isSafeInteger(messageNumber) || messageNumber <= Number(channel.latest_message_number || 0)) return res.status(204).end();
   await admin.from("google_webhook_channels").update({ latest_message_number: messageNumber, updated_at: new Date().toISOString() }).eq("channel_id", channelId);
-  const { data: selection } = await admin.from("google_selected_calendars").select("*").eq("user_id", channel.user_id).eq("calendar_id", channel.calendar_id).eq("selected_for_import", true).maybeSingle();
-  if (selection) { const auth = await authorizedCalendar({ admin, userId: channel.user_id }); await syncImportedCalendar({ admin, userId: channel.user_id, calendar: auth.calendar, selection }); }
+  await markWebhookDirty(admin, channel.user_id, channel.calendar_id);
+  await runCoordinatedWebhookImport(admin, channel.user_id);
   return res.status(204).end();
 }
 
@@ -159,7 +204,12 @@ async function routeAction(req, admin, user) {
     if (destination && !(selections || []).some((selection) => selection.calendar_id === destination)) await ensureWebhookChannel({ admin, userId: user.id, calendar: auth.calendar, calendarId: destination });
     await admin.from("google_calendar_connections").update({ last_sync_at: new Date().toISOString(), last_error: null, status: "connected", updated_at: new Date().toISOString() }).eq("user_id", user.id);
     await resolveSyncIssues({ admin, userId: user.id, categories: ["permission_problem", "temporary_provider_failure"], reason: "successful_sync" });
-    await finishSyncJob(admin, user.id, job.jobId);
+    const finalized = await finalizeSyncJob(admin, user.id, job.jobId);
+    if (!finalized.complete) {
+      await continueSyncJob(admin, user.id, job.jobId, 0);
+      console.info("[google-calendar-sync] webhook follow-up", { calendars: finalized.calendarIds.length, durationMs: Date.now() - syncStartedAt });
+      return { syncState: "in_progress", continuationToken: job.jobId, phase: "webhook_followup", cursor: 0, nativeUpdates: nativeResult.nativeUpdates };
+    }
     console.info("[google-calendar-sync] complete", { importedProcessed, nativeItems: Array.isArray(body.items) ? body.items.length : 0, googleWrites: nativeResult.googleWrites, noops: nativeResult.noops, durationMs: Date.now() - syncStartedAt });
     return { ...(await statusFor({ admin, userId: user.id })), syncState: "complete", nativeUpdates: nativeResult.nativeUpdates };
   }

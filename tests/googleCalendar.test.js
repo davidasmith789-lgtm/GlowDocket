@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
+import { activityGoogleEvent, applyGoogleNativeUpdates, applyGoogleUpdatesToSyncItems, assignmentGoogleEvent, buildGoogleCalendarItems, classGoogleEvents, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
+import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
+import { finalizeSyncJob, markWebhookDirty } from "../api/google-calendar.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
   const allDay = assignmentGoogleEvent({ title: "Essay", dueYear: 2026, dueMonth: 9, dueDay: 2 });
@@ -26,6 +27,13 @@ test("weekly classes use recurrence and cycle classes are deterministic future o
 test("managed events and writable roles include the compatible Google role", () => {
   assert.equal(isManagedEvent({ extendedProperties: { private: { glowdocketManaged: "1" } } }), true);
   assert.equal(canCreateEvents("writerWithoutPrivateAccess"), true); assert.equal(canCreateEvents("reader"), false);
+});
+
+test("an old managed Google identity cannot replace a valid active native mapping", () => {
+  const oldEvent = { id: "old-google", extendedProperties: { private: { glowdocketManaged: "1", glowdocketItemType: "class", glowdocketItemId: "cycle:Math:2026-09-05" } } };
+  const active = { id: "mapping", state: "active", google_event_id: "current-google" };
+  assert.deepEqual(managedIdentityDecision(oldEvent, null, active), { mapping: null, suppressRecovery: true });
+  assert.deepEqual(managedIdentityDecision(oldEvent, active, null), { mapping: active, suppressRecovery: false });
 });
 
 test("snapshot conflicts merge different fields and preserve same-field conflicts", () => {
@@ -86,6 +94,8 @@ test("a large unchanged managed dedicated calendar terminates without provider r
   const calendar = { events: Object.fromEntries(Object.keys(providerCalls).map((method) => [method, async () => { providerCalls[method] += 1; throw new Error(`unexpected ${method}`); }])) };
   const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "dedicated", items, enabledTypes: ["class", "activity"], managedEvents, maxItems: 1000 });
   assert.equal(result.complete, true); assert.equal(result.noops, 600); assert.equal(result.googleWrites, 0); assert.deepEqual(providerCalls, { get: 0, update: 0, insert: 0, delete: 0 });
+  const repeated = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "dedicated", items: [...items, { id: "unrelated", type: "activity", googleEvent: { summary: "Unrelated", start: { date: "2026-09-06" }, end: { date: "2026-09-07" } } }].slice(0, 600), enabledTypes: ["class", "activity"], managedEvents, maxItems: 1000 });
+  assert.equal(repeated.noops, 600); assert.equal(repeated.googleWrites, 0); assert.equal(new Set(mappings.map((mapping) => mapping.google_event_id)).size, 600, "provider identities remain unique and unchanged");
   const manual = { id: "manual", summary: "Family dinner", start: { dateTime: "2026-09-01T18:00:00" } };
   const importable = [...managedEvents.map(({ event }) => event), manual].filter((event) => managedProjectionDecision(event, mappings.find((mapping) => mapping.google_event_id === event.id)) === "import");
   assert.deepEqual(importable.map((event) => event.id), ["manual"], "the manual event is imported once beside managed no-ops");
@@ -101,6 +111,107 @@ test("mapping batches omit IDs for new rows and retain IDs for existing rows", a
   assert.equal(batches.length, 2, "new and existing mappings cannot share a PostgREST batch column set");
   assert.equal(batches[0][0].id, "existing-uuid");
   assert.equal(Object.hasOwn(batches[1][0], "id"), false, "PostgreSQL must supply the UUID default");
+});
+
+test("new managed events reserve their mapping before provider creation", async () => {
+  const order = []; const writes = []; let reservedMapping;
+  const mappingSelect = { select() { return this; }, eq() { return this; }, then(resolve) { resolve({ data: [], error: null }); } };
+  const issueUpdate = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
+  const admin = { from(table) {
+    if (table === "google_sync_issues") return issueUpdate;
+    assert.equal(table, "google_event_mappings");
+    return { ...mappingSelect, upsert(rows) { order.push("mapping"); writes.push(...rows); reservedMapping = rows[0]; return { async throwOnError() {} }; } };
+  } };
+  const calendar = { events: { async insert({ requestBody }) { order.push("provider"); const webhookEvent = { ...requestBody }; assert.equal(managedProjectionDecision(webhookEvent, reservedMapping), "managed", "a webhook between provider creation and finalization sees the reserved mapping"); return { data: { ...requestBody, etag: "etag-1", updated: "2026-09-05T18:00:00Z" } }; } } };
+  const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "14:00" }, { timeZone: "UTC" }) }], enabledTypes: ["activity"] });
+  assert.deepEqual(order, ["mapping", "provider", "mapping"]);
+  assert.equal(writes[0].state, "creating"); assert.equal(writes[1].state, "active");
+  assert.equal(writes[0].google_event_id, writes[1].google_event_id); assert.match(writes[0].google_event_id, /^[0-9a-f]{32}$/);
+  assert.equal(result.googleWrites, 1);
+});
+
+const coordinatedSyncAdmin = (initialJob = "job-1") => {
+  const state = { jobId: initialJob, dirty: new Set() };
+  return { state, admin: { async rpc(name, args) {
+    if (name === "mark_google_webhook_dirty") { state.dirty.add(args.p_calendar_id); return { data: true, error: null }; }
+    if (name === "consume_google_webhook_dirty") { const data = [...state.dirty].map((calendar_id) => ({ calendar_id })); state.dirty.clear(); return { data, error: null }; }
+    if (name === "finalize_google_sync_job") {
+      if (state.jobId !== args.p_job_id) return { data: [{ result: "not_owner", calendar_id: null }], error: null };
+      if (state.dirty.size) { const data = [...state.dirty].map((calendar_id) => ({ result: "continue", calendar_id })); state.dirty.clear(); return { data, error: null }; }
+      state.jobId = null; return { data: [{ result: "complete", calendar_id: null }], error: null };
+    }
+    assert.fail(`unexpected rpc ${name}`);
+  } } };
+};
+
+test("multiple webhook hints coalesce and a dirty active job retains ownership", async () => {
+  const { admin, state } = coordinatedSyncAdmin();
+  await Promise.all(Array.from({ length: 20 }, () => markWebhookDirty(admin, "user", "calendar")));
+  const finalized = await finalizeSyncJob(admin, "user", "job-1");
+  assert.deepEqual(finalized, { complete: false, calendarIds: ["calendar"] });
+  assert.equal(state.jobId, "job-1"); assert.equal(state.dirty.size, 0);
+});
+
+test("webhooks on either side of atomic finalization are consumed or remain visible", async () => {
+  const before = coordinatedSyncAdmin();
+  await markWebhookDirty(before.admin, "user", "before");
+  assert.deepEqual(await finalizeSyncJob(before.admin, "user", "job-1"), { complete: false, calendarIds: ["before"] });
+
+  const after = coordinatedSyncAdmin();
+  assert.deepEqual(await finalizeSyncJob(after.admin, "user", "job-1"), { complete: true, calendarIds: [] });
+  await markWebhookDirty(after.admin, "user", "after");
+  assert.deepEqual([...after.state.dirty], ["after"], "a webhook serialized after release remains visible to the next job");
+
+  const duringBeforeLock = coordinatedSyncAdmin();
+  await markWebhookDirty(duringBeforeLock.admin, "user", "during");
+  assert.equal((await finalizeSyncJob(duringBeforeLock.admin, "user", "job-1")).complete, false);
+  const duringAfterLock = coordinatedSyncAdmin();
+  await finalizeSyncJob(duringAfterLock.admin, "user", "job-1");
+  await markWebhookDirty(duringAfterLock.admin, "user", "during");
+  assert.equal(duringAfterLock.state.dirty.has("during"), true);
+});
+
+test("clean atomic finalization releases only its owning job", async () => {
+  const current = coordinatedSyncAdmin();
+  await assert.rejects(finalizeSyncJob(current.admin, "user", "stale-job"), (error) => error.code === "sync_expired");
+  assert.equal(current.state.jobId, "job-1", "a stale job cannot clear the current owner");
+  assert.deepEqual(await finalizeSyncJob(current.admin, "user", "job-1"), { complete: true, calendarIds: [] });
+  assert.equal(current.state.jobId, null);
+});
+
+test("a Google activity end-time edit persists in native state and the next export uses it", () => {
+  const native = { tasks: [], calendarEvents: [{ id: "activity-1", name: "Study", date: "2026-09-05", time: "13:00", endTime: "14:00" }], checklists: [] };
+  const updates = [{ type: "activity", id: "activity-1", fields: { end: { dateTime: "2026-09-05T15:00:00", timeZone: "America/New_York" } } }];
+  const saved = applyGoogleNativeUpdates(native, updates);
+  assert.equal(saved.calendarEvents[0].endTime, "15:00");
+  const items = [{ id: "activity-1", type: "activity", googleEvent: activityGoogleEvent(native.calendarEvents[0], { timeZone: "America/New_York" }) }];
+  const refreshedItems = applyGoogleUpdatesToSyncItems(items, updates);
+  assert.equal(refreshedItems[0].googleEvent.end.dateTime, "2026-09-05T15:00:00");
+});
+
+test("native reconciliation imports a Google-only edit without writing stale state back", async () => {
+  const oldEvent = activityGoogleEvent({ name: "Study", date: "2026-09-05", time: "13:00", endTime: "14:00" }, { timeZone: "America/New_York" });
+  const googleEvent = { id: "google-1", ...oldEvent, end: { dateTime: "2026-09-05T15:00:00", timeZone: "America/New_York" }, etag: "etag-2", updated: "2026-09-05T19:01:00Z" };
+  const mapping = { id: "mapping-1", user_id: "user", glowdocket_type: "activity", glowdocket_id: "activity-1", google_calendar_id: "calendar", google_event_id: "google-1", state: "active", last_google_snapshot: eventSnapshot(oldEvent), last_google_hash: snapshotHash(eventSnapshot(oldEvent)), last_glowdocket_snapshot: eventSnapshot(oldEvent), last_glowdocket_hash: snapshotHash(eventSnapshot(oldEvent)), sync_version: 1 };
+  const mappingQuery = { select() { return this; }, eq() { return this; }, upsert() { return { async throwOnError() {} }; }, then(resolve) { resolve({ data: [mapping], error: null }); } };
+  const issueQuery = { update() { return this; }, eq() { return this; }, in() { return this; }, is() { return this; }, then(resolve) { resolve({ error: null }); } };
+  const admin = { from(table) { return table === "google_event_mappings" ? mappingQuery : issueQuery; } };
+  const calendar = { events: { async get() { assert.fail("unchanged native state must not cause a provider read"); }, async update() { assert.fail("the imported Google edit must not be overwritten"); }, async insert() { assert.fail("the mapped event must not be duplicated"); }, async delete() { assert.fail("the mapped event must not be cancelled"); } } };
+  const result = await synchronizeNativeItems({ admin, userId: "user", calendar, destinationCalendarId: "calendar", items: [{ id: "activity-1", type: "activity", googleEvent: oldEvent }], enabledTypes: ["activity"], managedEvents: [{ mapping, event: googleEvent }] });
+  assert.equal(result.googleWrites, 0); assert.equal(result.nativeUpdates.length, 1);
+  assert.equal(result.nativeUpdates[0].fields.end.dateTime, "2026-09-05T15:00:00");
+});
+
+test("race coordination migration adds dirty coalescing and pending mapping state", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/202609050001_coordinate_google_sync_webhooks.sql", import.meta.url), "utf8");
+  assert.match(migration, /webhook_dirty boolean not null default false/);
+  assert.match(migration, /consume_google_webhook_dirty/);
+  assert.match(migration, /mark_google_webhook_dirty[\s\S]+google_calendar_connections[\s\S]+for update/);
+  assert.match(migration, /finalize_google_sync_job[\s\S]+owned_job is distinct from p_job_id/);
+  assert.match(migration, /finalize_google_sync_job[\s\S]+sync_job_id = p_job_id/);
+  assert.match(migration, /'creating','active'/);
+  assert.match(migration, /revoke all on function public\.finalize_google_sync_job\(uuid, uuid\) from public, anon, authenticated/);
+  assert.match(migration, /grant execute on function public\.finalize_google_sync_job\(uuid, uuid\) to service_role/);
 });
 
 test("database constraint failures are not classified as provider failures", () => {
