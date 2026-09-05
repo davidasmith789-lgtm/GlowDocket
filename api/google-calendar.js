@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import {
   GoogleCalendarError,
   WRITE_SCOPE,
+  auditManagedAssignmentEvents,
   authenticateRequest,
   authorizedCalendar,
   beginOAuth,
@@ -171,6 +172,12 @@ async function routeAction(req, admin, user) {
   }
   if (action === "clear-resolved-issues") { await admin.from("google_sync_issues").delete().eq("user_id", user.id).not("resolved_at", "is", null); return statusFor({ admin, userId: user.id }); }
   const auth = await authorizedCalendar({ admin, userId: user.id });
+  if (action === "verify-legacy-issue-readonly") {
+    const diagnosticRef = String(body.diagnosticRef || "").trim();
+    if (!/^GC-[A-Z0-9-]{1,40}$/i.test(diagnosticRef)) throw new GoogleCalendarError("invalid_diagnostic_reference", "That Google Calendar diagnostic reference is invalid.", 400);
+    return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], diagnosticRef, batchSize: 1, readOnly: true });
+  }
+  if (action === "audit-managed-assignments-readonly") return auditManagedAssignmentEvents({ admin, userId: user.id, calendar: auth.calendar, nativeIds: body.nativeIds });
   if (action === "verify-legacy-issues") return verifyLegacyMappingIssues({ admin, userId: user.id, calendar: auth.calendar, currentItems: Array.isArray(body.items) ? body.items : [], cursor: body.cursor, batchSize: 10 });
   if (action === "calendars") return { calendars: await listCalendarChoices(auth) };
   if (action === "settings") {

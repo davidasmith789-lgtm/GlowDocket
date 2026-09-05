@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { activityGoogleEvent, applyGoogleNativeUpdates, assignmentGoogleEvent, buildGoogleCalendarItems, buildNativeUpdateConfirmations, classGoogleEvents, googleDateTimeParts, googleEventDateKey, googleEventsForDate } from "../src/googleCalendarUtils.js";
-import { canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, semanticallyEquivalentSnapshots, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
+import { auditManagedAssignmentEvents, canCreateEvents, changedFields, completeIssueResolution, eventSnapshot, isManagedEvent, managedIdentityDecision, managedProjectionDecision, mergeSnapshots, providerIssueCategory, semanticallyEquivalentSnapshots, snapshotHash, synchronizeNativeItems, upsertEventMappings, verifyLegacyMappingIssues } from "../server/services/googleCalendarService.js";
 import { claimSyncJob, confirmNativeUpdates, continueSyncJob, finalizeSyncJob, markWebhookDirty } from "../api/google-calendar.js";
 
 test("assignments map to all-day or fifteen-minute Google events", () => {
@@ -384,4 +384,29 @@ test("legacy mapping verification resolves only cancelled orphan events and safe
   assert.equal(updates.length, 1); assert.equal(updates[0].payload.resolution_reason, "orphaned_google_event_cancelled");
   assert.deepEqual(updates[0].filters.find(([operator, column]) => operator === "in" && column === "id")[2], ["2"]);
   assert.doesNotMatch(JSON.stringify(result), /private provider detail|must not leak/);
+});
+
+test("targeted legacy verification includes obsolete weekly identities and is strictly read-only", async () => {
+  const issue = { id: "weekly-issue", diagnostic_ref: "GC-4420", glowdocket_id: "weekly:APES-1-1788105185173", google_calendar_id: "calendar", google_event_id: "old-master" };
+  let issueUpdateAttempted = false;
+  const query = (table) => ({ select() { return this; }, eq() { return this; }, is() { return this; }, update() { issueUpdateAttempted = true; return this; }, then(resolve) { resolve({ data: table === "google_sync_issues" ? [issue] : [], error: null }); } });
+  const calendar = { events: { async get() { return { data: { status: "cancelled", description: "private" } }; } } };
+  const originalInfo = console.info; console.info = () => {};
+  let result; try { result = await verifyLegacyMappingIssues({ admin: { from: query }, userId: "user", calendar, currentItems: [], diagnosticRef: "GC-4420", batchSize: 1, readOnly: true }); } finally { console.info = originalInfo; }
+  assert.deepEqual(result.counts, { missing: 0, cancelled: 1, active_orphan: 0, permission_or_lookup_failure: 0 });
+  assert.deepEqual(result.diagnosticReferences.cancelled, ["GC-4420"]); assert.equal(issueUpdateAttempted, false); assert.doesNotMatch(JSON.stringify(result), /private/);
+});
+
+test("assignment provider audit finds tracked, untracked, cancelled, and same-title events without writes", async () => {
+  const mapping = { glowdocket_id: "assignment-1", google_calendar_id: "calendar", google_event_id: "tracked", state: "active", last_google_snapshot: { summary: "Due: Quiz", start: { date: "2026-09-08" }, end: { date: "2026-09-09" } } };
+  const query = (table) => ({ select() { return this; }, eq() { return this; }, in() { return this; }, async maybeSingle() { return { data: { dedicated_calendar_id: "calendar" }, error: null }; }, then(resolve) { resolve({ data: table === "google_event_mappings" ? [mapping] : null, error: null }); } });
+  const events = [
+    { id: "tracked", status: "confirmed", summary: "Due: Quiz", start: { date: "2026-09-08" }, extendedProperties: { private: { glowdocketManaged: "1", glowdocketItemType: "assignment", glowdocketItemId: "assignment-1" } } },
+    { id: "orphan", status: "confirmed", summary: "Due: Quiz", start: { date: "2026-09-08" }, extendedProperties: { private: { glowdocketManaged: "1", glowdocketItemType: "assignment", glowdocketItemId: "assignment-1" } } },
+    { id: "old", status: "cancelled", summary: "Due: Quiz", start: { date: "2026-09-08" }, extendedProperties: { private: { glowdocketManaged: "1", glowdocketItemType: "assignment", glowdocketItemId: "assignment-1" } } },
+    { id: "manual", status: "confirmed", summary: "Due: Quiz", start: { date: "2026-09-08" } },
+  ];
+  const calendar = { events: { async list() { return { data: { items: events } }; }, async get() { return { data: { id: "tracked", status: "confirmed" } }; } } };
+  const originalInfo = console.info; console.info = () => {}; let result; try { result = await auditManagedAssignmentEvents({ admin: { from: query }, userId: "user", calendar, nativeIds: ["assignment-1"] }); } finally { console.info = originalInfo; }
+  const audited = result.assignments[0]; assert.equal(result.readOnly, true); assert.equal(audited.mappedStatus, "active"); assert.equal(audited.activeManagedCount, 2); assert.equal(audited.cancelledManagedCount, 1); assert.equal(audited.untrackedManagedCount, 2); assert.equal(audited.sameTitleDateEvents.length, 4); assert.doesNotMatch(JSON.stringify(result), /description|attendees/);
 });

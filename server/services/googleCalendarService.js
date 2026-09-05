@@ -96,7 +96,7 @@ export async function resolveSyncIssues({ admin, userId, categories, type = null
   await completeIssueResolution(query, "resolve_sync_issues");
 }
 
-export async function verifyLegacyMappingIssues({ admin, userId, calendar, currentItems = [], cursor = 0, batchSize = 10 }) {
+export async function verifyLegacyMappingIssues({ admin, userId, calendar, currentItems = [], cursor = 0, batchSize = 10, diagnosticRef = "", readOnly = false }) {
   const safeBatchSize = Math.min(10, Math.max(1, Number(batchSize) || 10));
   const [{ data: issues, error: issueError }, { data: mappings, error: mappingError }, { data: imports, error: importError }] = await Promise.all([
     admin.from("google_sync_issues").select("id,diagnostic_ref,glowdocket_id,google_calendar_id,google_event_id").eq("user_id", userId).eq("category", "mapping_recovery").eq("glowdocket_type", "class").is("resolved_at", null),
@@ -112,7 +112,8 @@ export async function verifyLegacyMappingIssues({ admin, userId, calendar, curre
   const mappedNative = new Set((mappings || []).map((mapping) => `${mapping.glowdocket_type}:${mapping.glowdocket_id}`));
   const mappedGoogle = new Set((mappings || []).map((mapping) => `${mapping.google_calendar_id}:${mapping.google_event_id}`));
   const importedGoogle = new Set((imports || []).map((event) => `${event.calendar_id}:${event.event_id}`));
-  const candidates = (issues || []).filter((issue) => /^cycle:.+:\d{4}-\d{2}-\d{2}$/.test(String(issue.glowdocket_id || ""))
+  const targetRef = String(diagnosticRef || "").trim();
+  const candidates = (issues || []).filter((issue) => (!targetRef ? /^cycle:.+:\d{4}-\d{2}-\d{2}$/.test(String(issue.glowdocket_id || "")) : issue.diagnostic_ref === targetRef)
     && !currentNative.has(String(issue.glowdocket_id))
     && !mappedNative.has(`class:${issue.glowdocket_id}`)
     && !mappedGoogle.has(`${issue.google_calendar_id}:${issue.google_event_id}`)
@@ -132,10 +133,44 @@ export async function verifyLegacyMappingIssues({ admin, userId, calendar, curre
   const counts = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).length]));
   const diagnosticReferences = Object.fromEntries(classifications.map((classification) => [classification, results.filter((result) => result.classification === classification).map((result) => result.diagnosticRef)]));
   const cancelledIssueIds = results.filter((result) => result.classification === "cancelled").map((result) => result.issueId);
-  if (cancelledIssueIds.length) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "orphaned_google_event_cancelled", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").is("resolved_at", null).in("id", cancelledIssueIds), "resolve_cancelled_orphaned_events");
+  if (!readOnly && cancelledIssueIds.length) await completeIssueResolution(admin.from("google_sync_issues").update({ resolved_at: new Date().toISOString(), resolution_reason: "orphaned_google_event_cancelled", updated_at: new Date().toISOString() }).eq("user_id", userId).eq("category", "mapping_recovery").is("resolved_at", null).in("id", cancelledIssueIds), "resolve_cancelled_orphaned_events");
   const nextCursor = batch.length ? String(batch.at(-1).id) : cursorId; const complete = start < 0 || start + batch.length >= candidates.length;
   console.info("[google-calendar] legacy verification batch", { checked: batch.length, totalCandidates: candidates.length, counts, diagnosticReferences, complete });
   return { counts, diagnosticReferences, checked: batch.length, totalCandidates: candidates.length, nextCursor, complete };
+}
+
+const safeProviderRef = (value) => value ? sha256(value).slice(0, 12) : null;
+const providerDate = (field) => String(field?.date || field?.dateTime || "").slice(0, 10);
+export async function auditManagedAssignmentEvents({ admin, userId, calendar, nativeIds = [] }) {
+  const ids = [...new Set((nativeIds || []).map(String).filter((id) => /^[A-Za-z0-9:_-]{1,160}$/.test(id)))];
+  if (!ids.length || ids.length > 20) throw new GoogleCalendarError("invalid_assignment_audit", "Choose between one and twenty assignments to verify.", 400);
+  const [{ data: prefs, error: prefsError }, { data: mappings, error: mappingError }] = await Promise.all([
+    admin.from("google_calendar_preferences").select("dedicated_calendar_id").eq("user_id", userId).maybeSingle(),
+    admin.from("google_event_mappings").select("glowdocket_id,google_calendar_id,google_event_id,state,last_google_snapshot").eq("user_id", userId).eq("glowdocket_type", "assignment").in("glowdocket_id", ids),
+  ]);
+  if (prefsError || mappingError) throw prefsError || mappingError;
+  const calendarId = prefs?.dedicated_calendar_id; if (!calendarId) throw new GoogleCalendarError("dedicated_calendar_missing", "The dedicated GlowDocket calendar is not available.", 409);
+  const dates = (mappings || []).flatMap((mapping) => [providerDate(mapping.last_google_snapshot?.start), providerDate(mapping.last_google_snapshot?.end)]).filter(Boolean).sort();
+  if (!dates.length) throw new GoogleCalendarError("assignment_audit_dates_missing", "The selected assignments do not have synchronized Google dates.", 409);
+  const from = new Date(`${dates[0]}T00:00:00Z`); from.setUTCDate(from.getUTCDate() - 14); const to = new Date(`${dates.at(-1)}T23:59:59Z`); to.setUTCDate(to.getUTCDate() + 14);
+  const events = []; let pageToken = null;
+  for (let page = 0; page < 10; page += 1) {
+    const response = await calendar.events.list({ calendarId, timeMin: from.toISOString(), timeMax: to.toISOString(), showDeleted: true, singleEvents: false, maxResults: 2500, pageToken: pageToken || undefined, fields: "items(id,status,summary,start,end,recurrence,extendedProperties/private),nextPageToken" });
+    events.push(...(response.data.items || [])); pageToken = response.data.nextPageToken || null; if (!pageToken) break;
+  }
+  if (pageToken) throw new GoogleCalendarError("assignment_audit_incomplete", "The Google Calendar audit exceeded its safe page limit.", 409);
+  const results = [];
+  for (const id of ids) {
+    const mapping = (mappings || []).find((entry) => String(entry.glowdocket_id) === id) || null;
+    let mappedStatus = "missing"; let mappedRecurrence = false;
+    if (mapping) try { const response = await calendar.events.get({ calendarId: mapping.google_calendar_id, eventId: mapping.google_event_id, fields: "id,status,recurrence" }); mappedStatus = response.data.status === "cancelled" ? "cancelled" : "active"; mappedRecurrence = Boolean(response.data.recurrence?.length); } catch (error) { const status = Number(error?.code || error?.response?.status || 0); if (![404, 410].includes(status)) mappedStatus = "permission_or_lookup_failure"; }
+    const expected = mapping?.last_google_snapshot || {}; const expectedTitle = String(expected.summary || ""); const expectedDate = providerDate(expected.start);
+    const managedMatches = events.filter((event) => event.extendedProperties?.private?.glowdocketManaged === "1" && String(event.extendedProperties?.private?.glowdocketItemType || "") === "assignment" && String(event.extendedProperties?.private?.glowdocketItemId || "") === id);
+    const titleDateMatches = events.filter((event) => String(event.summary || "") === expectedTitle && providerDate(event.start) === expectedDate);
+    results.push({ nativeId: id, mappingState: mapping?.state || null, mappedEventRef: safeProviderRef(mapping?.google_event_id), mappedStatus, mappedRecurrence, managedEvents: managedMatches.map((event) => ({ eventRef: safeProviderRef(event.id), status: event.status === "cancelled" ? "cancelled" : "active", recurrence: Boolean(event.recurrence?.length), tracked: Boolean(mapping && event.id === mapping.google_event_id) })), activeManagedCount: managedMatches.filter((event) => event.status !== "cancelled").length, cancelledManagedCount: managedMatches.filter((event) => event.status === "cancelled").length, untrackedManagedCount: managedMatches.filter((event) => !mapping || event.id !== mapping.google_event_id).length, sameTitleDateEvents: titleDateMatches.map((event) => ({ eventRef: safeProviderRef(event.id), status: event.status === "cancelled" ? "cancelled" : "active", managedNativeId: event.extendedProperties?.private?.glowdocketItemId || null, tracked: Boolean(mapping && event.id === mapping.google_event_id) })) });
+  }
+  console.info("[google-calendar] read-only assignment provider audit", { nativeIds: ids, range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }, counts: results.map((result) => ({ nativeId: result.nativeId, active: result.activeManagedCount, cancelled: result.cancelledManagedCount, untracked: result.untrackedManagedCount })) });
+  return { readOnly: true, range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }, assignments: results };
 }
 
 function encryptionKey(env = process.env) {
