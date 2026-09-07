@@ -5690,6 +5690,41 @@ a,
   align-items: center;
 }
 
+@media (min-width: 768px) {
+  .desktop-assignment-summary {
+    position: fixed;
+    z-index: 175;
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    padding: 0 clamp(24px, 6vw, 96px) 40px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    color: var(--text-color);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--page-bg) 84%, var(--primary-color) 16%), var(--page-bg) 52%, color-mix(in srgb, var(--page-bg) 88%, var(--surface-alt) 12%));
+  }
+  .desktop-assignment-summary > .mobile-fullscreen-header {
+    position: sticky;
+    z-index: 5;
+    top: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin: 0 calc(-1 * clamp(24px, 6vw, 96px));
+    padding: 22px clamp(24px, 6vw, 96px);
+    border-bottom: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--card-bg) 94%, transparent);
+    backdrop-filter: blur(18px);
+  }
+  .desktop-assignment-summary > main { width: min(1100px, 100%); margin: 0 auto; padding: 26px 0; }
+  .desktop-assignment-summary .mobile-summary-task-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .desktop-assignment-summary .mobile-fullscreen-header p { margin: 0; color: var(--primary-color); font-size: 0.72rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+  .desktop-assignment-summary .mobile-fullscreen-header h2 { margin: 4px 0 0; }
+  .desktop-assignment-summary .mobile-fullscreen-header span { display: block; margin-top: 4px; color: var(--muted-text); }
+  .desktop-assignment-summary .mobile-fullscreen-header button { display: grid; width: 48px; height: 48px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--surface-alt); color: var(--text-color); cursor: pointer; font-size: 1.8rem; }
+}
+
 .task-details-fluid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
@@ -6432,7 +6467,11 @@ html[data-theme="dark"] {
 .course-overview-primary > strong { grid-row: 1 / span 2; grid-column: 2; font-size: 2.5rem; line-height: 1; }
 .course-overview-primary > small { opacity: 0.82; }
 .course-overview-breakdown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.course-overview-breakdown div { display: grid; gap: 3px; padding: 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); }
+.course-overview-breakdown div,
+.course-overview-breakdown button { display: grid; gap: 3px; padding: 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); color: var(--text-color); text-align: left; }
+.course-overview-breakdown button { cursor: pointer; }
+.course-overview-breakdown button:hover:not(:disabled) { border-color: var(--focus-color); transform: translateY(-1px); }
+.course-overview-breakdown button:disabled { cursor: default; opacity: 0.62; }
 .course-overview-breakdown strong { font-size: 1.2rem; }
 .course-overview-breakdown span { color: var(--muted-text); font-size: 0.72rem; }
 .course-overview-breakdown .has-warning { border-color: color-mix(in srgb, var(--warning-color) 55%, var(--border-color)); }
@@ -6488,7 +6527,11 @@ html[data-theme="dark"] {
 
 .dashboard-reminders-widget { display: grid; gap: 12px; }
 .reminder-widget-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.reminder-widget-summary div { display: grid; gap: 3px; padding: 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); text-align: center; }
+.reminder-widget-summary div,
+.reminder-widget-summary button { display: grid; gap: 3px; padding: 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--surface-alt); color: var(--text-color); text-align: center; }
+.reminder-widget-summary button { cursor: pointer; }
+.reminder-widget-summary button:hover:not(:disabled) { border-color: var(--focus-color); transform: translateY(-1px); }
+.reminder-widget-summary button:disabled { cursor: default; opacity: 0.62; }
 .reminder-widget-summary strong { font-size: 1.45rem; }
 .reminder-widget-summary span { color: var(--muted-text); font-size: 0.68rem; }
 .reminder-widget-summary .has-warning { border-color: color-mix(in srgb, var(--warning-color) 55%, var(--border-color)); }

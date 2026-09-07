@@ -7516,22 +7516,6 @@ function App() {
     onReset={resetFilters}
   />;
 
-  const handleCourseOverviewOpen = (course) => {
-    resetFilters();
-    setFilterCourse(course);
-    setFiltersOpen(true);
-    const targetTab = Object.keys(workspaceLayout[workspaceMode] || {}).find((tab) =>
-      workspaceLayout[workspaceMode][tab].some((item) => item.type === "todo-master" && !item.hidden),
-    ) || "todo";
-    const targetWidget = workspaceLayout[workspaceMode]?.[targetTab]?.find((item) => item.type === "todo-master" && !item.hidden);
-    setCurrentTab(targetTab);
-    if (targetWidget) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-        document.querySelector(`[data-widget-id="${targetWidget.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }));
-    }
-  };
-
   const getAssignmentCountdownLabel = (task) => {
     if (getTaskStatus(task) === "completed") return null;
     const deadline = getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm);
@@ -8701,6 +8685,7 @@ function App() {
     dueToday: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today")).length,
     dueTomorrow: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Tomorrow")).length,
     noDate: overviewCourseTasks.filter((task) => getTaskDueBucket(task) === "No Due Date").length,
+    completed: tasks.filter((task) => getTaskCourseOrCategory(task) === overviewCourse && getTaskStatus(task) === "completed").length,
   };
   const dashboardReminderHours = [24, 48, 72, 168, 336, 720].includes(Number(userSettings.dashboardReminderHours))
     ? Number(userSettings.dashboardReminderHours)
@@ -8792,17 +8777,17 @@ function App() {
     return (
       <section className="course-overview-widget">
         <label><span>Choose a {schoolLevelCopy.courseLabel.toLowerCase()}</span><select value={overviewCourse} onChange={(event) => setCourseOverviewSelection(event.target.value)}>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
-        <button type="button" className="course-overview-primary" style={{ "--course-overview-color": courseColor, "--course-overview-text": getTextColorForCourse(overviewCourse) }} onClick={() => handleCourseOverviewOpen(overviewCourse)}>
+        <button type="button" className="course-overview-primary" style={{ "--course-overview-color": courseColor, "--course-overview-text": getTextColorForCourse(overviewCourse) }} onClick={() => openAssignmentSummary(`course:${overviewCourse}:active`)}>
           <span>Upcoming {schoolLevelCopy.taskPlural}</span>
           <strong>{courseOverviewSummary.upcoming}</strong>
           <small>Includes {schoolLevelCopy.todoLabel.toLowerCase()} and in progress</small>
         </button>
         <div className="course-overview-breakdown">
-          <div><strong>{courseOverviewSummary.inProgress}</strong><span>In progress</span></div>
-          <div className={courseOverviewSummary.dueToday > 0 ? "has-warning" : ""}><strong>{courseOverviewSummary.dueToday}</strong><span>Due today</span></div>
-          <div><strong>{courseOverviewSummary.dueTomorrow}</strong><span>Due tomorrow</span></div>
-          <div className={courseOverviewSummary.overdue > 0 ? "has-danger" : ""}><strong>{courseOverviewSummary.overdue}</strong><span>Overdue</span></div>
-          <div><strong>{overviewCourseEstimatedMinutes > 0 ? overviewCourseWorkloadLabel : courseOverviewSummary.noDate}</strong><span>{overviewCourseEstimatedMinutes > 0 ? "Estimated" : "No date"}</span></div>
+          <button type="button" disabled={courseOverviewSummary.inProgress === 0} onClick={() => openAssignmentSummary(`course:${overviewCourse}:inProgress`)}><strong>{courseOverviewSummary.inProgress}</strong><span>In progress</span></button>
+          <button type="button" disabled={courseOverviewSummary.dueToday === 0} className={courseOverviewSummary.dueToday > 0 ? "has-warning" : ""} onClick={() => openAssignmentSummary(`course:${overviewCourse}:today`)}><strong>{courseOverviewSummary.dueToday}</strong><span>Due today</span></button>
+          <button type="button" disabled={courseOverviewSummary.dueTomorrow === 0} onClick={() => openAssignmentSummary(`course:${overviewCourse}:tomorrow`)}><strong>{courseOverviewSummary.dueTomorrow}</strong><span>Due tomorrow</span></button>
+          <button type="button" disabled={courseOverviewSummary.overdue === 0} className={courseOverviewSummary.overdue > 0 ? "has-danger" : ""} onClick={() => openAssignmentSummary(`course:${overviewCourse}:overdue`)}><strong>{courseOverviewSummary.overdue}</strong><span>Overdue</span></button>
+          <button type="button" disabled={courseOverviewSummary.completed === 0} onClick={() => openAssignmentSummary(`course:${overviewCourse}:completed`)}><strong>{courseOverviewSummary.completed}</strong><span>Completed</span></button>
         </div>
         {overviewNextTask ? (
           <article className="course-overview-next">
@@ -8847,9 +8832,9 @@ function App() {
     return (
       <section className="dashboard-reminders-widget">
         <div className="reminder-widget-summary">
-          <div className={dueTodayCount > 0 ? "has-warning" : ""}><strong>{dueTodayCount}</strong><span>Due today</span></div>
-          <div><strong>{dueTomorrowCount}</strong><span>Due tomorrow</span></div>
-          <div className={dashboardOverdueTasks.length > 0 ? "has-danger" : ""}><strong>{dashboardOverdueTasks.length}</strong><span>Overdue</span></div>
+          <button type="button" disabled={dueTodayCount === 0} className={dueTodayCount > 0 ? "has-warning" : ""} onClick={() => openAssignmentSummary("today")}><strong>{dueTodayCount}</strong><span>Due today</span></button>
+          <button type="button" disabled={dueTomorrowCount === 0} onClick={() => openAssignmentSummary("tomorrow")}><strong>{dueTomorrowCount}</strong><span>Due tomorrow</span></button>
+          <button type="button" disabled={dashboardOverdueTasks.length === 0} className={dashboardOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openAssignmentSummary("overdue")}><strong>{dashboardOverdueTasks.length}</strong><span>Overdue</span></button>
         </div>
         <label className="reminder-horizon-control"><span>Upcoming window</span><select value={dashboardReminderHours} onChange={(event) => handleAddFieldSettingChange("dashboardReminderHours", Number(event.target.value))}><option value={24}>Next 24 hours</option><option value={48}>Next 48 hours</option><option value={72}>Next 3 days</option><option value={168}>Next 7 days</option><option value={336}>Next 14 days</option><option value={720}>Next 30 days</option></select></label>
         {overdueItems.length === 0 && upcomingItems.length === 0 ? <p className="reminder-widget-empty friendly-empty" role="status">Looks calm in here — nothing is due in this window.</p> : (
@@ -9525,8 +9510,8 @@ function App() {
     if (window.history.state?.taskcabinetMobilePanel === "settings") window.history.back();
     else setMobileSettingsOpen(false);
   };
-  const openMobileSummary = (category) => {
-    window.history.pushState({ taskcabinetMobilePanel: "summary" }, "");
+  const openAssignmentSummary = (category) => {
+    if (isMobileUi) window.history.pushState({ taskcabinetMobilePanel: "summary" }, "");
     setMobileSummaryCategory(category);
   };
   const closeMobileSummary = () => {
@@ -9544,15 +9529,31 @@ function App() {
   };
   const renderMobilePageTitle = (eyebrow, title, copy) => <MobilePageTitle eyebrow={eyebrow} title={title} copy={copy} />;
   const mobileTodayTasks = activeDashboardTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today"));
+  const mobileTomorrowTasks = activeDashboardTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Tomorrow"));
   const mobileOverdueTasks = mobileDueGroups.overdue;
-  const mobileSummaryTasks = mobileSummaryCategory === "active"
-    ? mobileDueGroups.active
-    : mobileSummaryCategory === "today"
-      ? mobileTodayTasks
-      : mobileSummaryCategory === "overdue"
-        ? mobileOverdueTasks
-        : [];
-  const mobileSummaryTitle = { active: "Active assignments", today: "Due today", overdue: "Overdue" }[mobileSummaryCategory] || "Assignments";
+  const courseSummaryMatch = mobileSummaryCategory.match(/^course:(.*):(active|inProgress|today|tomorrow|overdue|completed)$/);
+  const summaryCourse = courseSummaryMatch?.[1] || "";
+  const summaryCourseFilter = courseSummaryMatch?.[2] || "";
+  const summaryCourseTasks = tasks.filter((task) => getTaskCourseOrCategory(task) === summaryCourse);
+  const mobileSummaryTasks = courseSummaryMatch
+    ? summaryCourseTasks.filter((task) => {
+        const status = getTaskStatus(task);
+        if (summaryCourseFilter === "active") return status !== "completed";
+        if (summaryCourseFilter === "inProgress" || summaryCourseFilter === "completed") return status === summaryCourseFilter;
+        if (status === "completed") return false;
+        return getTaskDueBucket(task).startsWith({ today: "Due Today", tomorrow: "Due Tomorrow", overdue: "Overdue" }[summaryCourseFilter]);
+      })
+    : mobileSummaryCategory === "active"
+      ? mobileDueGroups.active
+      : mobileSummaryCategory === "today"
+        ? mobileTodayTasks
+        : mobileSummaryCategory === "tomorrow"
+          ? mobileTomorrowTasks
+          : mobileSummaryCategory === "overdue"
+            ? mobileOverdueTasks
+            : [];
+  const courseSummaryLabel = { active: "Active assignments", inProgress: "In progress", today: "Due today", tomorrow: "Due tomorrow", overdue: "Overdue", completed: "Completed" }[summaryCourseFilter];
+  const mobileSummaryTitle = courseSummaryMatch ? `${summaryCourse}: ${courseSummaryLabel}` : ({ active: "Active assignments", today: "Due today", tomorrow: "Due tomorrow", overdue: "Overdue" }[mobileSummaryCategory] || "Assignments");
   const openMobileAdd = (returnTab = currentTab) => {
     setMobileReturnTab(returnTab === "mobile-add" ? "dashboard" : returnTab);
     setMobileSummaryCategory("");
@@ -9664,7 +9665,7 @@ function App() {
     </ul>
   );
   const renderMobileHomeSection = (sectionId) => {
-    if (sectionId === "summary") return <section key={sectionId} className="mobile-app-stat-strip" aria-label="Assignment summary"><button type="button" disabled={activeTasksCount === 0} onClick={() => openMobileSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button><button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openMobileSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button><button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openMobileSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button></section>;
+    if (sectionId === "summary") return <section key={sectionId} className="mobile-app-stat-strip" aria-label="Assignment summary"><button type="button" disabled={activeTasksCount === 0} onClick={() => openAssignmentSummary("active")}><strong>{activeTasksCount}</strong><span>Active</span></button><button type="button" disabled={mobileTodayTasks.length === 0} className={mobileTodayTasks.length > 0 ? "has-warning" : ""} onClick={() => openAssignmentSummary("today")}><strong>{mobileTodayTasks.length}</strong><span>Today</span></button><button type="button" disabled={mobileOverdueTasks.length === 0} className={mobileOverdueTasks.length > 0 ? "has-danger" : ""} onClick={() => openAssignmentSummary("overdue")}><strong>{mobileOverdueTasks.length}</strong><span>Overdue</span></button></section>;
     if (sectionId === "plan") return <section key={sectionId} className="mobile-app-card mobile-app-plan-card"><div className="mobile-app-section-heading"><div><h3>Best Next Steps</h3></div><button type="button" onClick={() => openMobileTab("todo")}>View tasks</button></div>{renderRecommendedWidget()}</section>;
     if (sectionId === "quick") return <section key={sectionId} className="mobile-app-card mobile-app-quick-card"><div className="mobile-app-section-heading"><div><h3>Find a quick task</h3></div></div>{renderQuickMatchCard()}</section>;
     if (sectionId === "checklists") return <section key={sectionId} className="mobile-app-card mobile-dashboard-checklists"><div className="mobile-app-section-heading"><div><span>Stay organized</span><h3>Checklists</h3></div><div className="mobile-checklist-heading-actions">{checklists.length > 0 && <button type="button" onClick={() => { setChecklistSelectionMode((active) => !active); setSelectedChecklistIds([]); }}>{checklistSelectionMode ? "Cancel" : "Select"}</button>}<button type="button" onClick={handleCreateChecklist}>New list</button></div></div>{renderStandaloneChecklists()}</section>;
@@ -9932,8 +9933,8 @@ function App() {
           </main>
         )}
 
-        {isMobileUi && currentUser && mobileSummaryCategory && (
-          <section className="mobile-fullscreen-panel" role="dialog" aria-modal="true" aria-labelledby="mobile-summary-title">
+        {currentUser && mobileSummaryCategory && (
+          <section className={`mobile-fullscreen-panel${isMobileUi ? "" : " desktop-assignment-summary"}`} role="dialog" aria-modal="true" aria-labelledby="mobile-summary-title">
             <header className="mobile-fullscreen-header"><div><p>Assignment category</p><h2 id="mobile-summary-title">{mobileSummaryTitle}</h2><span>{mobileSummaryTasks.length} assignment{mobileSummaryTasks.length === 1 ? "" : "s"}</span></div><button type="button" onClick={closeMobileSummary} aria-label="Close assignment category">×</button></header>
             <main>{renderMobileSummaryAssignments()}</main>
           </section>
