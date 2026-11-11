@@ -5692,6 +5692,9 @@ a,
 }
 
 @media (min-width: 768px) {
+  .App:not(.mobile-app-ui) .app-shell.is-viewport-scaled:has(> .course-overview-assignment-screen) {
+    transform: none !important;
+  }
   .desktop-assignment-summary {
     position: fixed;
     z-index: 9000;
@@ -5726,6 +5729,16 @@ a,
   .desktop-assignment-summary .mobile-fullscreen-header h2 { margin: 4px 0 0; color: var(--text-color); }
   .desktop-assignment-summary .mobile-fullscreen-header span { display: block; margin-top: 4px; color: var(--muted-text); }
   .desktop-assignment-summary .mobile-fullscreen-header button { display: grid; width: 48px; height: 48px; padding: 0; place-items: center; border: 1px solid var(--border-color); border-radius: 50%; background: var(--surface-alt); color: var(--text-color); cursor: pointer; font-size: 1.8rem; }
+}
+
+.course-overview-assignment-screen {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .task-details-fluid {

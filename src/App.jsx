@@ -9934,7 +9934,7 @@ function App() {
         )}
 
         {currentUser && mobileSummaryCategory && (
-          <section className={`mobile-fullscreen-panel${isMobileUi ? "" : " desktop-assignment-summary"}`} role="dialog" aria-modal="true" aria-labelledby="mobile-summary-title">
+          <section className={`mobile-fullscreen-panel${isMobileUi ? "" : " desktop-assignment-summary"}${courseSummaryMatch ? " course-overview-assignment-screen" : ""}`} role="dialog" aria-modal="true" aria-labelledby="mobile-summary-title">
             <header className="mobile-fullscreen-header"><div><p>Assignment category</p><h2 id="mobile-summary-title">{mobileSummaryTitle}</h2><span>{mobileSummaryTasks.length} assignment{mobileSummaryTasks.length === 1 ? "" : "s"}</span></div><button type="button" onClick={closeMobileSummary} aria-label="Close assignment category">×</button></header>
             <main>{renderMobileSummaryAssignments()}</main>
           </section>
