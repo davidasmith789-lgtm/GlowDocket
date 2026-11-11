@@ -1459,6 +1459,7 @@ function WorkspaceWidget({
     "quick-match",
     "course-overview",
   ].includes(instance.type);
+  const scrollableWidget = ["recommended", "reminders", "course-overview"].includes(instance.type);
   const contentScale = mobileResize || instance.type === "course-colors"
     ? 1
     : Math.min(
@@ -1714,7 +1715,7 @@ function WorkspaceWidget({
   return (
     <section
       ref={widgetRef}
-      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}${instance.type === "recommended" ? " is-recommended-widget" : ""}${instance.type === "mini-calendar" ? " is-mini-calendar-widget" : ""}${instance.type === "checklists" ? " is-checklists-widget" : ""}${instance.type === "course-colors" ? " uses-fluid-course-colors" : ""}`}
+      className={`workspace-widget${collapsed ? " is-collapsed" : ""}${locked ? " is-locked" : ""}${mobileResize ? " uses-mobile-resize" : ""}${smallWidget ? " is-small-widget" : ""}${displayOnlyWidget ? " is-display-only" : ""}${fixedOverflowWidget ? " has-fixed-overflow" : ""}${scrollableWidget ? " is-scrollable-widget" : ""}${instance.type === "recommended" ? " is-recommended-widget" : ""}${instance.type === "mini-calendar" ? " is-mini-calendar-widget" : ""}${instance.type === "checklists" ? " is-checklists-widget" : ""}${instance.type === "course-colors" ? " uses-fluid-course-colors" : ""}`}
       data-widget-id={instance.id}
       data-widget-width={instance.width}
       data-expanded-height={instance.height}
@@ -8802,6 +8803,29 @@ function App() {
           </article>
         ) : (
           <p className="course-overview-empty friendly-empty" role="status">You’re all clear in this {schoolLevelCopy.courseLabel.toLowerCase()} right now.</p>
+        )}
+        {sortedOverviewCourseTasks.length > 0 && (
+          <section className="course-overview-assignment-list" aria-label={`All active assignments for ${overviewCourse}`}>
+            <h4>All active assignments</h4>
+            <ol className="recommended-plan-list">
+              {sortedOverviewCourseTasks.map((task, index) => (
+                <li key={task.id} className={`recommended-plan-item${getTaskDueBucket(task).startsWith("Overdue") ? " is-overdue" : ""}`}>
+                  <button type="button" className="recommended-plan-button" onClick={() => handleRecommendedTaskClick(task.id)}>
+                    <span className="recommended-plan-rank">{index + 1}</span>
+                    <div className="recommended-plan-content">
+                      <strong>{task.title}</strong>
+                      <div className="recommended-plan-details"><span>{getWorkflowLabel(getTaskStatus(task))}</span><span>{formatTaskDetails(task)}</span></div>
+                      {renderAssignmentCountdown(task, "course-overview-countdown")}
+                    </div>
+                  </button>
+                  <div className="recommended-plan-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => handleRecommendedTaskClick(task.id)}>{getFocusActionLabel(task)}</button>
+                    {getTaskStatus(task) === "todo" && <button type="button" className="btn btn-primary" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
         )}
       </section>
     );
