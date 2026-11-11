@@ -6148,7 +6148,7 @@ html[data-theme="dark"] {
 .workspace-widget.is-scrollable-widget .workspace-widget-body {
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   touch-action: pan-y;
   scrollbar-gutter: stable;
   -webkit-overflow-scrolling: touch;
