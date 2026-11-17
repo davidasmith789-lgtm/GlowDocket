@@ -9089,7 +9089,7 @@ function App() {
             <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`} className={isAssessment(task) ? "is-assessment-reminder" : undefined}>
               <button type="button" className="reminder-widget-main" onClick={() => handleReminderTaskClick(task)}>
                 <span><strong>{task.title}</strong><small>{isAssessment(task) ? `${formatAssessmentType(task.assessmentType)} · ` : ""}{getTaskCourseOrCategory(task)}</small></span>
-                <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !useMilitaryTime })}</small></span>
+                <span className={overdue ? "is-overdue" : ""}><span className="reminder-widget-countdown-line"><i className="reminder-course-dot" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)) }} aria-hidden="true" /><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong></span><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !useMilitaryTime })}</small></span>
               </button>
               {isAssessment(task) ? <button type="button" className="reminder-widget-start reminder-widget-calendar" aria-label={`View ${task.title} in calendar`} onClick={() => handleAssessmentFocus(task)}>Calendar</button> : getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
             </li>
@@ -9152,7 +9152,7 @@ function App() {
 
         <button
           type="button"
-          className="btn btn-danger"
+          className="btn btn-danger move-to-trash-button"
           onClick={(event) => stopCardClick(event, () => handleDelete(task.id))}
         >
           Move to Trash
@@ -9172,7 +9172,7 @@ function App() {
         {renderVoiceUndoAction(task)}
         <div className="task-action-pair task-action-pair-right">
           <button type="button" className="btn btn-secondary" onClick={(event) => stopCardClick(event, () => handleEditStart(task))}>✏️ Edit</button>
-          <button type="button" className="btn btn-danger" onClick={(event) => stopCardClick(event, () => handleDelete(task.id))}>Move to Trash</button>
+          <button type="button" className="btn btn-danger move-to-trash-button" onClick={(event) => stopCardClick(event, () => handleDelete(task.id))}>Move to Trash</button>
         </div>
       </div>
     );
@@ -9200,7 +9200,7 @@ function App() {
 
         <button
           type="button"
-          className="btn btn-danger"
+          className="btn btn-danger move-to-trash-button"
           onClick={(event) => stopCardClick(event, () => handleDelete(task.id))}
         >
           Move to Trash
@@ -10622,7 +10622,7 @@ function App() {
                                 {renderVoiceUndoAction(task)}
 
                                 <button
-                                  className="btn btn-danger"
+                                  className="btn btn-danger move-to-trash-button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDelete(task.id);
@@ -10770,7 +10770,7 @@ function App() {
                                 {renderVoiceUndoAction(task)}
 
                                 <button
-                                  className="btn btn-danger"
+                                  className="btn btn-danger move-to-trash-button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDelete(task.id);
@@ -10901,7 +10901,7 @@ function App() {
                         {renderVoiceUndoAction(task)}
 
                         <button
-                          className="btn btn-danger"
+                          className="btn btn-danger move-to-trash-button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(task.id);
@@ -11137,7 +11137,7 @@ function App() {
                             <div className="task-title-row"><span className={`assessment-type-badge is-${task.assessmentType || "test"}`}>{formatAssessmentType(task.assessmentType)}</span><strong className="task-title-text">{task.title}</strong><span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>{renderTaskReminderIndicator(task)}</div>
                             <div className="assessment-calendar-schedule"><span>Scheduled for {formatAssignmentTime(task.dueHour, task.dueAmPm)}</span>{renderAssignmentCountdown(task)}</div>
                             <p className="hint-text">{isMobileUi ? "Tap" : "Click"} to {expandedTaskId === task.id ? "hide" : "view"} notes</p>
-                            {expandedTaskId === task.id && <div className="assessment-calendar-details" onClick={(event) => event.stopPropagation()}>{task.notes ? <p>{task.notes}</p> : <p className="hint-text">No notes were added.</p>}<div className="task-actions"><button type="button" className="btn btn-secondary" onClick={() => openAssessmentEditor(task)}>Edit {formatAssessmentType(task.assessmentType)}</button><button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>Move to Trash</button></div></div>}
+                            {expandedTaskId === task.id && <div className="assessment-calendar-details" onClick={(event) => event.stopPropagation()}>{task.notes ? <p>{task.notes}</p> : <p className="hint-text">No notes were added.</p>}<div className="task-actions"><button type="button" className="btn btn-secondary" onClick={() => openAssessmentEditor(task)}>Edit {formatAssessmentType(task.assessmentType)}</button><button type="button" className="btn btn-danger move-to-trash-button" onClick={() => handleDelete(task.id)}>Move to Trash</button></div></div>}
                           </li>
                         ) : (
                           <li
@@ -12423,7 +12423,7 @@ function App() {
                                 Restore
                               </button>
                               {renderVoiceUndoAction(task)}
-                              <button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>
+                              <button type="button" className="btn btn-danger move-to-trash-button" onClick={() => handleDelete(task.id)}>
                                 Move to Trash
                               </button>
                             </div>
@@ -12528,7 +12528,7 @@ function App() {
                                 <div className="task-actions">
                                   <button type="button" className="btn btn-secondary" onClick={() => handleRestoreArchived(task.id)}>Restore</button>
                                   {renderVoiceUndoAction(task)}
-                                  <button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>Move to Trash</button>
+                                  <button type="button" className="btn btn-danger move-to-trash-button" onClick={() => handleDelete(task.id)}>Move to Trash</button>
                                 </div>
                               </li>
                             ))}
@@ -13215,7 +13215,7 @@ function App() {
         </div>
       )}
       {googleDisconnectOpen && <div className="calendar-event-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGoogleDisconnectOpen(false); }}><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-disconnect-title"><h2 id="google-disconnect-title">Disconnect Google Calendar?</h2><p>Your GlowDocket data will not be deleted.</p><label><input type="checkbox" checked={keepGoogleCalendar} onChange={(event) => setKeepGoogleCalendar(event.target.checked)} /> Keep my GlowDocket calendar in Google</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(false)}>Cancel</button><button type="button" className="btn btn-danger" onClick={handleGoogleDisconnect} disabled={googleCalendarBusy === "disconnect"}>{googleCalendarBusy === "disconnect" ? "Disconnecting…" : "Disconnect Google"}</button></div></section></div>}
-      {pendingTrashTask && <div className="calendar-event-modal trash-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPendingTrashTask(null); }} onKeyDown={(event) => { if (event.key === "Escape") setPendingTrashTask(null); }}><section className="trash-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="trash-confirm-title" aria-describedby="trash-confirm-description"><span className="assessment-editor-eyebrow">Recoverable Trash</span><h2 id="trash-confirm-title">Move this {isAssessment(pendingTrashTask) ? formatAssessmentType(pendingTrashTask.assessmentType).toLowerCase() : "assignment"} to Trash?</h2><p id="trash-confirm-description"><strong>“{pendingTrashTask.title || "Untitled"}”</strong> will leave your active views, but you can restore it from Trash.</p>{isAssessment(pendingTrashTask) && pendingTrashTask.linkedStudyTaskId && <p className="hint-text">Its linked study assignment will be kept.</p>}<div className="trash-confirm-actions"><button type="button" className="btn btn-secondary" autoFocus onClick={() => setPendingTrashTask(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingTrashTask.id); setPendingTrashTask(null); }}>Move to Trash</button></div></section></div>}
+      {pendingTrashTask && <div className="calendar-event-modal trash-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPendingTrashTask(null); }} onKeyDown={(event) => { if (event.key === "Escape") setPendingTrashTask(null); }}><section className="trash-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="trash-confirm-title" aria-describedby="trash-confirm-description"><span className="assessment-editor-eyebrow">Recoverable Trash</span><h2 id="trash-confirm-title">Move this {isAssessment(pendingTrashTask) ? formatAssessmentType(pendingTrashTask.assessmentType).toLowerCase() : "assignment"} to Trash?</h2><p id="trash-confirm-description"><strong>“{pendingTrashTask.title || "Untitled"}”</strong> will leave your active views, but you can restore it from Trash.</p>{isAssessment(pendingTrashTask) && pendingTrashTask.linkedStudyTaskId && <p className="hint-text">Its linked study assignment will be kept.</p>}<div className="trash-confirm-actions"><button type="button" className="btn btn-secondary" autoFocus onClick={() => setPendingTrashTask(null)}>Cancel</button><button type="button" className="btn btn-danger move-to-trash-button" onClick={() => { finishAssignmentDelete(pendingTrashTask.id); setPendingTrashTask(null); }}>Move to Trash</button></div></section></div>}
       {pendingGoogleAssignmentDelete && <div className="calendar-event-modal" role="presentation"><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-assignment-delete-title"><h2 id="google-assignment-delete-title">Delete assignment?</h2><p>{pendingGoogleAssignmentDelete.title || "This assignment"} will move to Trash.</p><label><input type="checkbox" checked={removeDeletedAssignmentFromGoogle} onChange={(event) => setRemoveDeletedAssignmentFromGoogle(event.target.checked)} /> Remove from Google Calendar</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setPendingGoogleAssignmentDelete(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingGoogleAssignmentDelete.id, removeDeletedAssignmentFromGoogle); setPendingGoogleAssignmentDelete(null); }}>Delete assignment</button></div></section></div>}
       {tutorialOpen && (
         <div className="tutorial-backdrop" role="presentation">

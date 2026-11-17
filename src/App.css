@@ -6695,6 +6695,8 @@ html[data-theme="dark"] {
 .reminder-widget-start:hover { border-color: var(--focus-color); background: var(--surface-alt); }
 .reminder-widget-main > span { display: grid; gap: 3px; min-width: 0; }
 .reminder-widget-main > span:last-child { flex: 0 0 auto; text-align: right; }
+.reminder-widget-countdown-line { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.reminder-course-dot { width: 9px; height: 9px; flex: 0 0 9px; border: 1px solid color-mix(in srgb, var(--text-color) 24%, transparent); border-radius: 50%; box-shadow: 0 0 0 2px color-mix(in srgb, var(--card-bg) 70%, transparent); }
 .reminder-widget-start { align-self: stretch; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--card-bg); color: var(--text-color); font-size: 0.7rem; font-weight: 800; cursor: pointer; }
 .reminder-widget-calendar { min-width: 72px; }
 .reminder-widget-list strong { overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -9213,4 +9215,14 @@ html[data-theme="dark"] .sync-conflict-dialog {
   .google-calendar-settings .google-calendar-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
   .google-calendar-settings .google-calendar-actions .btn { width: 100%; }
   .google-calendar-settings .settings-toggle-copy { align-items: flex-start; }
+}
+
+/* Move-to-Trash actions always use the active theme's readable danger pair. */
+.move-to-trash-button,
+.move-to-trash-button:hover,
+.move-to-trash-button:focus-visible {
+  border: 1px solid color-mix(in srgb, var(--danger-color) 72%, var(--border-color)) !important;
+  background: var(--danger-color) !important;
+  color: var(--danger-text) !important;
+  -webkit-text-fill-color: var(--danger-text);
 }

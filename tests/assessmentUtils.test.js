@@ -83,9 +83,14 @@ test("assessment integration keeps events out of task workflows and exposes the 
   assert.doesNotMatch(app, /required type="time" value=\{assessmentTime\}/);
   assert.match(app, /if \(isAssessment\(task\)\) \{\s*openAssessmentEditor\(task\);/);
   assert.match(app, /className="reminder-widget-start reminder-widget-calendar"[\s\S]*?onClick=\{\(\) => handleAssessmentFocus\(task\)\}>Calendar/);
+  assert.match(app, /className="reminder-course-dot" style=\{\{ backgroundColor: getCourseColor\(getTaskCourseOrCategory\(task\)\) \}\}/);
+  assert.match(css, /\.reminder-widget-countdown-line\s*\{[^}]*display:\s*inline-flex;[^}]*justify-content:\s*flex-end;/s);
+  assert.match(css, /\.reminder-course-dot\s*\{[^}]*border-radius:\s*50%;/s);
   assert.match(css, /@media \(max-width: 500px\)[\s\S]*?\.reminder-widget-list li\.is-assessment-reminder\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/s);
   assert.match(app, /className="trash-confirm-dialog"/);
+  assert.match(app, /className="btn btn-danger move-to-trash-button"/);
   assert.match(css, /\.trash-confirm-dialog\s*\{[^}]*background:\s*var\(--modal-bg\);[^}]*color:\s*var\(--text-color\)/s);
+  assert.match(css, /\.move-to-trash-button,[\s\S]*?background:\s*var\(--danger-color\) !important;[\s\S]*?color:\s*var\(--danger-text\) !important;/s);
   assert.match(css, /\.assessment-editor\s*\{[^}]*background:\s*var\(--card-bg\)/s);
   assert.match(css, /\.assessment-add-panel\s*\{/);
   assert.match(css, /\.assignment-entry-form > \.bulk-import-panel \{ margin-bottom: 0; \}/);
