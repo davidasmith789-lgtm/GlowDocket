@@ -23,7 +23,19 @@ export function assessmentTimeInputValue(item) {
   return `${pad(hour)}:${match[2] || "00"}`;
 }
 
-function dueTimeParts(timeInput) {
+function dueTimeParts(timeInput, amPm) {
+  if (["AM", "PM"].includes(amPm)) {
+    const match = String(timeInput || "").trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    if (hour < 1 || hour > 12 || minute > 59) return null;
+    return {
+      dueHour: `${hour}:${pad(minute)}`,
+      dueAmPm: amPm,
+    };
+  }
+
   const match = String(timeInput || "").match(/^(\d{2}):(\d{2})$/);
   if (!match) return null;
   const hour = Number(match[1]);
@@ -60,6 +72,7 @@ export function buildAssessmentTask({
   course,
   date,
   time,
+  amPm,
   notes = "",
   existing = {},
   now = new Date(),
@@ -67,7 +80,7 @@ export function buildAssessmentTask({
   const cleanName = String(name || "").trim();
   const cleanCourse = String(course || "").trim();
   const parsedDate = dateParts(date);
-  const parsedTime = dueTimeParts(time);
+  const parsedTime = dueTimeParts(time, amPm);
   if (!cleanName || !cleanCourse || !parsedDate || !parsedTime) return null;
   const type = ASSESSMENT_TYPES.includes(assessmentType) ? assessmentType : "test";
   const timestamp = now.toISOString();
@@ -101,7 +114,7 @@ export function buildAssessmentTask({
 export function getAssessmentStudyNotes(assessment) {
   const type = formatAssessmentType(assessment?.assessmentType);
   const date = assessmentDateInputValue(assessment);
-  const time = assessmentTimeInputValue(assessment);
+  const time = assessment?.dueHour ? `${assessment.dueHour} ${assessment.dueAmPm || "PM"}` : "";
   return [
     `${type}: ${assessment?.title || "Untitled"}`,
     `Scheduled for: ${date} at ${time}`,

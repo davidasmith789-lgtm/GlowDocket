@@ -3710,6 +3710,7 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 .assessment-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
 .assessment-field { display: grid; gap: 6px; color: var(--muted-text); font-size: 0.76rem; font-weight: 800; }
 .assessment-field input, .assessment-field select, .assessment-field textarea { box-sizing: border-box; width: 100%; min-width: 0; border-color: var(--border-color); background: var(--input-bg); color: var(--text-color); }
+.assessment-time-controls { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 8px; }
 .assessment-name-field, .assessment-notes-field, .assessment-study-option, .assessment-type-choice { grid-column: 1 / -1; }
 .assessment-notes-field textarea { min-height: 110px; resize: vertical; }
 .assessment-type-choice { display: flex; gap: 8px; margin: 0; padding: 0; border: 0; }
@@ -3725,6 +3726,12 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
 .assessment-study-option small { color: var(--muted-text); line-height: 1.4; }
 .assessment-form-error { margin: 12px 0 0; color: var(--danger-color); font-weight: 800; }
 .assessment-editor > footer { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+.trash-confirm-dialog { box-sizing: border-box; width: min(460px, 100%); padding: 22px; border: 1px solid var(--border-color); border-radius: 18px; background: var(--modal-bg); color: var(--text-color); box-shadow: 0 24px 70px rgb(2 6 23 / 35%); }
+.trash-confirm-dialog h2 { margin: 6px 0 10px; color: var(--text-color); }
+.trash-confirm-dialog p { margin: 0; color: var(--muted-text); line-height: 1.5; }
+.trash-confirm-dialog p + p { margin-top: 8px; }
+.trash-confirm-dialog p strong { color: var(--text-color); }
+.trash-confirm-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 .calendar-assessment-card { border-left: 4px solid var(--primary-color); background: color-mix(in srgb, var(--primary-color) 6%, var(--card-bg)); }
 .calendar-assessment-card .task-title-row { align-items: center; }
 .assessment-calendar-schedule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; color: var(--muted-text); font-size: 0.8rem; font-weight: 800; }
@@ -3739,6 +3746,8 @@ html[data-theme] .react-calendar__month-view__weekdays abbr { color: var(--muted
   .assessment-name-field, .assessment-notes-field, .assessment-study-option, .assessment-type-choice { grid-column: 1; }
   .assessment-editor > footer { position: sticky; bottom: calc(-20px - env(safe-area-inset-bottom, 0px)); margin: 18px -15px calc(-20px - env(safe-area-inset-bottom, 0px)); padding: 12px 15px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border-color); background: var(--card-bg); }
   .assessment-editor > footer .btn { flex: 1; }
+  .assessment-time-controls { grid-template-columns: minmax(0, 1fr) 100px; }
+  .trash-confirm-actions .btn { flex: 1; }
   .assessment-overview-main { grid-template-columns: auto minmax(0, 1fr); }
   .assessment-overview-main > .assignment-countdown { grid-column: 2; }
   .calendar-add-buttons { width: 100%; justify-content: stretch; }
@@ -6687,6 +6696,7 @@ html[data-theme="dark"] {
 .reminder-widget-main > span { display: grid; gap: 3px; min-width: 0; }
 .reminder-widget-main > span:last-child { flex: 0 0 auto; text-align: right; }
 .reminder-widget-start { align-self: stretch; padding: 0 10px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--card-bg); color: var(--text-color); font-size: 0.7rem; font-weight: 800; cursor: pointer; }
+.reminder-widget-calendar { min-width: 72px; }
 .reminder-widget-list strong { overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
 .reminder-widget-list small { color: var(--muted-text); font-size: 0.67rem; }
 .reminder-widget-list .is-overdue strong { color: var(--danger-color); }
@@ -6719,6 +6729,7 @@ html[data-theme="dark"] {
   .reminder-widget-summary { grid-template-columns: 1fr; }
   .reminder-horizon-control { grid-template-columns: 1fr; }
   .reminder-widget-list li { grid-template-columns: 1fr; }
+  .reminder-widget-list li.is-assessment-reminder { grid-template-columns: minmax(0, 1fr) auto; }
   .reminder-widget-start { min-height: 32px; }
 }
 

@@ -29,7 +29,6 @@ import { getReminderActionLabel, getWorkflowLabel, MOBILE_TASK_LEVELS, nextMobil
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "./assignmentCountdown.js";
 import {
   assessmentDateInputValue,
-  assessmentTimeInputValue,
   buildAssessmentTask,
   buildStudyTaskForAssessment,
   formatAssessmentType,
@@ -2225,7 +2224,8 @@ function App() {
   const [assessmentName, setAssessmentName] = useState("");
   const [assessmentCourse, setAssessmentCourse] = useState("");
   const [assessmentDate, setAssessmentDate] = useState("");
-  const [assessmentTime, setAssessmentTime] = useState("");
+  const [assessmentTime, setAssessmentTime] = useState(userSettings.defaultDueTime || "11:00");
+  const [assessmentAmPm, setAssessmentAmPm] = useState(userSettings.defaultDueAmPm || "PM");
   const [assessmentNotes, setAssessmentNotes] = useState("");
   const [assessmentCreateStudyTask, setAssessmentCreateStudyTask] = useState(false);
   const [assessmentFormError, setAssessmentFormError] = useState("");
@@ -2292,6 +2292,7 @@ function App() {
   const [keepGoogleCalendar, setKeepGoogleCalendar] = useState(true);
   const [pendingGoogleAssignmentDelete, setPendingGoogleAssignmentDelete] = useState(null);
   const [removeDeletedAssignmentFromGoogle, setRemoveDeletedAssignmentFromGoogle] = useState(true);
+  const [pendingTrashTask, setPendingTrashTask] = useState(null);
   const googleCalendarSyncingRef = useRef(false);
   const googleCalendarLastAutoSyncRef = useRef(0);
   const googleCalendarNativeFingerprintRef = useRef("");
@@ -4607,7 +4608,8 @@ function App() {
     setAssessmentName("");
     setAssessmentCourse("");
     setAssessmentDate("");
-    setAssessmentTime("");
+    setAssessmentTime("11:00");
+    setAssessmentAmPm("PM");
     setAssessmentNotes("");
     setAssessmentCreateStudyTask(false);
     setAssessmentFormError("");
@@ -4620,7 +4622,8 @@ function App() {
     setAssessmentName("");
     setAssessmentCourse(course || selectedCourse || courses.find((item) => item !== "Other") || courses[0] || "Other");
     setAssessmentDate(date);
-    setAssessmentTime("");
+    setAssessmentTime(userSettings.defaultDueTime || "11:00");
+    setAssessmentAmPm(userSettings.defaultDueAmPm || "PM");
     setAssessmentNotes("");
     setAssessmentCreateStudyTask(false);
     setAssessmentFormError("");
@@ -4634,7 +4637,8 @@ function App() {
     setAssessmentName(assessment.title || "");
     setAssessmentCourse(assessment.course || courses[0] || "Other");
     setAssessmentDate(assessmentDateInputValue(assessment));
-    setAssessmentTime(assessmentTimeInputValue(assessment));
+    setAssessmentTime(assessment.dueHour || "11:00");
+    setAssessmentAmPm(assessment.dueAmPm || "PM");
     setAssessmentNotes(assessment.notes || "");
     setAssessmentCreateStudyTask(Boolean(assessment.linkedStudyTaskId && tasks.some((item) => item.id === assessment.linkedStudyTaskId && !item.isDeleted)));
     setAssessmentFormError("");
@@ -4654,6 +4658,7 @@ function App() {
       course: assessmentCourse,
       date: assessmentDate,
       time: assessmentTime,
+      amPm: assessmentAmPm,
       notes: assessmentNotes,
       existing: existingAssessment || {},
     });
@@ -5439,11 +5444,8 @@ function App() {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
     if (googleCalendarState.connected) { setPendingGoogleAssignmentDelete(taskBeingDeleted || { id, title: "Assignment" }); setRemoveDeletedAssignmentFromGoogle(true); return; }
     if (userSettings.confirmBeforeTrash !== false) {
-      const itemLabel = isAssessment(taskBeingDeleted) ? formatAssessmentType(taskBeingDeleted.assessmentType).toLowerCase() : "assignment";
-      const confirmed = window.confirm(
-        `Move this ${itemLabel}, “${taskBeingDeleted?.title || "Untitled"},” to Trash?${isAssessment(taskBeingDeleted) && taskBeingDeleted.linkedStudyTaskId ? " Its linked study assignment will be kept." : ""}`,
-      );
-      if (!confirmed) return;
+      setPendingTrashTask(taskBeingDeleted || { id, title: "Untitled" });
+      return;
     }
     finishAssignmentDelete(id);
   };
@@ -7683,7 +7685,7 @@ function App() {
 
   const handleReminderTaskClick = (task) => {
     if (isAssessment(task)) {
-      handleAssessmentFocus(task);
+      openAssessmentEditor(task);
       return;
     }
     handleTaskFocus(task.id, getTaskStatus(task) === "inProgress" ? "inProgress" : "todo");
@@ -9084,12 +9086,12 @@ function App() {
         <h4>{title}</h4>
         <ul className="reminder-widget-list">
           {items.map(({ task, deadline, overdue }) => (
-            <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`}>
+            <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`} className={isAssessment(task) ? "is-assessment-reminder" : undefined}>
               <button type="button" className="reminder-widget-main" onClick={() => handleReminderTaskClick(task)}>
                 <span><strong>{task.title}</strong><small>{isAssessment(task) ? `${formatAssessmentType(task.assessmentType)} · ` : ""}{getTaskCourseOrCategory(task)}</small></span>
                 <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !useMilitaryTime })}</small></span>
               </button>
-              {!isAssessment(task) && getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
+              {isAssessment(task) ? <button type="button" className="reminder-widget-start reminder-widget-calendar" aria-label={`View ${task.title} in calendar`} onClick={() => handleAssessmentFocus(task)}>Calendar</button> : getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
             </li>
           ))}
         </ul>
@@ -12606,7 +12608,7 @@ function App() {
               <label className="assessment-field assessment-name-field"><span>{formatAssessmentType(assessmentType)} name</span><input data-dialog-initial-focus required value={assessmentName} onChange={(event) => { setAssessmentName(event.target.value); setAssessmentFormError(""); }} placeholder={assessmentType === "quiz" ? "e.g., Chapter 6 Quiz" : "e.g., Biology Midterm"} /></label>
               <label className="assessment-field"><span>Course</span><select required value={assessmentCourse} onChange={(event) => { setAssessmentCourse(event.target.value); setAssessmentFormError(""); }}><option value="">Select a course</option>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
               <label className="assessment-field"><span>Date</span><input required type="date" value={assessmentDate} onChange={(event) => { setAssessmentDate(event.target.value); setAssessmentFormError(""); }} /></label>
-              <label className="assessment-field"><span>Time</span><input required type="time" value={assessmentTime} onChange={(event) => { setAssessmentTime(event.target.value); setAssessmentFormError(""); }} /></label>
+              <div className="assessment-field assessment-time-field"><label htmlFor="assessment-time">Time</label><div className="assessment-time-controls"><input id="assessment-time" required type="text" inputMode="numeric" placeholder="e.g., 3 or 3:45" value={assessmentTime} onChange={(event) => { setAssessmentTime(event.target.value); setAssessmentFormError(""); }} onBlur={() => { const normalized = normalizeDueTime(assessmentTime); if (normalized) setAssessmentTime(normalized); }} /><select aria-label="Quiz or test time period" value={assessmentAmPm} onChange={(event) => { setAssessmentAmPm(event.target.value); setAssessmentFormError(""); }}><option value="AM">AM</option><option value="PM">PM</option></select></div></div>
               <label className="assessment-field assessment-notes-field"><span>Notes</span><textarea value={assessmentNotes} onChange={(event) => setAssessmentNotes(event.target.value)} rows="5" placeholder="Topics, chapters, allowed materials, room, or anything else to remember…" /></label>
               <label className="assessment-study-option"><input type="checkbox" checked={assessmentCreateStudyTask} disabled={assessmentHasLinkedStudy} onChange={(event) => setAssessmentCreateStudyTask(event.target.checked)} /><span><strong>Create a “Study for: {assessmentName || `${assessmentType} name`}” assignment</strong><small>{assessmentHasLinkedStudy ? "The linked study assignment will stay synchronized with this event." : "It will be due at 11:59 PM the night before and include these event details and notes."}</small></span></label>
             </div>
@@ -13213,6 +13215,7 @@ function App() {
         </div>
       )}
       {googleDisconnectOpen && <div className="calendar-event-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGoogleDisconnectOpen(false); }}><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-disconnect-title"><h2 id="google-disconnect-title">Disconnect Google Calendar?</h2><p>Your GlowDocket data will not be deleted.</p><label><input type="checkbox" checked={keepGoogleCalendar} onChange={(event) => setKeepGoogleCalendar(event.target.checked)} /> Keep my GlowDocket calendar in Google</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(false)}>Cancel</button><button type="button" className="btn btn-danger" onClick={handleGoogleDisconnect} disabled={googleCalendarBusy === "disconnect"}>{googleCalendarBusy === "disconnect" ? "Disconnecting…" : "Disconnect Google"}</button></div></section></div>}
+      {pendingTrashTask && <div className="calendar-event-modal trash-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPendingTrashTask(null); }} onKeyDown={(event) => { if (event.key === "Escape") setPendingTrashTask(null); }}><section className="trash-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="trash-confirm-title" aria-describedby="trash-confirm-description"><span className="assessment-editor-eyebrow">Recoverable Trash</span><h2 id="trash-confirm-title">Move this {isAssessment(pendingTrashTask) ? formatAssessmentType(pendingTrashTask.assessmentType).toLowerCase() : "assignment"} to Trash?</h2><p id="trash-confirm-description"><strong>“{pendingTrashTask.title || "Untitled"}”</strong> will leave your active views, but you can restore it from Trash.</p>{isAssessment(pendingTrashTask) && pendingTrashTask.linkedStudyTaskId && <p className="hint-text">Its linked study assignment will be kept.</p>}<div className="trash-confirm-actions"><button type="button" className="btn btn-secondary" autoFocus onClick={() => setPendingTrashTask(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingTrashTask.id); setPendingTrashTask(null); }}>Move to Trash</button></div></section></div>}
       {pendingGoogleAssignmentDelete && <div className="calendar-event-modal" role="presentation"><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-assignment-delete-title"><h2 id="google-assignment-delete-title">Delete assignment?</h2><p>{pendingGoogleAssignmentDelete.title || "This assignment"} will move to Trash.</p><label><input type="checkbox" checked={removeDeletedAssignmentFromGoogle} onChange={(event) => setRemoveDeletedAssignmentFromGoogle(event.target.checked)} /> Remove from Google Calendar</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setPendingGoogleAssignmentDelete(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingGoogleAssignmentDelete.id, removeDeletedAssignmentFromGoogle); setPendingGoogleAssignmentDelete(null); }}>Delete assignment</button></div></section></div>}
       {tutorialOpen && (
         <div className="tutorial-backdrop" role="presentation">

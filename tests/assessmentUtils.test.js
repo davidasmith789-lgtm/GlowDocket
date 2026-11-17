@@ -16,7 +16,8 @@ test("quiz and test events retain their exact course date time and notes", () =>
     name: "Chapter 6 Quiz",
     course: "Biology",
     date: "2027-01-08",
-    time: "09:30",
+    time: "9:30",
+    amPm: "AM",
     notes: "Bring a calculator.",
     now: new Date("2026-11-18T12:00:00Z"),
   });
@@ -41,7 +42,8 @@ test("optional study assignments are due at 11:59 PM on the previous calendar da
     name: "Winter Final",
     course: "Chemistry",
     date: "2027-01-01",
-    time: "13:15",
+    time: "1:15",
+    amPm: "PM",
     notes: "Units 1 through 5",
     now: new Date("2026-11-18T12:00:00Z"),
   });
@@ -60,6 +62,7 @@ test("optional study assignments are due at 11:59 PM on the previous calendar da
   assert.equal(studyTask.dueAmPm, "PM");
   assert.equal(studyTask.sourceAssessmentId, assessment.id);
   assert.match(studyTask.notes, /Units 1 through 5/);
+  assert.match(studyTask.notes, /1:15 PM/);
 });
 
 test("assessment integration keeps events out of task workflows and exposes the themed editor", async () => {
@@ -74,6 +77,15 @@ test("assessment integration keeps events out of task workflows and exposes the 
   assert.match(app, /Upcoming quizzes & tests/);
   assert.match(app, /Assignments, quizzes & tests for/);
   assert.match(app, /Create a “Study for:/);
+  assert.match(app, /className="assessment-time-controls"/);
+  assert.match(app, /placeholder="e\.g\., 3 or 3:45" value=\{assessmentTime\}/);
+  assert.match(app, /value=\{assessmentAmPm\}/);
+  assert.doesNotMatch(app, /required type="time" value=\{assessmentTime\}/);
+  assert.match(app, /if \(isAssessment\(task\)\) \{\s*openAssessmentEditor\(task\);/);
+  assert.match(app, /className="reminder-widget-start reminder-widget-calendar"[\s\S]*?onClick=\{\(\) => handleAssessmentFocus\(task\)\}>Calendar/);
+  assert.match(css, /@media \(max-width: 500px\)[\s\S]*?\.reminder-widget-list li\.is-assessment-reminder\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/s);
+  assert.match(app, /className="trash-confirm-dialog"/);
+  assert.match(css, /\.trash-confirm-dialog\s*\{[^}]*background:\s*var\(--modal-bg\);[^}]*color:\s*var\(--text-color\)/s);
   assert.match(css, /\.assessment-editor\s*\{[^}]*background:\s*var\(--card-bg\)/s);
   assert.match(css, /\.assessment-add-panel\s*\{/);
   assert.match(css, /\.assignment-entry-form > \.bulk-import-panel \{ margin-bottom: 0; \}/);
