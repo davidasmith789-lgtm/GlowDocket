@@ -8017,11 +8017,6 @@ function App() {
 
   const renderAddAssignmentForm = (formId) => (
     <form onSubmit={handleAddTask} className="card-form assignment-entry-form">
-      <section className="assessment-add-panel" aria-label="Add a quiz or test">
-        <span className="assessment-add-icon" aria-hidden="true">✦</span>
-        <div><strong>Add a Quiz or Test</strong><p>Keep the event on your course overview, reminders, and calendar without adding it to your assignment lists.</p></div>
-        <button type="button" className="btn btn-primary" onClick={() => openNewAssessment()}>Add Quiz/Test</button>
-      </section>
       <section className="bulk-import-panel" aria-label="Paste assignment list">
         <div className="bulk-import-heading">
           <div>{isMobileUi && <span className="mobile-add-option-number">Option 1</span>}<strong>{isMobileUi ? "Import Assignments" : "Paste Assignment List"}</strong><p>{isMobileUi ? "Paste one assignment per line or upload a syllabus, then review every detected item before saving." : "Create several assignments from one line each, with a review before saving."}</p></div>
@@ -8081,6 +8076,11 @@ function App() {
             )}
           </div>
         )}
+      </section>
+      <section className="assessment-add-panel" aria-label="Add a quiz or test">
+        <span className="assessment-add-icon" aria-hidden="true">✦</span>
+        <div><strong>Add a Quiz or Test</strong><p>Keep the event on your course overview, reminders, and calendar without adding it to your assignment lists.</p></div>
+        <button type="button" className="btn btn-primary" onClick={() => openNewAssessment()}>Add Quiz/Test</button>
       </section>
       <section
         className="voice-assignment-panel is-coming-soon"

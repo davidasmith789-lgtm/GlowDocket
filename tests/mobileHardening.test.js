@@ -120,12 +120,12 @@ test("mobile assignment summary gives overdue the full second row", async () => 
   assert.match(styles, /\.mobile-app-stat-strip button:nth-child\(3\) \{ grid-column: 1 \/ -1; \}/);
 });
 
-test("mobile Add Assignment methods retain import, manual, then voice order", async () => {
+test("mobile Add Assignment places quizzes after import and hides the voice placeholder", async () => {
   const styles = await read("../src/App.css");
   assert.match(styles, /assignment-entry-form > \.bulk-import-panel \{ order: 1; \}/);
-  assert.match(styles, /assignment-entry-form > \.manual-assignment-fields \{ order: 2; \}/);
-  assert.match(styles, /assignment-entry-form > \.voice-assignment-panel \{ order: 3; \}/);
-  assert.doesNotMatch(styles, /assignment-entry-form > \.voice-assignment-panel \{ order: -/);
+  assert.match(styles, /assignment-entry-form > \.assessment-add-panel \{ order: 2; \}/);
+  assert.match(styles, /assignment-entry-form > \.manual-assignment-fields \{ order: 3; \}/);
+  assert.match(styles, /assignment-entry-form > :is\(\.voice-assignment-panel, \.voice-inline-error\) \{ display: none !important; \}/);
 });
 
 test("mobile Add Assignment fills Safari's dynamic viewport", async () => {

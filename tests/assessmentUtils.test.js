@@ -70,6 +70,7 @@ test("assessment integration keeps events out of task workflows and exposes the 
 
   assert.match(app, /!isAssessment\(task\)[\s\S]*?getTaskStatus\(task\) === "todo"/);
   assert.match(app, /Add a Quiz or Test/);
+  assert.match(app, /className="bulk-import-panel"[\s\S]*className="assessment-add-panel"/);
   assert.match(app, /Upcoming quizzes & tests/);
   assert.match(app, /Assignments, quizzes & tests for/);
   assert.match(app, /Create a “Study for:/);

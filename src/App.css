@@ -132,9 +132,10 @@
   .mobile-app-ui .subtask-checklist-item span { min-width: 0; overflow-wrap: anywhere; }
 
   .mobile-app-ui .assignment-entry-form > .bulk-import-panel { order: 1; }
-  .mobile-app-ui .assignment-entry-form > .manual-assignment-fields { order: 2; }
-  .mobile-app-ui .assignment-entry-form > .voice-assignment-panel { order: 3; }
-  .mobile-app-ui .assignment-entry-form > .voice-inline-error { order: 4; }
+  .mobile-app-ui .assignment-entry-form > .assessment-add-panel { order: 2; }
+  .mobile-app-ui .assignment-entry-form > .manual-assignment-fields { order: 3; }
+  .mobile-app-ui .assignment-entry-form > .voice-assignment-panel { order: 4; }
+  .mobile-app-ui .assignment-entry-form > .voice-inline-error { order: 5; }
   .manual-assignment-fields.guided-active > :not(.mobile-add-option-heading):not(.guided-assignment-entry) { display: none !important; }
   .guided-assignment-entry { display: grid; gap: 16px; padding: 4px 0; }
   .guided-entry-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; color: var(--muted-text); font-size: .78rem; font-weight: 800; }
@@ -2325,8 +2326,8 @@ button:disabled {
   .mobile-app-ui :where(input, select, textarea) { color: var(--text-color); background-color: var(--input-bg); border-color: var(--border-color); }
   .mobile-app-ui :where(input, textarea)::placeholder { color: var(--muted-text); opacity: 0.82; }
   .mobile-app-ui :where(.mobile-app-card, .mobile-app-sheet, .mobile-fullscreen-panel, .mobile-checklist-fullscreen, .settings-content, .task-card) { color: var(--text-color); }
-  .mobile-app-ui .assignment-entry-form > .voice-assignment-panel { order: 3; }
-  .mobile-app-ui .assignment-entry-form > .voice-inline-error { order: 4; }
+  .mobile-app-ui .assignment-entry-form > .voice-assignment-panel { order: 4; }
+  .mobile-app-ui .assignment-entry-form > .voice-inline-error { order: 5; }
 }
 
 .welcome-screen {
@@ -5761,6 +5762,7 @@ a,
   opacity: 0.72;
 }
 .voice-inline-error { border-color: var(--danger-color); color: var(--danger-color); }
+.assignment-entry-form > :is(.voice-assignment-panel, .voice-inline-error) { display: none !important; }
 
 .btn-voice-undo,
 .btn-voice-undo:hover {
