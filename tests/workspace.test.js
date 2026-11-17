@@ -835,6 +835,18 @@ test("checklist steps support an optional persisted information body", async () 
   assert.match(css, /mobile-checklist-fullscreen \.checklist-item-details textarea \{[^}]*min-height: 96px;/);
 });
 
+test("checklist item names grow while editing and reset to their leading text on blur", async () => {
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
+  assert.match(source, /--checklist-item-name-width/);
+  assert.match(source, /onBlur=\{\(event\) => \{ event\.currentTarget\.scrollLeft = 0; \}\}/);
+  assert.match(css, /\.checklist-item-copy \{[^}]*width: clamp\(120px, var\(--checklist-item-name-width, 14ch\), 55cqw\);/);
+  assert.match(css, /\.checklist-item-text \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/);
+  assert.match(css, /\.checklist-item-text:focus \{ text-overflow: clip; \}/);
+});
+
 test("global text scaling reaches button labels and large text reflows dense widgets", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(css, /button,\s*\[role="button"\]\s*\{[^}]*font-family:\s*inherit;[^}]*font-size:\s*inherit;/s);

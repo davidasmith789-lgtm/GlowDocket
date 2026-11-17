@@ -469,12 +469,20 @@ const THEME_COLOR_DEFAULTS = {
   },
 };
 
+const withThemeFeatureAccents = (colors) => ({
+  ...colors,
+  communityAccent: colors.primary,
+  communityActionText: colors.primaryText,
+  flashcardAccent: colors.primary,
+  flashcardActionText: colors.primaryText,
+});
+
 const DEFAULT_COLOR_THEME_PRESETS = [
   {
     id: "ocean-focus",
     name: "Ocean Focus",
     mode: "light",
-    colors: {
+    colors: withThemeFeatureAccents({
       ...THEME_COLOR_DEFAULTS.light,
       page: "#eef8ff", surface: "#ffffff", surfaceAlt: "#dff1fb",
       text: "#0f172a", muted: "#486174", border: "#b9d7e8", focus: "#0284c7",
@@ -484,13 +492,13 @@ const DEFAULT_COLOR_THEME_PRESETS = [
       checklistAccent: "#0ea5e9", heroStart: "#0284c7", heroMiddle: "#0f766e", heroEnd: "#1d4ed8",
       logoBackground: "#ffffff", logoGradientStart: "#06b6d4", logoGradientEnd: "#1d4ed8",
       logoStar: "#ffffff", logoGlow: "#67e8f9", logoSpeedLines: "#0284c7",
-    },
+    }),
   },
   {
     id: "forest-study",
     name: "Forest Study",
     mode: "light",
-    colors: {
+    colors: withThemeFeatureAccents({
       ...THEME_COLOR_DEFAULTS.light,
       page: "#f2f8f1", surface: "#ffffff", surfaceAlt: "#e3f1df",
       text: "#132019", muted: "#51624d", border: "#bdd5b8", focus: "#15803d",
@@ -500,13 +508,13 @@ const DEFAULT_COLOR_THEME_PRESETS = [
       checklistAccent: "#22c55e", heroStart: "#166534", heroMiddle: "#15803d", heroEnd: "#0f766e",
       logoBackground: "#ffffff", logoGradientStart: "#22c55e", logoGradientEnd: "#0f766e",
       logoStar: "#ffffff", logoGlow: "#86efac", logoSpeedLines: "#15803d",
-    },
+    }),
   },
   {
     id: "sunset-planner",
     name: "Sunset Planner",
     mode: "light",
-    colors: {
+    colors: withThemeFeatureAccents({
       ...THEME_COLOR_DEFAULTS.light,
       page: "#fff7ed", surface: "#ffffff", surfaceAlt: "#ffedd5",
       text: "#2f1b12", muted: "#7c5847", border: "#fed7aa", focus: "#f97316",
@@ -516,13 +524,13 @@ const DEFAULT_COLOR_THEME_PRESETS = [
       checklistAccent: "#f97316", heroStart: "#f97316", heroMiddle: "#db2777", heroEnd: "#7c3aed",
       logoBackground: "#ffffff", logoGradientStart: "#f97316", logoGradientEnd: "#7c3aed",
       logoStar: "#ffffff", logoGlow: "#f9a8d4", logoSpeedLines: "#ea580c",
-    },
+    }),
   },
   {
     id: "midnight-neon",
     name: "Midnight Neon",
     mode: "dark",
-    colors: {
+    colors: withThemeFeatureAccents({
       ...THEME_COLOR_DEFAULTS.dark,
       page: "#080b17", surface: "#111827", surfaceAlt: "#172033",
       text: "#f8fafc", muted: "#a5b4fc", border: "#273449", focus: "#22d3ee",
@@ -532,13 +540,13 @@ const DEFAULT_COLOR_THEME_PRESETS = [
       checklistAccent: "#a78bfa", heroStart: "#0f172a", heroMiddle: "#312e81", heroEnd: "#0891b2",
       logoBackground: "#111827", logoGradientStart: "#22d3ee", logoGradientEnd: "#8b5cf6",
       logoStar: "#ffffff", logoGlow: "#67e8f9", logoSpeedLines: "#22d3ee",
-    },
+    }),
   },
   {
     id: "berry-night",
     name: "Berry Night",
     mode: "dark",
-    colors: {
+    colors: withThemeFeatureAccents({
       ...THEME_COLOR_DEFAULTS.dark,
       page: "#130916", surface: "#211027", surfaceAlt: "#32153a",
       text: "#fff7fb", muted: "#d8b4fe", border: "#4a2559", focus: "#f472b6",
@@ -548,7 +556,7 @@ const DEFAULT_COLOR_THEME_PRESETS = [
       checklistAccent: "#f472b6", heroStart: "#701a75", heroMiddle: "#be185d", heroEnd: "#7c2d12",
       logoBackground: "#211027", logoGradientStart: "#f472b6", logoGradientEnd: "#7c3aed",
       logoStar: "#ffffff", logoGlow: "#f0abfc", logoSpeedLines: "#d946ef",
-    },
+    }),
   },
 ];
 
@@ -588,7 +596,12 @@ const getTextSizeClass = (value) => {
 
 const getEffectiveThemeColors = (mode, customColors = {}) => {
   const savedColors = customColors || {};
-  const colors = { ...THEME_COLOR_DEFAULTS[mode], ...savedColors };
+  const defaults = THEME_COLOR_DEFAULTS[mode];
+  const colors = { ...defaults, ...savedColors };
+  if (!savedColors.communityAccent || savedColors.communityAccent === defaults.communityAccent) colors.communityAccent = savedColors.primary || defaults.primary;
+  if (!savedColors.communityActionText || savedColors.communityActionText === defaults.communityActionText) colors.communityActionText = savedColors.primaryText || defaults.primaryText;
+  if (!savedColors.flashcardAccent || savedColors.flashcardAccent === defaults.flashcardAccent) colors.flashcardAccent = savedColors.primary || defaults.primary;
+  if (!savedColors.flashcardActionText || savedColors.flashcardActionText === defaults.flashcardActionText) colors.flashcardActionText = savedColors.primaryText || defaults.primaryText;
   if (!savedColors.communityBackground) colors.communityBackground = savedColors.surface || THEME_COLOR_DEFAULTS[mode].surface;
   if (!savedColors.communityText) colors.communityText = savedColors.text || THEME_COLOR_DEFAULTS[mode].text;
   return colors;
@@ -2973,6 +2986,17 @@ function App() {
     } catch (error) {
       console.error("Could not load login-screen colors:", error);
     }
+    const activeBuiltInTheme = BUILT_IN_COLOR_THEMES.find((colorTheme) => colorTheme.id === userSettings.activeColorThemeId);
+    if (activeBuiltInTheme) {
+      const featureColors = withThemeFeatureAccents(activeBuiltInTheme.colors);
+      activeColors = {
+        ...activeColors,
+        communityAccent: featureColors.communityAccent,
+        communityActionText: featureColors.communityActionText,
+        flashcardAccent: featureColors.flashcardAccent,
+        flashcardActionText: featureColors.flashcardActionText,
+      };
+    }
     activeColors = getSafeColorThemeColors(
       getEffectiveThemeColors(theme, activeColors),
     );
@@ -2984,7 +3008,7 @@ function App() {
     });
     const appBarColor = normalizeHexColor(activeColors.page || "") || THEME_COLOR_DEFAULTS[theme].page;
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", appBarColor);
-  }, [currentUser, theme, userSettings.customColors]);
+  }, [currentUser, theme, userSettings.activeColorThemeId, userSettings.customColors]);
 
   useEffect(() => {
     const sourceApp = document.querySelector(".App:not(.detached-widget-app)");
@@ -3487,14 +3511,23 @@ function App() {
 
   const handleCustomColorChange = (key, value) => {
     setUserSettings((prev) => {
+      const customColors = {
+        ...(prev.customColors || {}),
+        [key]: value,
+      };
+      if (key === "primary") {
+        customColors.communityAccent = value;
+        customColors.flashcardAccent = value;
+      }
+      if (key === "primaryText") {
+        customColors.communityActionText = value;
+        customColors.flashcardActionText = value;
+      }
       const updated = {
         ...prev,
         activeColorThemeId: "custom",
         activeColorThemeMode: theme,
-        customColors: {
-          ...(prev.customColors || {}),
-          [key]: value,
-        },
+        customColors,
       };
 
       try {
@@ -8557,18 +8590,20 @@ function App() {
                 onDrop={(event) => handleReorderChecklistItem(selectedList.id, event.dataTransfer.getData("text/checklist-item"), item.id)}
               >
                 <input type="checkbox" checked={item.isDone} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "isDone", event.target.checked)} />
-                <div className="checklist-item-copy">
-                  <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} aria-label="Checklist step title" />
+                <div className="checklist-item-copy" style={{ "--checklist-item-name-width": `${Math.max(14, Math.min(64, (item.text || "").length + 2))}ch` }}>
+                  <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} onBlur={(event) => { event.currentTarget.scrollLeft = 0; }} aria-label="Checklist step title" />
                 </div>
-                <div className="checklist-item-date-fields">
-                  <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
-                    {!item.dueDate && <span aria-hidden="true">Select date</span>}
-                    <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
-                  </label>
-                  {userSettings.checklistTimesEnabled && <input type="time" value={item.dueTime || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueTime", event.target.value)} aria-label={`Due time for ${item.text}`} />}
-                  {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear date</button>}
+                <div className="checklist-item-schedule">
+                  <div className="checklist-item-date-fields">
+                    <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
+                      {!item.dueDate && <span aria-hidden="true">Select date</span>}
+                      <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
+                    </label>
+                    {userSettings.checklistTimesEnabled && <input type="time" value={item.dueTime || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueTime", event.target.value)} aria-label={`Due time for ${item.text}`} />}
+                    {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear date</button>}
+                  </div>
+                  {item.dueDate && <div className="checklist-item-deadline"><strong>{formatChecklistDeadline(item)}</strong><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
                 </div>
-                {item.dueDate && <div className="checklist-item-deadline"><strong>{formatChecklistDeadline(item)}</strong><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
                 <button type="button" className="checklist-item-delete" onClick={() => handleDeleteChecklistItem(selectedList.id, item.id)} aria-label={`Delete ${item.text}`}>×</button>
                 <button type="button" className="checklist-item-grip" aria-label={`Drag ${item.text || "checklist step"} to reorder`} title="Drag to reorder" onPointerDown={(event) => startChecklistTouchReorder(event, ".standalone-checklist-items li", item.id, (source, target) => handleReorderChecklistItem(selectedList.id, source, target))}>⋮⋮</button>
                 <details className="checklist-item-details" defaultOpen={Boolean(item.body)}>

@@ -220,6 +220,9 @@ test("Full Color Studio exposes Community and Flashcards feature colors", () => 
   assert.match(appSource, /--community-accent-color/);
   assert.match(appSource, /--flashcard-accent-color/);
   assert.match(hubStyles, /--primary-color: var\(--flashcard-accent-color\)/);
+  assert.match(appSource, /withThemeFeatureAccents[\s\S]*communityAccent: colors\.primary[\s\S]*flashcardAccent: colors\.primary/);
+  assert.match(appSource, /activeBuiltInTheme[\s\S]*communityAccent: featureColors\.communityAccent[\s\S]*flashcardAccent: featureColors\.flashcardAccent/);
+  assert.match(appSource, /key === "primary"[\s\S]*customColors\.communityAccent = value;[\s\S]*customColors\.flashcardAccent = value;/);
 });
 
 test("every Flashcard reward has distinct emblem artwork and a mastery animation", () => {
