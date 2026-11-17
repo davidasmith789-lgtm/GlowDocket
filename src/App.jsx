@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import "./App.css";
 import {
   formatChecklistCountdown,
-  formatChecklistDeadline,
+  formatChecklistDate,
   getChecklistDeadline,
 } from "./checklistUtils.js";
 import {
@@ -7447,8 +7447,13 @@ function App() {
   const recommendedTasks = recommendationItems.map((item) => item.task);
   const recommendationWorkload = summarizeRecommendationWorkload(recommendationItems);
   const recommendationWorkloadLabel = recommendationWorkload.knownMinutes > 0
-    ? `${Math.floor(recommendationWorkload.knownMinutes / 60)}h ${recommendationWorkload.knownMinutes % 60}m`
-    : "No estimates";
+    ? `${Math.floor(recommendationWorkload.knownMinutes / 60)}h ${recommendationWorkload.knownMinutes % 60}m estimated`
+    : `${recommendationWorkload.unknownCount} task${recommendationWorkload.unknownCount === 1 ? "" : "s"} need time estimates`;
+  const recommendationWorkloadDescription = recommendationWorkload.knownMinutes > 0
+    ? recommendationWorkload.unknownCount > 0
+      ? `${recommendationWorkload.unknownCount} other task${recommendationWorkload.unknownCount === 1 ? "" : "s"} still need estimated times`
+      : "Estimated time needed for these recommended tasks"
+    : "Add estimated time to see how long this plan will take";
 
   // Create an object with one array per due-date heading, then fill those arrays
   // from an already sorted list. This powers the grouped task screens.
@@ -8596,13 +8601,13 @@ function App() {
                 <div className="checklist-item-schedule">
                   <div className="checklist-item-date-fields">
                     <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
-                      {!item.dueDate && <span aria-hidden="true">Select date</span>}
+                      <span aria-hidden="true">{item.dueDate ? formatChecklistDate(item) : "Select date"}</span>
                       <input type="date" value={item.dueDate || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueDate", event.target.value)} aria-label={`Due date for ${item.text}`} />
                     </label>
                     {userSettings.checklistTimesEnabled && <input type="time" value={item.dueTime || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "dueTime", event.target.value)} aria-label={`Due time for ${item.text}`} />}
-                    {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear date</button>}
                   </div>
-                  {item.dueDate && <div className="checklist-item-deadline"><strong>{formatChecklistDeadline(item)}</strong><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
+                  {item.dueDate && <div className="checklist-item-deadline"><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
+                  {item.dueDate && <button type="button" className="checklist-date-clear" onClick={() => handleClearChecklistItemDeadline(selectedList.id, item.id)} aria-label={`Clear due date for ${item.text}`}>Clear</button>}
                 </div>
                 <button type="button" className="checklist-item-delete" onClick={() => handleDeleteChecklistItem(selectedList.id, item.id)} aria-label={`Delete ${item.text}`}>×</button>
                 <button type="button" className="checklist-item-grip" aria-label={`Drag ${item.text || "checklist step"} to reorder`} title="Drag to reorder" onPointerDown={(event) => startChecklistTouchReorder(event, ".standalone-checklist-items li", item.id, (source, target) => handleReorderChecklistItem(selectedList.id, source, target))}>⋮⋮</button>
@@ -8768,7 +8773,7 @@ function App() {
 
   const renderRecommendedWidget = () => recommendationItems.length === 0 ? <div className="empty-state-action friendly-empty" role="status"><p className="recommended-plan-empty">You’re all caught up! Add something whenever you’re ready, and we’ll help you decide what to tackle first.</p>{isMobileUi ? <button type="button" className="recommended-plan-tip-bubble mobile-empty-add-action" onClick={() => openMobileAdd("dashboard")}>Tap here or use the + Add button to add your next assignment.</button> : <p className="recommended-plan-tip-bubble">Add your next assignment from the Add Assignment section on the Dashboard.</p>}</div> : (
     <>
-      <div className="recommended-plan-workload compact"><strong>{recommendationWorkloadLabel}</strong><span>Top-plan workload{recommendationWorkload.unknownCount > 0 ? ` + ${recommendationWorkload.unknownCount} unestimated` : ""}</span></div>
+      <div className="recommended-plan-workload compact"><strong>{recommendationWorkloadLabel}</strong><span>{recommendationWorkloadDescription}</span></div>
       <ol className="recommended-plan-list portable-recommendations">
         {recommendationItems.map((item, index) => (
           <li key={item.task.id} className={`recommended-plan-item${getTaskDueBucket(item.task).startsWith("Overdue") ? " is-overdue" : ""}`}>
@@ -10066,12 +10071,7 @@ function App() {
               {recommendationItems.length > 0 && (
                 <div className="recommended-plan-workload">
                   <strong>{recommendationWorkloadLabel}</strong>
-                  <span>
-                    Estimated across the top plan
-                    {recommendationWorkload.unknownCount > 0
-                      ? `, plus ${recommendationWorkload.unknownCount} without estimates`
-                      : ""}
-                  </span>
+                  <span>{recommendationWorkloadDescription}</span>
                 </div>
               )}
 

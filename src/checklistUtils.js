@@ -25,18 +25,21 @@ export function formatChecklistCountdown(item, now = new Date()) {
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
+  if (totalMinutes < 720) return hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
+  return `${Math.max(1, Math.floor(totalMinutes / 60))}h left`;
+}
+
+export function formatChecklistDate(item) {
+  const deadline = getChecklistDeadline(item);
+  if (!deadline) return "";
+  return `${deadline.getMonth() + 1}/${deadline.getDate()}/${deadline.getFullYear()}`;
 }
 
 export function formatChecklistDeadline(item) {
   const deadline = getChecklistDeadline(item);
   if (!deadline) return "";
 
-  const dateLabel = deadline.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: deadline.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-  });
+  const dateLabel = formatChecklistDate(item);
   if (!item.dueTime) return dateLabel;
   return `${dateLabel} · ${deadline.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 }

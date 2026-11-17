@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { formatChecklistCountdown, getChecklistDeadline } from "../src/checklistUtils.js";
+import { formatChecklistCountdown, formatChecklistDate, getChecklistDeadline } from "../src/checklistUtils.js";
 import { preparePastedAssignmentLines } from "../src/bulkImportUtils.js";
 import { findLikelySyllabusAssignments, getSyllabusFileKind } from "../src/syllabusImport.js";
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "../src/assignmentCountdown.js";
@@ -67,7 +67,10 @@ test("date-only checklist deadlines use the end of the local day", () => {
 test("countdown switches from days to hours", () => {
   const now = new Date("2026-07-06T12:00:00");
   assert.equal(formatChecklistCountdown({ dueDate: "2026-07-08" }, now), "3 days left");
+  assert.equal(formatChecklistCountdown({ dueDate: "2026-07-07", dueTime: "06:30" }, now), "18h left");
+  assert.equal(formatChecklistCountdown({ dueDate: "2026-07-06", dueTime: "23:30" }, now), "11h 30m left");
   assert.equal(formatChecklistCountdown({ dueDate: "2026-07-06", dueTime: "14:30" }, now), "2h 30m left");
+  assert.equal(formatChecklistDate({ dueDate: "2026-11-18" }), "11/18/2026");
 });
 
 test("checklist due dates can be cleared on mobile and desktop", async () => {
@@ -87,8 +90,8 @@ test("empty checklist dates use a compact labeled picker", async () => {
     readFile(new URL("../src/App.css", import.meta.url), "utf8"),
   ]);
   assert.match(source, /checklist-date-picker\$\{item\.dueDate \? "" : " is-empty"\}/);
-  assert.match(source, /!item\.dueDate && <span aria-hidden="true">Select date<\/span>/);
-  assert.match(css, /\.checklist-date-picker\.is-empty\s*\{[^}]*width:\s*118px;/s);
+  assert.match(source, /item\.dueDate \? formatChecklistDate\(item\) : "Select date"/);
+  assert.match(css, /\.checklist-date-picker\s*\{[^}]*width:\s*124px;/s);
 });
 
 test("workload summaries support today, week, month, custom, and all remaining", () => {
@@ -1229,7 +1232,8 @@ test("syllabus scanning keeps dated work and ignores policy prose", () => {
 test("assignment countdowns use days normally and hours on the due date", () => {
   const now = new Date("2026-07-06T10:00:00");
   assert.equal(formatAssignmentCountdown(new Date("2026-07-08T15:00:00"), now), "2 days left");
-  assert.equal(formatAssignmentCountdown(new Date("2026-07-06T15:30:00"), now), "5h 30m left today");
+  assert.equal(formatAssignmentCountdown(new Date("2026-07-07T09:00:00"), now), "23h left");
+  assert.equal(formatAssignmentCountdown(new Date("2026-07-06T20:30:00"), now), "10h 30m left");
   assert.equal(formatAssignmentCountdown(new Date("2026-07-06T09:00:00"), now), "Overdue by 1h 0m");
   assert.equal(getAssignmentCountdownTone(new Date("2026-07-06T15:30:00"), now), "today");
 });
@@ -1250,7 +1254,7 @@ test("voice undo permanently locks once work starts", () => {
   assert.equal(canUndoVoiceCreation({ ...started, status: "todo" }), false);
 });
 
-test("recommended plan explains urgency and totals known workload", () => {
+test("recommended plan explains urgency and totals known workload", async () => {
   const tasks = [
     { id: "essay", title: "Essay", due: new Date("2026-07-10T23:00:00"), bucket: "Due Tomorrow", priority: "MED", estimatedMinutes: 120, status: "todo" },
     { id: "quiz", title: "Quiz", due: new Date("2026-07-09T12:00:00"), bucket: "Due Today", priority: "HIGH", estimatedMinutes: 25, status: "inProgress", subtasks: [{ isDone: true }, { isDone: false }] },
@@ -1268,6 +1272,9 @@ test("recommended plan explains urgency and totals known workload", () => {
   assert.deepEqual(ranked[0].reasons, ["Due today", "High priority", "In progress", "Short win"]);
   assert.equal(workload.knownMinutes, 145);
   assert.equal(workload.unknownCount, 1);
+  const app = await readFile(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /Add estimated time to see how long this plan will take/);
+  assert.doesNotMatch(app, /Top-plan workload/);
 });
 
 test("quick match presets keep defaults and sanitize custom times", () => {

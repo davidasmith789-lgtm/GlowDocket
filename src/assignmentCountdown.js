@@ -11,6 +11,10 @@ function formatHoursAndMinutes(milliseconds) {
   return `${hours}h ${minutes}m`;
 }
 
+function formatWholeHours(milliseconds) {
+  return `${Math.max(1, Math.floor(milliseconds / HOUR))}h`;
+}
+
 export function formatAssignmentCountdown(deadline, now = new Date()) {
   if (!(deadline instanceof Date) || Number.isNaN(deadline.getTime())) return "";
   const difference = deadline.getTime() - now.getTime();
@@ -23,10 +27,12 @@ export function formatAssignmentCountdown(deadline, now = new Date()) {
     return `Overdue by ${days} day${days === 1 ? "" : "s"}`;
   }
 
+  if (difference < 12 * HOUR) return `${formatHoursAndMinutes(difference)} left`;
+  if (difference < DAY) return `${formatWholeHours(difference)} left`;
+
   const deadlineDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const calendarDays = Math.round((deadlineDay.getTime() - today.getTime()) / DAY);
-  if (calendarDays === 0) return `${formatHoursAndMinutes(difference)} left today`;
   return `${calendarDays} day${calendarDays === 1 ? "" : "s"} left`;
 }
 
