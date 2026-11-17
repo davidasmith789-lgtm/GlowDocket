@@ -27,6 +27,14 @@ import { findMatchingCourse, normalizeCourseName, parsePastedAssignmentRows } fr
 import { createAssignmentsCsv } from "./assignmentCsv.js";
 import { getReminderActionLabel, getWorkflowLabel, MOBILE_TASK_LEVELS, nextMobileTaskLevel, passwordsMatch, splitActiveAndOverdue } from "./mobileUxUtils.js";
 import { formatAssignmentCountdown, getAssignmentCountdownTone } from "./assignmentCountdown.js";
+import {
+  assessmentDateInputValue,
+  assessmentTimeInputValue,
+  buildAssessmentTask,
+  buildStudyTaskForAssessment,
+  formatAssessmentType,
+  isAssessment,
+} from "./assessmentUtils.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "./calendarWeekUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "./voiceTaskUtils.js";
 import { summarizeWorkload } from "./workloadUtils.js";
@@ -1020,7 +1028,7 @@ function recoveryRequestedOnLoad() {
  *
  * The main task object has this general shape:
  * {
- *   id, title, course, dueMonth, dueDay, dueHour, dueAmPm,
+ *   id, itemType, title, course, dueYear, dueMonth, dueDay, dueHour, dueAmPm,
  *   estimatedMinutes, priority, repeat, isCompleted, status, notes, subtasks,
  *   isArchived, archivedAt, isDeleted, deletedAt
  * }
@@ -1050,7 +1058,7 @@ function normalizeDueTime(value) {
   return `${hour}:${String(minute).padStart(2, "0")}`;
 }
 
-function getDeadlineDate(dueMonth, dueDay, dueHour = "11:59", dueAmPm = "PM") {
+function getDeadlineDate(dueMonth, dueDay, dueHour = "11:59", dueAmPm = "PM", dueYear = new Date().getFullYear()) {
   if (!dueMonth || !dueDay) return null;
   const normalizedTime = normalizeDueTime(dueHour) || "11:59";
   const [hourText, minuteText] = normalizedTime.split(":");
@@ -1058,7 +1066,7 @@ function getDeadlineDate(dueMonth, dueDay, dueHour = "11:59", dueAmPm = "PM") {
   if ((dueAmPm || "PM") === "PM") hour += 12;
   const now = new Date();
   const result = new Date(
-    now.getFullYear(),
+    Number(dueYear) || now.getFullYear(),
     Number(dueMonth) - 1,
     Number(dueDay),
     hour,
@@ -1069,7 +1077,7 @@ function getDeadlineDate(dueMonth, dueDay, dueHour = "11:59", dueAmPm = "PM") {
 
 function getEffectiveDeadline(task) {
   const deadlines = [
-    getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm),
+    getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm, task?.dueYear),
     ...getSafeSubtasks(task)
       .filter((subtask) => !subtask.isDone)
       .map((subtask) =>
@@ -1093,14 +1101,12 @@ function getEffectiveDeadline(task) {
  * returned strings are also used by filtering, sorting, counts, and headings,
  * so update those related features together if these labels ever change.
  */
-function getDueDateBucket(dueMonth, dueDay) {
+function getDueDateBucket(dueMonth, dueDay, dueYear = new Date().getFullYear()) {
   if (!dueMonth || !dueDay) return "No Due Date";
 
   const now = new Date();
-  const currentYear = now.getFullYear();
-
   // JavaScript months start at 0, so January is month 0, February is month 1, etc.
-  const taskDate = new Date(currentYear, Number(dueMonth) - 1, Number(dueDay));
+  const taskDate = new Date(Number(dueYear) || now.getFullYear(), Number(dueMonth) - 1, Number(dueDay));
 
   // Midnight removes the current time of day from the date comparison.
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -2212,6 +2218,16 @@ function App() {
   const [optionalLinksOpen, setOptionalLinksOpen] = useState(false);
   const [optionalFilesOpen, setOptionalFilesOpen] = useState(false);
   const [optionalChecklistOpen, setOptionalChecklistOpen] = useState(false);
+  const [assessmentEditorOpen, setAssessmentEditorOpen] = useState(false);
+  const [editingAssessmentId, setEditingAssessmentId] = useState(null);
+  const [assessmentType, setAssessmentType] = useState("test");
+  const [assessmentName, setAssessmentName] = useState("");
+  const [assessmentCourse, setAssessmentCourse] = useState("");
+  const [assessmentDate, setAssessmentDate] = useState("");
+  const [assessmentTime, setAssessmentTime] = useState("");
+  const [assessmentNotes, setAssessmentNotes] = useState("");
+  const [assessmentCreateStudyTask, setAssessmentCreateStudyTask] = useState(false);
+  const [assessmentFormError, setAssessmentFormError] = useState("");
 
   // ---------------------------------------------------------------------------
   // TASK DATA, NAVIGATION, FILTERS, AND OPEN/CLOSED PANELS
@@ -2928,7 +2944,7 @@ function App() {
     const hasDate = task.dueMonth && task.dueDay;
     const monthLabel = hasDate ? monthNames[Number(task.dueMonth) - 1] : null;
     const dateLabel = hasDate
-      ? `${monthLabel} ${Number(task.dueDay)}`
+      ? `${monthLabel} ${Number(task.dueDay)}${task.dueYear && Number(task.dueYear) !== new Date().getFullYear() ? `, ${task.dueYear}` : ""}`
       : "No date";
     const timeLabel = formatAssignmentTime(task.dueHour, task.dueAmPm);
     const repeatLabel =
@@ -3093,9 +3109,16 @@ function App() {
       if (pushId) { try { matchesProfile = JSON.parse(localStorage.getItem(getPushDeviceStorageKey(currentUser)) || "null")?.profileInstallationId === pushId; } catch { matchesProfile = false; } }
       if (!matchesProfile) { setExternalPushMessage("This reminder belongs to another local profile. Sign into that profile to open it."); return; }
       const matchingTask = tasks.find((task) => String(task.id) === taskId && !task.isDeleted);
-      setCurrentTab(matchingTask && getTaskStatus(matchingTask) === "inProgress" ? "inProgress" : "todo");
-      if (matchingTask) setExpandedTaskId(matchingTask.id);
-      else setExternalPushMessage("That assignment is no longer available in this local profile.");
+      if (matchingTask && isAssessment(matchingTask)) {
+        const deadline = getEffectiveDeadline(matchingTask);
+        if (deadline) setSelectedDate(new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate()));
+        setCurrentTab("calendar");
+        setExpandedTaskId(matchingTask.id);
+      } else {
+        setCurrentTab(matchingTask && getTaskStatus(matchingTask) === "inProgress" ? "inProgress" : "todo");
+        if (matchingTask) setExpandedTaskId(matchingTask.id);
+      }
+      if (!matchingTask) setExternalPushMessage("That assignment, quiz, or test is no longer available in this local profile.");
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -4576,6 +4599,125 @@ function App() {
     saveCourseOrder(reorderedCourses);
   };
 
+  const resetAssessmentEditor = () => {
+    setAssessmentEditorOpen(false);
+    setEditingAssessmentId(null);
+    setAssessmentType("test");
+    setAssessmentName("");
+    setAssessmentCourse("");
+    setAssessmentDate("");
+    setAssessmentTime("");
+    setAssessmentNotes("");
+    setAssessmentCreateStudyTask(false);
+    setAssessmentFormError("");
+  };
+
+  const openNewAssessment = ({ date = "", course = "" } = {}) => {
+    dialogTriggerRef.current = document.activeElement;
+    setEditingAssessmentId(null);
+    setAssessmentType("test");
+    setAssessmentName("");
+    setAssessmentCourse(course || selectedCourse || courses.find((item) => item !== "Other") || courses[0] || "Other");
+    setAssessmentDate(date);
+    setAssessmentTime("");
+    setAssessmentNotes("");
+    setAssessmentCreateStudyTask(false);
+    setAssessmentFormError("");
+    setAssessmentEditorOpen(true);
+  };
+
+  const openAssessmentEditor = (assessment) => {
+    dialogTriggerRef.current = document.activeElement;
+    setEditingAssessmentId(assessment.id);
+    setAssessmentType(assessment.assessmentType || "test");
+    setAssessmentName(assessment.title || "");
+    setAssessmentCourse(assessment.course || courses[0] || "Other");
+    setAssessmentDate(assessmentDateInputValue(assessment));
+    setAssessmentTime(assessmentTimeInputValue(assessment));
+    setAssessmentNotes(assessment.notes || "");
+    setAssessmentCreateStudyTask(Boolean(assessment.linkedStudyTaskId && tasks.some((item) => item.id === assessment.linkedStudyTaskId && !item.isDeleted)));
+    setAssessmentFormError("");
+    setAssessmentEditorOpen(true);
+  };
+
+  const handleSaveAssessment = (event) => {
+    event.preventDefault();
+    const existingAssessment = editingAssessmentId
+      ? tasks.find((item) => item.id === editingAssessmentId && isAssessment(item))
+      : null;
+    const assessmentId = existingAssessment?.id || `assessment-${Date.now()}`;
+    let assessment = buildAssessmentTask({
+      id: assessmentId,
+      assessmentType,
+      name: assessmentName,
+      course: assessmentCourse,
+      date: assessmentDate,
+      time: assessmentTime,
+      notes: assessmentNotes,
+      existing: existingAssessment || {},
+    });
+    if (!assessment) {
+      setAssessmentFormError("Add a name, course, valid date, and time before saving.");
+      return;
+    }
+
+    const existingStudyTask = existingAssessment?.linkedStudyTaskId
+      ? tasks.find((item) => item.id === existingAssessment.linkedStudyTaskId && !item.isDeleted)
+      : null;
+    let studyTask = null;
+    if (assessmentCreateStudyTask || existingStudyTask) {
+      const studyId = existingStudyTask?.id || `${assessmentId}-study-${Date.now()}`;
+      studyTask = buildStudyTaskForAssessment(assessment, { id: studyId, existing: existingStudyTask || {} });
+      assessment = { ...assessment, linkedStudyTaskId: studyId };
+    }
+
+    setTasks((previous) => {
+      let updated = existingAssessment
+        ? previous.map((item) => item.id === assessmentId ? assessment : item)
+        : [...previous, assessment];
+      if (studyTask) {
+        updated = updated.some((item) => item.id === studyTask.id)
+          ? updated.map((item) => item.id === studyTask.id ? studyTask : item)
+          : [...updated, studyTask];
+      }
+      saveTasksForCurrentUser(updated);
+      return updated;
+    });
+
+    if (userSettings.externalPushEnabled) {
+      const assessmentReminder = getExternalReminderForTask(assessment);
+      if (assessmentReminder) {
+        const operation = existingAssessment
+          ? replaceExternalReminder(currentUser, assessmentReminder)
+          : scheduleExternalReminder(currentUser, assessmentReminder);
+        runImmediateReminderMutation(assessment.id, operation);
+      } else if (existingAssessment) {
+        const oldReminder = getExternalReminderForTask(existingAssessment);
+        if (oldReminder) runImmediateReminderMutation(existingAssessment.id, cancelExternalReminder(currentUser, oldReminder.occurrenceKey));
+      }
+      if (studyTask) {
+        const studyReminder = getExternalReminderForTask(studyTask);
+        if (studyReminder) {
+          const operation = existingStudyTask
+            ? replaceExternalReminder(currentUser, studyReminder)
+            : scheduleExternalReminder(currentUser, studyReminder);
+          runImmediateReminderMutation(studyTask.id, operation);
+        } else if (existingStudyTask) {
+          const oldReminder = getExternalReminderForTask(existingStudyTask);
+          if (oldReminder) runImmediateReminderMutation(existingStudyTask.id, cancelExternalReminder(currentUser, oldReminder.occurrenceKey));
+        }
+      }
+    }
+    resetAssessmentEditor();
+  };
+
+  const handleAssessmentFocus = (assessment) => {
+    const deadline = getEffectiveDeadline(assessment);
+    if (deadline) setSelectedDate(new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate()));
+    setExpandedTaskId(assessment.id);
+    setCurrentTab("calendar");
+  };
+
   const handleApplyVoiceAssignments = (payload, createdAt, source = "voice") => {
     const parsedAssignments = Array.isArray(payload?.assignments)
       ? payload.assignments.slice(0, source === "paste" ? 50 : 10)
@@ -5296,8 +5438,9 @@ function App() {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
     if (googleCalendarState.connected) { setPendingGoogleAssignmentDelete(taskBeingDeleted || { id, title: "Assignment" }); setRemoveDeletedAssignmentFromGoogle(true); return; }
     if (userSettings.confirmBeforeTrash !== false) {
+      const itemLabel = isAssessment(taskBeingDeleted) ? formatAssessmentType(taskBeingDeleted.assessmentType).toLowerCase() : "assignment";
       const confirmed = window.confirm(
-        `Move "${taskBeingDeleted?.title || "this assignment"}" to Trash?`,
+        `Move this ${itemLabel}, “${taskBeingDeleted?.title || "Untitled"},” to Trash?${isAssessment(taskBeingDeleted) && taskBeingDeleted.linkedStudyTaskId ? " Its linked study assignment will be kept." : ""}`,
       );
       if (!confirmed) return;
     }
@@ -6077,7 +6220,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (!editingTaskId && !copyingTask) return undefined;
+    if (!editingTaskId && !copyingTask && !assessmentEditorOpen) return undefined;
     const dialog = activeDialogRef.current;
     const focusableSelector = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
     window.requestAnimationFrame(() => {
@@ -6087,7 +6230,8 @@ function App() {
     const handleDialogKeys = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        if (copyingTask) setCopyingTask(null);
+        if (assessmentEditorOpen) resetAssessmentEditor();
+        else if (copyingTask) setCopyingTask(null);
         else {
           setEditingTaskId(null);
           setEditingTask(null);
@@ -6123,7 +6267,7 @@ function App() {
       document.removeEventListener("keydown", handleDialogKeys);
       window.requestAnimationFrame(() => dialogTriggerRef.current?.focus?.());
     };
-  }, [copyingTask, editingTaskId]);
+  }, [assessmentEditorOpen, copyingTask, editingTaskId]);
 
   const handleUndoDeletedAssignment = () => {
     if (!deletedAssignmentUndo) return;
@@ -7131,9 +7275,15 @@ function App() {
   const getTaskDueBucket = (task) => {
     const deadline = getEffectiveDeadline(task);
     return deadline
-      ? getDueDateBucket(deadline.getMonth() + 1, deadline.getDate())
+      ? getDueDateBucket(deadline.getMonth() + 1, deadline.getDate(), deadline.getFullYear())
       : "No Due Date";
   };
+
+  const taskOccursOnDate = (task, date) => (
+    Number(task.dueMonth) === date.getMonth() + 1 &&
+    Number(task.dueDay) === date.getDate() &&
+    (!task.dueYear || Number(task.dueYear) === date.getFullYear())
+  );
 
   // A task must pass every active filter. "ALL" means that particular filter
   // is disabled. Search checks the title, course, and optional notes together.
@@ -7173,6 +7323,7 @@ function App() {
 
   const todoTasks = tasks.filter(
     (task) =>
+      !isAssessment(task) &&
       !task.isArchived &&
       !task.isDeleted &&
       getTaskStatus(task) === "todo" &&
@@ -7181,6 +7332,7 @@ function App() {
 
   const inProgressTasks = tasks.filter(
     (task) =>
+      !isAssessment(task) &&
       !task.isArchived &&
       !task.isDeleted &&
       getTaskStatus(task) === "inProgress" &&
@@ -7189,6 +7341,7 @@ function App() {
 
   const completedTasks = tasks.filter(
     (task) =>
+      !isAssessment(task) &&
       !task.isArchived &&
       !task.isDeleted &&
       getTaskStatus(task) === "completed" &&
@@ -7203,6 +7356,7 @@ function App() {
 
   const unarchivedCompletedCount = tasks.filter(
     (task) =>
+      !isAssessment(task) &&
       !task.isDeleted &&
       getTaskStatus(task) === "completed" &&
       !task.isArchived,
@@ -7227,9 +7381,7 @@ function App() {
   const getCourseDotsForDate = (date) => {
     const courseNames = calendarTasks
       .filter(
-        (task) =>
-          Number(task.dueMonth) === date.getMonth() + 1 &&
-          Number(task.dueDay) === date.getDate(),
+        (task) => taskOccursOnDate(task, date),
       )
       .map((task) => task.course || getTaskCategory(task));
 
@@ -7239,9 +7391,7 @@ function App() {
     }));
   };
   const selectedDateTasks = calendarTasks.filter(
-    (task) =>
-      Number(task.dueMonth) === selectedDate.getMonth() + 1 &&
-      Number(task.dueDay) === selectedDate.getDate(),
+    (task) => taskOccursOnDate(task, selectedDate),
   );
   const selectedCycleDay = getCycleDayForDate(selectedDate, userSettings);
   const selectedWeeklyMeetings = getWeeklyMeetingsForDate(selectedDate, userSettings);
@@ -7391,11 +7541,12 @@ function App() {
     : [];
   const selectedCycleCourseTasks = selectedDateTasks.filter(
     (task) =>
+      !isAssessment(task) &&
       getTaskCategory(task) === "School" &&
       selectedCycleCourses.includes(task.course),
   );
   const selectedWeeklyCourseTasks = selectedDateTasks.filter(
-    (task) => getTaskCategory(task) === "School" && selectedScheduleCourses.includes(task.course),
+    (task) => !isAssessment(task) && getTaskCategory(task) === "School" && selectedScheduleCourses.includes(task.course),
   );
 
   // To Do and In Progress use the same student-friendly order: urgent first,
@@ -7433,6 +7584,7 @@ function App() {
   const recommendationItems = rankRecommendedTasks(
     tasks.filter(
       (task) =>
+        !isAssessment(task) &&
         !task.isArchived &&
         !task.isDeleted &&
         getTaskStatus(task) !== "completed",
@@ -7518,6 +7670,10 @@ function App() {
   };
 
   const handleReminderTaskClick = (task) => {
+    if (isAssessment(task)) {
+      handleAssessmentFocus(task);
+      return;
+    }
     handleTaskFocus(task.id, getTaskStatus(task) === "inProgress" ? "inProgress" : "todo");
   };
 
@@ -7557,14 +7713,14 @@ function App() {
 
   const getAssignmentCountdownLabel = (task) => {
     if (getTaskStatus(task) === "completed") return null;
-    const deadline = getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm);
+    const deadline = getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm, task?.dueYear);
     return formatAssignmentCountdown(deadline, checklistNow) || null;
   };
 
   const renderAssignmentCountdown = (task, extraClassName = "") => {
     const label = getAssignmentCountdownLabel(task);
     if (!label) return null;
-    const deadline = getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm);
+    const deadline = getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm, task?.dueYear);
     const tone = getAssignmentCountdownTone(deadline, checklistNow);
     return <AssignmentCountdown title={task.title} label={label} tone={tone} extraClassName={extraClassName} />;
   };
@@ -7609,7 +7765,7 @@ function App() {
     ].filter(Boolean);
     return <>
       <div className="recommended-plan-details">{details.map((detail) => <span key={detail}>{detail}</span>)}</div>
-      {metadata.countdownLabel && <AssignmentCountdown title={task.title} label={metadata.countdownLabel} tone={getAssignmentCountdownTone(getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm), checklistNow)} extraClassName="recommended-countdown" />}
+      {metadata.countdownLabel && <AssignmentCountdown title={task.title} label={metadata.countdownLabel} tone={getAssignmentCountdownTone(getDeadlineDate(task?.dueMonth, task?.dueDay, task?.dueHour, task?.dueAmPm, task?.dueYear), checklistNow)} extraClassName="recommended-countdown" />}
       {metadata.reasons.length > 0 && <div className="recommended-plan-reasons">{metadata.reasons.map((reason) => <span key={reason}>{reason}</span>)}</div>}
     </>;
   };
@@ -7654,7 +7810,7 @@ function App() {
               subtask.dueAmPm,
             );
             const bucket = deadline
-              ? getDueDateBucket(deadline.getMonth() + 1, deadline.getDate())
+              ? getDueDateBucket(deadline.getMonth() + 1, deadline.getDate(), deadline.getFullYear())
               : "";
             return (
             <li key={subtask.id} className="subtask-checklist-item">
@@ -7849,6 +8005,11 @@ function App() {
 
   const renderAddAssignmentForm = (formId) => (
     <form onSubmit={handleAddTask} className="card-form assignment-entry-form">
+      <section className="assessment-add-panel" aria-label="Add a quiz or test">
+        <span className="assessment-add-icon" aria-hidden="true">✦</span>
+        <div><strong>Add a Quiz or Test</strong><p>Keep the event on your course overview, reminders, and calendar without adding it to your assignment lists.</p></div>
+        <button type="button" className="btn btn-primary" onClick={() => openNewAssessment()}>Add Quiz/Test</button>
+      </section>
       <section className="bulk-import-panel" aria-label="Paste assignment list">
         <div className="bulk-import-heading">
           <div>{isMobileUi && <span className="mobile-add-option-number">Option 1</span>}<strong>{isMobileUi ? "Import Assignments" : "Paste Assignment List"}</strong><p>{isMobileUi ? "Paste one assignment per line or upload a syllabus, then review every detected item before saving." : "Create several assignments from one line each, with a review before saving."}</p></div>
@@ -8308,10 +8469,19 @@ function App() {
   // overdue, due-today, and remaining-workload statistics.
   const activeDashboardTasks = tasks.filter(
     (task) =>
+      !isAssessment(task) &&
       !task.isArchived &&
       !task.isDeleted &&
       getTaskStatus(task) !== "completed",
   );
+  const activeAssessmentTasks = tasks.filter((task) => {
+    if (!isAssessment(task) || task.isArchived || task.isDeleted) return false;
+    const deadline = getEffectiveDeadline(task);
+    return deadline && deadline.getTime() >= checklistNow.getTime();
+  });
+  const activeScheduleItems = [...activeDashboardTasks, ...activeAssessmentTasks];
+  const editingAssessment = editingAssessmentId ? tasks.find((item) => item.id === editingAssessmentId && isAssessment(item)) : null;
+  const assessmentHasLinkedStudy = Boolean(editingAssessment?.linkedStudyTaskId && tasks.some((item) => item.id === editingAssessment.linkedStudyTaskId && !item.isDeleted));
   const mobileDueGroups = splitActiveAndOverdue(activeDashboardTasks, getTaskDueBucket);
   const activeTasksCount = isMobileUi ? mobileDueGroups.active.length : activeDashboardTasks.length;
 
@@ -8677,12 +8847,12 @@ function App() {
           calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
           showNeighboringMonth={userSettings.showNeighboringMonth !== false}
           onClickDay={handleDashboardCalendarClick}
-          tileClassName={({ date, view }) => view === "month" && activeDashboardTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
+          tileClassName={({ date, view }) => view === "month" && activeDashboardTasks.some((task) => taskOccursOnDate(task, date) && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
           tileContent={({ date, view }) => {
             if (view !== "month" || userSettings.showCalendarTaskDots === false) return null;
             const dots = getCourseDotsForDate(date);
             return dots.length > 0 ? (
-              <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
+              <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with scheduled work`}>
                 {dots.map((dot) => (
                   <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
                 ))}
@@ -8695,7 +8865,7 @@ function App() {
     </section>
   );
 
-  const deadlineConfidenceCounts = summarizeDeadlineConfidence(activeDashboardTasks, (task) => getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm));
+  const deadlineConfidenceCounts = summarizeDeadlineConfidence(activeDashboardTasks, (task) => getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm, task.dueYear));
   const overdueTasksCount = deadlineConfidenceCounts.overdue;
   const dueTodayCount = deadlineConfidenceCounts.today;
   const dueTomorrowCount = deadlineConfidenceCounts.tomorrow;
@@ -8714,30 +8884,33 @@ function App() {
     ? courseOverviewSelection
     : courses[0] || "Other";
   const overviewCourseTasks = activeDashboardTasks.filter((task) => task.course === overviewCourse);
+  const overviewCourseAssessments = activeAssessmentTasks
+    .filter((task) => task.course === overviewCourse)
+    .sort((a, b) => getEffectiveDeadline(a) - getEffectiveDeadline(b));
   const sortedOverviewCourseTasks = sortAssignmentsByDuePriorityEstimate(overviewCourseTasks);
-  const overviewNextTask = sortedOverviewCourseTasks[0] || null;
-  const overviewCourseEstimatedMinutes = overviewCourseTasks.reduce((total, task) => total + (Number(task.estimatedMinutes) || 0), 0);
-  const overviewCourseWorkloadLabel = `${Math.floor(overviewCourseEstimatedMinutes / 60)}h ${overviewCourseEstimatedMinutes % 60}m`;
+  const overviewNextTask = [...sortedOverviewCourseTasks, ...overviewCourseAssessments]
+    .sort((a, b) => (getEffectiveDeadline(a)?.getTime() ?? Infinity) - (getEffectiveDeadline(b)?.getTime() ?? Infinity))[0] || null;
   const courseOverviewSummary = {
     todo: overviewCourseTasks.filter((task) => getTaskStatus(task) === "todo").length,
     inProgress: overviewCourseTasks.filter((task) => getTaskStatus(task) === "inProgress").length,
-    upcoming: overviewCourseTasks.filter((task) => ["todo", "inProgress"].includes(getTaskStatus(task))).length,
+    upcoming: overviewCourseTasks.length + overviewCourseAssessments.length,
+    assessments: overviewCourseAssessments.length,
     overdue: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Overdue")).length,
     dueToday: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Today")).length,
     dueTomorrow: overviewCourseTasks.filter((task) => getTaskDueBucket(task).startsWith("Due Tomorrow")).length,
     noDate: overviewCourseTasks.filter((task) => getTaskDueBucket(task) === "No Due Date").length,
-    completed: tasks.filter((task) => getTaskCourseOrCategory(task) === overviewCourse && getTaskStatus(task) === "completed").length,
+    completed: tasks.filter((task) => !isAssessment(task) && getTaskCourseOrCategory(task) === overviewCourse && getTaskStatus(task) === "completed").length,
   };
   const dashboardReminderHours = [24, 48, 72, 168, 336, 720].includes(Number(userSettings.dashboardReminderHours))
     ? Number(userSettings.dashboardReminderHours)
     : 24;
   const reminderWindowEnd = checklistNow.getTime() + dashboardReminderHours * 60 * 60 * 1000;
-  const dashboardReminderTasks = activeDashboardTasks
-    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm) }))
+  const dashboardReminderTasks = activeScheduleItems
+    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm, task.dueYear) }))
     .filter(({ deadline }) => deadline && deadline.getTime() >= checklistNow.getTime() && deadline.getTime() <= reminderWindowEnd)
     .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
   const dashboardOverdueTasks = activeDashboardTasks
-    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm) }))
+    .map((task) => ({ task, deadline: getDeadlineDate(task.dueMonth, task.dueDay, task.dueHour, task.dueAmPm, task.dueYear) }))
     .filter(({ deadline }) => deadline && deadline.getTime() < checklistNow.getTime())
     .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
 
@@ -8818,13 +8991,14 @@ function App() {
     return (
       <section className="course-overview-widget">
         <label><span>Choose a {schoolLevelCopy.courseLabel.toLowerCase()}</span><select value={overviewCourse} onChange={(event) => setCourseOverviewSelection(event.target.value)}>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
-        <button type="button" className="course-overview-primary" style={{ "--course-overview-color": courseColor, "--course-overview-text": getTextColorForCourse(overviewCourse) }} onClick={() => openAssignmentSummary(`course:${overviewCourse}:active`)}>
-          <span>Upcoming {schoolLevelCopy.taskPlural}</span>
+        <button type="button" className="course-overview-primary" style={{ "--course-overview-color": courseColor, "--course-overview-text": getTextColorForCourse(overviewCourse) }} onClick={() => overviewCourseTasks.length > 0 ? openAssignmentSummary(`course:${overviewCourse}:active`) : overviewCourseAssessments[0] && handleAssessmentFocus(overviewCourseAssessments[0])}>
+          <span>Upcoming work</span>
           <strong>{courseOverviewSummary.upcoming}</strong>
-          <small>Includes {schoolLevelCopy.todoLabel.toLowerCase()} and in progress</small>
+          <small>{overviewCourseTasks.length} active assignment{overviewCourseTasks.length === 1 ? "" : "s"} · {courseOverviewSummary.assessments} quiz{courseOverviewSummary.assessments === 1 ? " or test" : "zes or tests"}</small>
         </button>
         <div className="course-overview-breakdown">
           <button type="button" disabled={courseOverviewSummary.inProgress === 0} onClick={() => openAssignmentSummary(`course:${overviewCourse}:inProgress`)}><strong>{courseOverviewSummary.inProgress}</strong><span>In progress</span></button>
+          <button type="button" disabled={courseOverviewSummary.assessments === 0} onClick={() => overviewCourseAssessments[0] && handleAssessmentFocus(overviewCourseAssessments[0])}><strong>{courseOverviewSummary.assessments}</strong><span>Quizzes & tests</span></button>
           <button type="button" disabled={courseOverviewSummary.dueToday === 0} className={courseOverviewSummary.dueToday > 0 ? "has-warning" : ""} onClick={() => openAssignmentSummary(`course:${overviewCourse}:today`)}><strong>{courseOverviewSummary.dueToday}</strong><span>Due today</span></button>
           <button type="button" disabled={courseOverviewSummary.dueTomorrow === 0} onClick={() => openAssignmentSummary(`course:${overviewCourse}:tomorrow`)}><strong>{courseOverviewSummary.dueTomorrow}</strong><span>Due tomorrow</span></button>
           <button type="button" disabled={courseOverviewSummary.overdue === 0} className={courseOverviewSummary.overdue > 0 ? "has-danger" : ""} onClick={() => openAssignmentSummary(`course:${overviewCourse}:overdue`)}><strong>{courseOverviewSummary.overdue}</strong><span>Overdue</span></button>
@@ -8833,16 +9007,32 @@ function App() {
         {overviewNextTask ? (
           <article className="course-overview-next">
             <span>Next up</span>
-            <strong>{overviewNextTask.title}</strong>
-            <small>{!getAssignmentCountdownLabel(overviewNextTask) ? `${getTaskDueBucket(overviewNextTask)} | ` : ""}{overviewNextTask.priority || "No"} priority</small>
+            <strong>{isAssessment(overviewNextTask) ? `${formatAssessmentType(overviewNextTask.assessmentType)}: ${overviewNextTask.title}` : overviewNextTask.title}</strong>
+            <small>{isAssessment(overviewNextTask) ? `${getEffectiveDeadline(overviewNextTask)?.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} at ${formatAssignmentTime(overviewNextTask.dueHour, overviewNextTask.dueAmPm)}` : `${!getAssignmentCountdownLabel(overviewNextTask) ? `${getTaskDueBucket(overviewNextTask)} | ` : ""}${overviewNextTask.priority || "No"} priority`}</small>
             {renderAssignmentCountdown(overviewNextTask, "course-overview-countdown")}
             <div className="course-overview-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => handleRecommendedTaskClick(overviewNextTask.id)}>{getFocusActionLabel(overviewNextTask)}</button>
-              {getTaskStatus(overviewNextTask) === "todo" && <button type="button" className="btn btn-primary" onClick={() => handleQuickMatchStart(overviewNextTask.id)}>In Progress</button>}
+              {isAssessment(overviewNextTask) ? <><button type="button" className="btn btn-secondary" onClick={() => handleAssessmentFocus(overviewNextTask)}>View in calendar</button><button type="button" className="btn btn-primary" onClick={() => openAssessmentEditor(overviewNextTask)}>Edit</button></> : <><button type="button" className="btn btn-secondary" onClick={() => handleRecommendedTaskClick(overviewNextTask.id)}>{getFocusActionLabel(overviewNextTask)}</button>{getTaskStatus(overviewNextTask) === "todo" && <button type="button" className="btn btn-primary" onClick={() => handleQuickMatchStart(overviewNextTask.id)}>In Progress</button>}</>}
             </div>
           </article>
         ) : (
           <p className="course-overview-empty friendly-empty" role="status">You’re all clear in this {schoolLevelCopy.courseLabel.toLowerCase()} right now.</p>
+        )}
+        {overviewCourseAssessments.length > 0 && (
+          <section className="course-overview-assessment-list" aria-label={`Upcoming quizzes and tests for ${overviewCourse}`}>
+            <h4>Upcoming quizzes & tests</h4>
+            <ol>
+              {overviewCourseAssessments.map((assessment) => (
+                <li key={assessment.id}>
+                  <button type="button" className="assessment-overview-main" onClick={() => handleAssessmentFocus(assessment)}>
+                    <span className={`assessment-type-badge is-${assessment.assessmentType || "test"}`}>{formatAssessmentType(assessment.assessmentType)}</span>
+                    <span><strong>{assessment.title}</strong><small>{getEffectiveDeadline(assessment)?.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} · {formatAssignmentTime(assessment.dueHour, assessment.dueAmPm)}</small></span>
+                    {renderAssignmentCountdown(assessment, "course-overview-countdown")}
+                  </button>
+                  <button type="button" className="assessment-inline-edit" onClick={() => openAssessmentEditor(assessment)}>Edit</button>
+                </li>
+              ))}
+            </ol>
+          </section>
         )}
         {sortedOverviewCourseTasks.length > 0 && (
           <section className="course-overview-assignment-list" aria-label={`All active assignments for ${overviewCourse}`}>
@@ -8872,8 +9062,8 @@ function App() {
   };
 
   const renderRemindersWidget = () => {
-    const overdueItems = dashboardOverdueTasks.slice(0, 4).map((item) => ({ ...item, overdue: true }));
-    const upcomingItems = dashboardReminderTasks.slice(0, 6).map((item) => ({ ...item, overdue: false }));
+    const overdueItems = dashboardOverdueTasks.map((item) => ({ ...item, overdue: true }));
+    const upcomingItems = dashboardReminderTasks.map((item) => ({ ...item, overdue: false }));
     const rangeLabel = dashboardReminderHours < 72
       ? `${dashboardReminderHours} hours`
       : `${dashboardReminderHours / 24} days`;
@@ -8884,10 +9074,10 @@ function App() {
           {items.map(({ task, deadline, overdue }) => (
             <li key={`${overdue ? "overdue" : "upcoming"}-${task.id}`}>
               <button type="button" className="reminder-widget-main" onClick={() => handleReminderTaskClick(task)}>
-                <span><strong>{task.title}</strong><small>{getTaskCourseOrCategory(task)}</small></span>
+                <span><strong>{task.title}</strong><small>{isAssessment(task) ? `${formatAssessmentType(task.assessmentType)} · ` : ""}{getTaskCourseOrCategory(task)}</small></span>
                 <span className={overdue ? "is-overdue" : ""}><strong>{formatAssignmentCountdown(deadline, checklistNow)}</strong><small>{deadline.toLocaleDateString(undefined, { month: "short", day: "numeric" })} | {deadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: !useMilitaryTime })}</small></span>
               </button>
-              {getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
+              {!isAssessment(task) && getTaskStatus(task) === "todo" && <button type="button" className="reminder-widget-start" onClick={() => handleQuickMatchStart(task.id)}>In Progress</button>}
             </li>
           ))}
         </ul>
@@ -9598,7 +9788,7 @@ function App() {
   const courseSummaryMatch = mobileSummaryCategory.match(/^course:(.*):(active|inProgress|today|tomorrow|overdue|completed)$/);
   const summaryCourse = courseSummaryMatch?.[1] || "";
   const summaryCourseFilter = courseSummaryMatch?.[2] || "";
-  const summaryCourseTasks = tasks.filter((task) => getTaskCourseOrCategory(task) === summaryCourse);
+  const summaryCourseTasks = tasks.filter((task) => !isAssessment(task) && getTaskCourseOrCategory(task) === summaryCourse);
   const mobileSummaryTasks = courseSummaryMatch
     ? summaryCourseTasks.filter((task) => {
         const status = getTaskStatus(task);
@@ -10733,7 +10923,7 @@ function App() {
               style={{ marginTop: "10px" }}
             >
               <div className="panel-header calendar-view-header">
-                <h3>📅 Assignment Calendar</h3>
+                <h3>📅 Academic Calendar</h3>
                 <div className="calendar-header-controls">
                   <label className="calendar-week-start-control">
                     <span>Week order</span>
@@ -10750,7 +10940,7 @@ function App() {
               </div>
 
               {userSettings.calendarViewMode === "week" ? (
-                <section className="weekly-calendar" aria-label="Weekly assignment calendar">
+                <section className="weekly-calendar" aria-label="Weekly academic calendar">
                   <div className="weekly-calendar-navigation">
                     <button type="button" className="btn btn-secondary" onClick={() => handleCalendarDateChange(shiftCalendarWeek(selectedDate, -1))}>← Previous week</button>
                     <strong>{visibleWeekDates[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – {visibleWeekDates[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</strong>
@@ -10760,7 +10950,7 @@ function App() {
                   <div className="weekly-calendar-scroll">
                     <div className="weekly-calendar-grid">
                       {visibleWeekDates.map((date) => {
-                        const dayTasks = calendarTasks.filter((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate());
+                        const dayTasks = calendarTasks.filter((task) => taskOccursOnDate(task, date));
                         const dots = getCourseDotsForDate(date);
                         const cycleDay = getCycleDayForDate(date, userSettings);
                         const dayColor = getCalendarDayColor(date);
@@ -10771,7 +10961,7 @@ function App() {
                             <small>{date.toLocaleDateString(undefined, { month: "short" })}</small>
                             {userSettings.showCalendarCycleLabels !== false && cycleDay && <span className="weekly-cycle-day">{cycleDay}</span>}
                             {userSettings.showCalendarTaskDots !== false && dots.length > 0 && <span className="calendar-course-dots">{dots.map((dot) => <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />)}</span>}
-                            <span className="weekly-task-count">{dayTasks.length} assignment{dayTasks.length === 1 ? "" : "s"}</span>
+                            <span className="weekly-task-count">{dayTasks.length} item{dayTasks.length === 1 ? "" : "s"}</span>
                           </button>
                         );
                       })}
@@ -10787,7 +10977,7 @@ function App() {
                     next2Label={null}
                     calendarType={userSettings.calendarWeekStartsOn === "monday" ? "iso8601" : "gregory"}
                     showNeighboringMonth={userSettings.showNeighboringMonth !== false}
-                    tileClassName={({ date, view }) => view === "month" && calendarTasks.some((task) => Number(task.dueMonth) === date.getMonth() + 1 && Number(task.dueDay) === date.getDate() && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
+                    tileClassName={({ date, view }) => view === "month" && calendarTasks.some((task) => taskOccursOnDate(task, date) && !isAssessment(task) && getTaskDueBucket(task).startsWith("Overdue")) ? "calendar-overdue-day" : ""}
                     tileContent={({ date, view }) => {
                       if (view !== "month") return null;
                       const dots = getCourseDotsForDate(date);
@@ -10802,7 +10992,7 @@ function App() {
                         {(showTaskDots || showCycleDay) && <div className="calendar-tile-details">
                           {showCycleDay && <span>{cycleDay}</span>}
                           {showTaskDots && (
-                            <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with assignments`}>
+                            <span className="calendar-course-dots" aria-label={`${dots.length} course${dots.length === 1 ? "" : "s"} with scheduled work`}>
                               {dots.map((dot) => (
                                 <i key={dot.course} style={{ backgroundColor: dot.color }} title={dot.course} />
                               ))}
@@ -10916,7 +11106,7 @@ function App() {
 
                   <section className="calendar-day-section calendar-assignments-section" aria-labelledby="calendar-selected-assignments-title">
                   <h4 id="calendar-selected-assignments-title">
-                    Assignments for {selectedDate.toDateString()}
+                    Assignments, quizzes & tests for {selectedDate.toDateString()}
                   </h4>
 
                   {selectedDateTasks.length === 0 ? (
@@ -10928,7 +11118,14 @@ function App() {
                       className="task-list"
                       style={{ paddingLeft: 0, listStyle: "none" }}
                     >
-                      {selectedDateTasks.map((task) => (
+                      {selectedDateTasks.map((task) => isAssessment(task) ? (
+                          <li key={task.id} className={`task-card calendar-task-card calendar-assessment-card${expandedTaskId === task.id ? " expanded" : ""}`} onClick={() => setExpandedTaskId((currentId) => currentId === task.id ? null : task.id)}>
+                            <div className="task-title-row"><span className={`assessment-type-badge is-${task.assessmentType || "test"}`}>{formatAssessmentType(task.assessmentType)}</span><strong className="task-title-text">{task.title}</strong><span className="task-course-pill" style={{ backgroundColor: getCourseColor(getTaskCourseOrCategory(task)), color: getTextColorForCourse(getTaskCourseOrCategory(task)) }}>{getTaskCourseOrCategory(task)}</span>{renderTaskReminderIndicator(task)}</div>
+                            <div className="assessment-calendar-schedule"><span>Scheduled for {formatAssignmentTime(task.dueHour, task.dueAmPm)}</span>{renderAssignmentCountdown(task)}</div>
+                            <p className="hint-text">{isMobileUi ? "Tap" : "Click"} to {expandedTaskId === task.id ? "hide" : "view"} notes</p>
+                            {expandedTaskId === task.id && <div className="assessment-calendar-details" onClick={(event) => event.stopPropagation()}>{task.notes ? <p>{task.notes}</p> : <p className="hint-text">No notes were added.</p>}<div className="task-actions"><button type="button" className="btn btn-secondary" onClick={() => openAssessmentEditor(task)}>Edit {formatAssessmentType(task.assessmentType)}</button><button type="button" className="btn btn-danger" onClick={() => handleDelete(task.id)}>Move to Trash</button></div></div>}
+                          </li>
+                        ) : (
                           <li
                             key={task.id}
                             className={`task-card calendar-task-card${expandedTaskId === task.id ? " expanded" : ""}`}
@@ -10990,23 +11187,23 @@ function App() {
                     <div>
                       <strong>Add something due on this day</strong>
                       <p className="hint-text">
-                        Use the full assignment form below with the selected
-                        month and day already filled in.
+                        Add a quiz or test, or use the full assignment form with
+                        the selected month and day already filled in.
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      className={`btn ${calendarAddOpen ? "btn-secondary" : "btn-primary"}`}
-                      onClick={() => {
-                        if (calendarAddOpen) {
-                          setCalendarAddOpen(false);
-                        } else {
-                          handleAddForSelectedDate();
-                        }
-                      }}
-                    >
-                      {calendarAddOpen ? "Cancel" : isMobileUi ? `+ ${schoolLevelCopy.addLabel} for this day` : `➕ ${schoolLevelCopy.addLabel}`}
-                    </button>
+                    <div className="calendar-add-buttons"><button type="button" className="btn btn-secondary" onClick={() => openNewAssessment({ date: selectedCalendarDateKey })}>+ Quiz/Test</button><button
+                        type="button"
+                        className={`btn ${calendarAddOpen ? "btn-secondary" : "btn-primary"}`}
+                        onClick={() => {
+                          if (calendarAddOpen) {
+                            setCalendarAddOpen(false);
+                          } else {
+                            handleAddForSelectedDate();
+                          }
+                        }}
+                      >
+                        {calendarAddOpen ? "Cancel" : isMobileUi ? `+ ${schoolLevelCopy.addLabel} for this day` : `➕ ${schoolLevelCopy.addLabel}`}
+                      </button></div>
                   </div>
 
                   {calendarAddOpen && (
@@ -12385,6 +12582,27 @@ function App() {
         )}
 
         </div>
+      {assessmentEditorOpen && (
+        <div className="modal-backdrop assessment-editor-backdrop" onClick={resetAssessmentEditor} onKeyDown={(event) => { if (event.key === "Escape") resetAssessmentEditor(); }}>
+          <form ref={activeDialogRef} className="assessment-editor" role="dialog" aria-modal="true" aria-labelledby="assessment-editor-title" tabIndex="-1" onSubmit={handleSaveAssessment} onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div><span className="assessment-editor-eyebrow">Course event</span><h2 id="assessment-editor-title">{editingAssessmentId ? `Edit ${formatAssessmentType(assessmentType)}` : "Add a Quiz or Test"}</h2><p>This stays out of assignment status lists while remaining visible where dates matter.</p></div>
+              <button type="button" onClick={resetAssessmentEditor} aria-label="Close quiz or test editor">×</button>
+            </header>
+            <div className="assessment-editor-grid">
+              <fieldset className="assessment-type-choice"><legend>Type</legend><label className={assessmentType === "quiz" ? "active" : ""}><input type="radio" name="assessmentType" value="quiz" checked={assessmentType === "quiz"} onChange={() => setAssessmentType("quiz")} /><span>Quiz</span></label><label className={assessmentType === "test" ? "active" : ""}><input type="radio" name="assessmentType" value="test" checked={assessmentType === "test"} onChange={() => setAssessmentType("test")} /><span>Test</span></label></fieldset>
+              <label className="assessment-field assessment-name-field"><span>{formatAssessmentType(assessmentType)} name</span><input data-dialog-initial-focus required value={assessmentName} onChange={(event) => { setAssessmentName(event.target.value); setAssessmentFormError(""); }} placeholder={assessmentType === "quiz" ? "e.g., Chapter 6 Quiz" : "e.g., Biology Midterm"} /></label>
+              <label className="assessment-field"><span>Course</span><select required value={assessmentCourse} onChange={(event) => { setAssessmentCourse(event.target.value); setAssessmentFormError(""); }}><option value="">Select a course</option>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
+              <label className="assessment-field"><span>Date</span><input required type="date" value={assessmentDate} onChange={(event) => { setAssessmentDate(event.target.value); setAssessmentFormError(""); }} /></label>
+              <label className="assessment-field"><span>Time</span><input required type="time" value={assessmentTime} onChange={(event) => { setAssessmentTime(event.target.value); setAssessmentFormError(""); }} /></label>
+              <label className="assessment-field assessment-notes-field"><span>Notes</span><textarea value={assessmentNotes} onChange={(event) => setAssessmentNotes(event.target.value)} rows="5" placeholder="Topics, chapters, allowed materials, room, or anything else to remember…" /></label>
+              <label className="assessment-study-option"><input type="checkbox" checked={assessmentCreateStudyTask} disabled={assessmentHasLinkedStudy} onChange={(event) => setAssessmentCreateStudyTask(event.target.checked)} /><span><strong>Create a “Study for: {assessmentName || `${assessmentType} name`}” assignment</strong><small>{assessmentHasLinkedStudy ? "The linked study assignment will stay synchronized with this event." : "It will be due at 11:59 PM the night before and include these event details and notes."}</small></span></label>
+            </div>
+            {assessmentFormError && <p className="assessment-form-error" role="alert">{assessmentFormError}</p>}
+            <footer><button type="button" className="btn btn-secondary" onClick={resetAssessmentEditor}>Cancel</button><button type="submit" className="btn btn-primary">{editingAssessmentId ? "Save Changes" : `Add ${formatAssessmentType(assessmentType)}`}</button></footer>
+          </form>
+        </div>
+      )}
       {/*
         EDIT MODAL
         Rendered above every tab only while editingTask contains a temporary copy.
