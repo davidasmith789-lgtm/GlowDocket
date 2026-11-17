@@ -5763,6 +5763,8 @@ a,
 }
 .voice-inline-error { border-color: var(--danger-color); color: var(--danger-color); }
 .assignment-entry-form > :is(.voice-assignment-panel, .voice-inline-error) { display: none !important; }
+.assignment-entry-form > .bulk-import-panel { margin-bottom: 0; }
+.assignment-entry-form > .assessment-add-panel { margin-bottom: 16px; }
 
 .btn-voice-undo,
 .btn-voice-undo:hover {

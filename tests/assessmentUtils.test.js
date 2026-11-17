@@ -76,5 +76,7 @@ test("assessment integration keeps events out of task workflows and exposes the 
   assert.match(app, /Create a “Study for:/);
   assert.match(css, /\.assessment-editor\s*\{[^}]*background:\s*var\(--card-bg\)/s);
   assert.match(css, /\.assessment-add-panel\s*\{/);
+  assert.match(css, /\.assignment-entry-form > \.bulk-import-panel \{ margin-bottom: 0; \}/);
+  assert.match(css, /\.assignment-entry-form > \.assessment-add-panel \{ margin-bottom: 16px; \}/);
   assert.match(css, /\.calendar-assessment-card\s*\{/);
 });
