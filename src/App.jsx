@@ -8556,14 +8556,9 @@ function App() {
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => handleReorderChecklistItem(selectedList.id, event.dataTransfer.getData("text/checklist-item"), item.id)}
               >
-                {!isMobileUi && <button type="button" className="checklist-item-grip" title="Drag to reorder" onPointerDown={(event) => startChecklistTouchReorder(event, ".standalone-checklist-items li", item.id, (source, target) => handleReorderChecklistItem(selectedList.id, source, target))}>⠿</button>}
                 <input type="checkbox" checked={item.isDone} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "isDone", event.target.checked)} />
                 <div className="checklist-item-copy">
                   <input className="checklist-item-text" value={item.text} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "text", event.target.value)} aria-label="Checklist step title" />
-                  <details className="checklist-item-details" defaultOpen={Boolean(item.body)}>
-                    <summary>{item.body ? "More information" : "Add more information"}</summary>
-                    <textarea value={item.body || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "body", event.target.value)} placeholder="Add notes, instructions, links, or anything else about this step…" rows="3" aria-label={`More information for ${item.text || "checklist step"}`} />
-                  </details>
                 </div>
                 <div className="checklist-item-date-fields">
                   <label className={`checklist-date-picker${item.dueDate ? "" : " is-empty"}`}>
@@ -8575,6 +8570,11 @@ function App() {
                 </div>
                 {item.dueDate && <div className="checklist-item-deadline"><strong>{formatChecklistDeadline(item)}</strong><span>{formatChecklistCountdown(item, checklistNow)}</span></div>}
                 <button type="button" className="checklist-item-delete" onClick={() => handleDeleteChecklistItem(selectedList.id, item.id)} aria-label={`Delete ${item.text}`}>×</button>
+                <button type="button" className="checklist-item-grip" aria-label={`Drag ${item.text || "checklist step"} to reorder`} title="Drag to reorder" onPointerDown={(event) => startChecklistTouchReorder(event, ".standalone-checklist-items li", item.id, (source, target) => handleReorderChecklistItem(selectedList.id, source, target))}>⋮⋮</button>
+                <details className="checklist-item-details" defaultOpen={Boolean(item.body)}>
+                  <summary>{item.body ? "More information" : "Add more information"}</summary>
+                  <textarea value={item.body || ""} onChange={(event) => handleUpdateChecklistItem(selectedList.id, item.id, "body", event.target.value)} placeholder="Add notes, instructions, links, or anything else about this step…" rows="3" aria-label={`More information for ${item.text || "checklist step"}`} />
+                </details>
               </li>
             ))}
           </ul>

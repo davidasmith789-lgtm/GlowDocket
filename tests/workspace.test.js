@@ -812,9 +812,14 @@ test("every checklist widget view has an independent touch-friendly scroll area"
 });
 
 test("checklist checkboxes keep a visible fixed size and stable grid alignment", async () => {
-  const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
+  const [source, css] = await Promise.all([
+    readFile(new URL("../src/App.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/App.css", import.meta.url), "utf8"),
+  ]);
   assert.match(css, /\.standalone-checklist-items > li > input\[type="checkbox"\],[\s\S]*?appearance:\s*none;[^}]*width:\s*24px;[^}]*min-width:\s*24px;[^}]*height:\s*24px;[^}]*justify-self:\s*start;/s);
   assert.match(css, /\.standalone-checklist-items > li > input\[type="checkbox"\]:checked,[\s\S]*?background-image:\s*url\(/s);
+  assert.match(source, /<input type="checkbox"[\s\S]*className="checklist-item-grip"/);
+  assert.match(css, /\.checklist-item-grip \{[^}]*grid-column: 6;[^}]*cursor: grab;/);
 });
 
 test("checklist steps support an optional persisted information body", async () => {
@@ -825,6 +830,7 @@ test("checklist steps support an optional persisted information body", async () 
   assert.match(source, /text: trimmed, body: ""/);
   assert.match(source, /className="checklist-item-details" defaultOpen=\{Boolean\(item\.body\)\}/);
   assert.match(source, /handleUpdateChecklistItem\(selectedList\.id, item\.id, "body", event\.target\.value\)/);
+  assert.match(css, /\.checklist-item-details \{[^}]*grid-column: 1 \/ -1;/);
   assert.match(css, /\.checklist-item-details textarea \{[^}]*width: 100%;[^}]*resize: vertical;/);
   assert.match(css, /mobile-checklist-fullscreen \.checklist-item-details textarea \{[^}]*min-height: 96px;/);
 });
@@ -832,7 +838,7 @@ test("checklist steps support an optional persisted information body", async () 
 test("global text scaling reaches button labels and large text reflows dense widgets", async () => {
   const css = await readFile(new URL("../src/App.css", import.meta.url), "utf8");
   assert.match(css, /button,\s*\[role="button"\]\s*\{[^}]*font-family:\s*inherit;[^}]*font-size:\s*inherit;/s);
-  assert.match(css, /text-size-large[^}]*\.standalone-checklist-items li\s*\{[^}]*grid-template-columns:\s*auto auto minmax\(0, 1fr\) auto;/s);
+  assert.match(css, /text-size-large[^}]*\.standalone-checklist-items li\s*\{[^}]*grid-template-columns:\s*28px minmax\(0, 1fr\) 34px 26px;/s);
   assert.match(css, /text-size-large[^}]*\.course-overview-breakdown\s*\{[^}]*repeat\(auto-fit,/s);
   assert.match(css, /text-size-large[^}]*\.account-dashboard-shortcuts\s*\{[^}]*repeat\(auto-fit,/s);
   assert.match(css, /text-size-large[^}]*\.reminder-suggestion\s*\{[^}]*flex-wrap:\s*wrap;/s);
