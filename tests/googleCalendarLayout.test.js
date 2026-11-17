@@ -8,4 +8,6 @@ test("Google Calendar settings use fluid non-overlapping controls", async () => 
   assert.match(css, /\.google-calendar-settings \.google-calendar-compact-option\s*\{[\s\S]*?grid-template-columns: 18px minmax\(0, 1fr\)/);
   assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(min\(220px, 100%\), 1fr\)\)/);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*?google-calendar-actions \.btn \{ width: 100%; \}/);
+  assert.match(css, /\.google-disconnect-dialog\s*\{[^}]*border:\s*1px solid var\(--border-color\);[^}]*background:\s*var\(--modal-bg\);[^}]*color:\s*var\(--text-color\);/s);
+  assert.doesNotMatch(css, /\.google-disconnect-dialog\s*\{[^}]*var\(--panel-bg, #fff\)/s);
 });

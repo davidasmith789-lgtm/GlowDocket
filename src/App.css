@@ -9097,7 +9097,7 @@ html[data-theme="dark"] .sync-conflict-dialog {
 .google-managed-items span { display: grid; gap: 0.15rem; }
 .google-imported-event .calendar-event-row { cursor: default; }
 .google-imported-event .calendar-event-notes { display: grid; gap: 0.5rem; }
-.google-disconnect-dialog { width: min(92vw, 31rem); border-radius: 1rem; padding: 1.25rem; background: var(--panel-bg, #fff); color: inherit; box-shadow: 0 24px 70px #0006; }
+.google-disconnect-dialog { box-sizing: border-box; width: min(92vw, 31rem); padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 1rem; background: var(--modal-bg); color: var(--text-color); box-shadow: 0 24px 70px #0006; }
 .google-disconnect-dialog > label { display: flex; gap: 0.55rem; align-items: center; margin: 1rem 0; }
 
 /* Google Calendar settings stay in the normal page flow at every text size. */
