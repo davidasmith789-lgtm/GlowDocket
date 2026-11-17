@@ -4585,7 +4585,22 @@ html[data-theme="dark"] .edit-notes-side {
 }
 
 .recommended-plan-workload.compact {
+  flex-wrap: nowrap;
+  gap: 6px;
   margin: 0 0 10px;
+  white-space: nowrap;
+}
+
+.recommended-plan-workload.compact strong {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+}
+
+.recommended-plan-workload.compact span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
 }
 
 .recommended-plan-workload strong {
