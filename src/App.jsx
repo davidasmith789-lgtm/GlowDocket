@@ -36,6 +36,7 @@ import {
   isAssessment,
 } from "./assessmentUtils.js";
 import { getWeekDates, isSameCalendarDay, shiftCalendarWeek } from "./calendarWeekUtils.js";
+import { getChecklistDropPlacement } from "./checklistReorderUtils.js";
 import { canUndoVoiceCreation, lockVoiceUndo } from "./voiceTaskUtils.js";
 import { summarizeWorkload } from "./workloadUtils.js";
 import {
@@ -6911,8 +6912,10 @@ function App() {
     document.body.appendChild(ghost);
     sourceCard.classList.add("is-pointer-dragging");
     try { handle.setPointerCapture?.(pointerId); } catch { /* Window listeners remain as a fallback. */ }
-    let workingItems = [...checklists];
+    const originalItems = [...checklists];
+    let workingItems = originalItems;
     let activeTarget = null;
+    let activePlacement = null;
     let activeSignature = "";
     checklistDragOrderRef.current = workingItems;
 
@@ -6944,21 +6947,26 @@ function App() {
         : null;
       const target = hoveredTarget || nearestTarget;
       activeTarget?.classList.remove("drop-left", "drop-right", "drop-above", "drop-below");
-      activeTarget = target && target.dataset.reorderId !== sourceId ? target : null;
-      if (!activeTarget) return;
-      const targetBounds = activeTarget.getBoundingClientRect();
-      const centerX = targetBounds.left + targetBounds.width / 2;
-      const centerY = targetBounds.top + targetBounds.height / 2;
-      const horizontalDistance = Math.abs((moveEvent.clientX - centerX) / Math.max(1, targetBounds.width));
-      const verticalDistance = Math.abs((moveEvent.clientY - centerY) / Math.max(1, targetBounds.height));
-      const placement = horizontalDistance > verticalDistance
-        ? (moveEvent.clientX < centerX ? "left" : "right")
-        : (moveEvent.clientY < centerY ? "above" : "below");
+      activeTarget = null;
+      activePlacement = null;
+      const validTarget = target && target.dataset.reorderId !== sourceId ? target : null;
+      const placement = validTarget
+        ? getChecklistDropPlacement(validTarget.getBoundingClientRect(), moveEvent.clientX, moveEvent.clientY)
+        : null;
+      if (!validTarget || !placement) {
+        activeSignature = "";
+        workingItems = originalItems;
+        checklistDragOrderRef.current = originalItems;
+        setChecklists(originalItems);
+        return;
+      }
+      activeTarget = validTarget;
+      activePlacement = placement;
       activeTarget.classList.add(`drop-${placement}`);
       const signature = `${activeTarget.dataset.reorderId}-${placement}`;
       if (signature === activeSignature) return;
       activeSignature = signature;
-      workingItems = placeChecklistCard(workingItems, sourceId, activeTarget.dataset.reorderId, placement);
+      workingItems = placeChecklistCard(originalItems, sourceId, activeTarget.dataset.reorderId, placement);
       checklistDragOrderRef.current = workingItems;
       setChecklists(workingItems);
     };
@@ -6971,10 +6979,14 @@ function App() {
       window.removeEventListener("pointerup", stop);
       window.removeEventListener("pointercancel", stop);
       try { if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId); } catch { /* Capture may already be released. */ }
-      const finalOrder = checklistDragOrderRef.current || workingItems;
+      const shouldCommit = stopEvent?.type === "pointerup" && activeTarget && activePlacement;
+      const finalOrder = shouldCommit ? (checklistDragOrderRef.current || workingItems) : originalItems;
       checklistDragOrderRef.current = null;
-      try { localStorage.setItem(checklistStorageKey, JSON.stringify(finalOrder)); }
-      catch (error) { console.error("Failed to save checklist order:", error); }
+      setChecklists(finalOrder);
+      if (shouldCommit) {
+        try { localStorage.setItem(checklistStorageKey, JSON.stringify(finalOrder)); }
+        catch (error) { console.error("Failed to save checklist order:", error); }
+      }
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", stop);

@@ -932,7 +932,11 @@ test("checklist cards use two-dimensional pointer reordering with a cursor ghost
   assert.match(source, /const insideGallery = galleryBounds[\s\S]*moveEvent\.clientX[\s\S]*moveEvent\.clientY/);
   assert.match(source, /const nearestTarget = insideGallery && !hoveredTarget[\s\S]*querySelectorAll\("\.checklist-gallery-card"\)[\s\S]*Math\.hypot/);
   assert.match(source, /const target = hoveredTarget \|\| nearestTarget/);
-  assert.match(source, /horizontalDistance > verticalDistance[\s\S]*"left" : "right"[\s\S]*"above" : "below"/);
+  assert.match(source, /getChecklistDropPlacement\(validTarget\.getBoundingClientRect\(\), moveEvent\.clientX, moveEvent\.clientY\)/);
+  assert.match(source, /const originalItems = \[\.\.\.checklists\]/);
+  assert.match(source, /if \(!validTarget \|\| !placement\)[\s\S]*workingItems = originalItems;[\s\S]*setChecklists\(originalItems\)/);
+  assert.match(source, /const shouldCommit = stopEvent\?\.type === "pointerup" && activeTarget && activePlacement/);
+  assert.match(source, /shouldCommit \? \(checklistDragOrderRef\.current \|\| workingItems\) : originalItems/);
   assert.match(source, /setChecklists\(workingItems\)/);
   assert.match(css, /\.checklist-gallery-drag-ghost\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;[^}]*animation:\s*none !important;[^}]*transition:\s*none;/s);
   assert.match(source, /className="standalone-checklists checklist-gallery-view"/);
