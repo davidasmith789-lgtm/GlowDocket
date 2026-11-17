@@ -5426,6 +5426,12 @@ function App() {
     });
   };
 
+  const isAssignmentLinkedToGoogle = (id) => (googleCalendarState.mappings || []).some((mapping) => (
+    mapping.glowdocket_type === "assignment" &&
+    String(mapping.glowdocket_id) === String(id) &&
+    mapping.state === "active"
+  ));
+
   const finishAssignmentDelete = (id, removeFromGoogle = true) => {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
     const deletedAt = new Date().toISOString();
@@ -5436,13 +5442,13 @@ function App() {
     });
     if (userSettings.externalPushEnabled && taskBeingDeleted) { const reminder = getExternalReminderForTask(taskBeingDeleted); if (reminder) runImmediateReminderMutation(taskBeingDeleted.id, cancelExternalReminder(currentUser, reminder.occurrenceKey)); }
     if (accountMode === "cloud") getSupabaseBrowserClient().then((client) => client.rpc("unlink_assignment_flashcards", { assignment_id: id })).catch(() => {});
-    if (googleCalendarState.connected) unlinkGoogleCalendarItem("assignment", id, removeFromGoogle).catch((error) => setGoogleCalendarNotice(error.message));
+    if (googleCalendarState.connected && isAssignmentLinkedToGoogle(id)) unlinkGoogleCalendarItem("assignment", id, removeFromGoogle).catch((error) => setGoogleCalendarNotice(error.message));
   };
 
   // Deleting moves an assignment to recoverable Trash instead of erasing it.
   const handleDelete = (id) => {
     const taskBeingDeleted = tasks.find((task) => task.id === id);
-    if (googleCalendarState.connected) { setPendingGoogleAssignmentDelete(taskBeingDeleted || { id, title: "Assignment" }); setRemoveDeletedAssignmentFromGoogle(true); return; }
+    if (googleCalendarState.connected) { setPendingGoogleAssignmentDelete(taskBeingDeleted || { id, title: "Assignment" }); setRemoveDeletedAssignmentFromGoogle(isAssignmentLinkedToGoogle(id)); return; }
     if (userSettings.confirmBeforeTrash !== false) {
       setPendingTrashTask(taskBeingDeleted || { id, title: "Untitled" });
       return;
@@ -13216,7 +13222,7 @@ function App() {
       )}
       {googleDisconnectOpen && <div className="calendar-event-modal" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setGoogleDisconnectOpen(false); }}><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-disconnect-title"><h2 id="google-disconnect-title">Disconnect Google Calendar?</h2><p>Your GlowDocket data will not be deleted.</p><label><input type="checkbox" checked={keepGoogleCalendar} onChange={(event) => setKeepGoogleCalendar(event.target.checked)} /> Keep my GlowDocket calendar in Google</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setGoogleDisconnectOpen(false)}>Cancel</button><button type="button" className="btn btn-danger" onClick={handleGoogleDisconnect} disabled={googleCalendarBusy === "disconnect"}>{googleCalendarBusy === "disconnect" ? "Disconnecting…" : "Disconnect Google"}</button></div></section></div>}
       {pendingTrashTask && <div className="calendar-event-modal trash-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPendingTrashTask(null); }} onKeyDown={(event) => { if (event.key === "Escape") setPendingTrashTask(null); }}><section className="trash-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="trash-confirm-title" aria-describedby="trash-confirm-description"><span className="assessment-editor-eyebrow">Recoverable Trash</span><h2 id="trash-confirm-title">Move this {isAssessment(pendingTrashTask) ? formatAssessmentType(pendingTrashTask.assessmentType).toLowerCase() : "assignment"} to Trash?</h2><p id="trash-confirm-description"><strong>“{pendingTrashTask.title || "Untitled"}”</strong> will leave your active views, but you can restore it from Trash.</p>{isAssessment(pendingTrashTask) && pendingTrashTask.linkedStudyTaskId && <p className="hint-text">Its linked study assignment will be kept.</p>}<div className="trash-confirm-actions"><button type="button" className="btn btn-secondary" autoFocus onClick={() => setPendingTrashTask(null)}>Cancel</button><button type="button" className="btn btn-danger move-to-trash-button" onClick={() => { finishAssignmentDelete(pendingTrashTask.id); setPendingTrashTask(null); }}>Move to Trash</button></div></section></div>}
-      {pendingGoogleAssignmentDelete && <div className="calendar-event-modal" role="presentation"><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-assignment-delete-title"><h2 id="google-assignment-delete-title">Delete assignment?</h2><p>{pendingGoogleAssignmentDelete.title || "This assignment"} will move to Trash.</p><label><input type="checkbox" checked={removeDeletedAssignmentFromGoogle} onChange={(event) => setRemoveDeletedAssignmentFromGoogle(event.target.checked)} /> Remove from Google Calendar</label><div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setPendingGoogleAssignmentDelete(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingGoogleAssignmentDelete.id, removeDeletedAssignmentFromGoogle); setPendingGoogleAssignmentDelete(null); }}>Delete assignment</button></div></section></div>}
+      {pendingGoogleAssignmentDelete && <div className="calendar-event-modal" role="presentation"><section className="google-disconnect-dialog" role="dialog" aria-modal="true" aria-labelledby="google-assignment-delete-title"><h2 id="google-assignment-delete-title">Delete assignment?</h2><p>{pendingGoogleAssignmentDelete.title || "This assignment"} will move to Trash.</p>{isAssignmentLinkedToGoogle(pendingGoogleAssignmentDelete.id) && <label className="google-delete-calendar-option"><span>Remove from Google Calendar</span><input type="checkbox" checked={removeDeletedAssignmentFromGoogle} onChange={(event) => setRemoveDeletedAssignmentFromGoogle(event.target.checked)} /></label>}<div className="calendar-event-form-actions"><button type="button" className="btn btn-secondary" onClick={() => setPendingGoogleAssignmentDelete(null)}>Cancel</button><button type="button" className="btn btn-danger" onClick={() => { finishAssignmentDelete(pendingGoogleAssignmentDelete.id, removeDeletedAssignmentFromGoogle); setPendingGoogleAssignmentDelete(null); }}>Delete assignment</button></div></section></div>}
       {tutorialOpen && (
         <div className="tutorial-backdrop" role="presentation">
           <section ref={tutorialRef} className="tutorial-dialog" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy" tabIndex="-1">

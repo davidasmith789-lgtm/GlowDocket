@@ -9099,6 +9099,8 @@ html[data-theme="dark"] .sync-conflict-dialog {
 .google-imported-event .calendar-event-notes { display: grid; gap: 0.5rem; }
 .google-disconnect-dialog { box-sizing: border-box; width: min(92vw, 31rem); padding: 1.25rem; border: 1px solid var(--border-color); border-radius: 1rem; background: var(--modal-bg); color: var(--text-color); box-shadow: 0 24px 70px #0006; }
 .google-disconnect-dialog > label { display: flex; gap: 0.55rem; align-items: center; margin: 1rem 0; }
+.google-disconnect-dialog > .google-delete-calendar-option { width: fit-content; max-width: 100%; justify-content: flex-start; white-space: nowrap; }
+.google-delete-calendar-option > input[type="checkbox"] { width: auto; min-width: 0; flex: 0 0 auto; margin: 0; }
 
 /* Google Calendar settings stay in the normal page flow at every text size. */
 .google-calendar-settings { container-type: inline-size; }
